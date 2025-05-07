@@ -21,8 +21,6 @@ import com.demo.demo.repository.SpotifyUserRepository;
 
 import lombok.AllArgsConstructor;
 
-import org.springframework.beans.factory.annotation.Value;
-
 @AllArgsConstructor
 @Service
 public class SpotifyAuthService {
