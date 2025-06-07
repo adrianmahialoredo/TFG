@@ -1,8 +1,7 @@
 package com.demo.demo.dto;
 
 import java.util.List;
-
-import lombok.*;
+import lombok.Data;
 
 @Data
 public class ChordDto {
@@ -17,5 +16,7 @@ public class ChordDto {
     private boolean minor;
     private boolean major;
     private boolean seventh;
+    private boolean capo;
+    private int capoFret; 
 
 }

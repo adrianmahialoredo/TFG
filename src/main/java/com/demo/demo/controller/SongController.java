@@ -1,58 +1,104 @@
 package com.demo.demo.controller;
 
-import com.demo.demo.model.Song;
 import com.demo.demo.service.SongService;
+import com.demo.demo.dto.SongDTO;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
 import java.util.List;
-import java.util.Optional;
+import org.springframework.http.HttpStatus;
 
+/**
+ * Controller for managing songs.
+ * 
+ * Provides endpoints to create, read, update, and delete songs.
+ * As well as to fetch all songs or a specific song by ID.
+ * 
+ * This controller uses the SongService to handle business logic
+ * and convert entities to DTOs for API responses.
+ * 
+ * Endpoints:
+ * - GET /songs: Fetch all songs
+ * - GET /songs/{id}: Fetch a specific song by ID
+ * - POST /songs: Create a new song
+ * - PUT /songs/{id}: Update an existing song by ID
+ * - DELETE /songs/{id}: Delete a song by ID
+ * 
+ * This controller is annotated with @RestController to handle RESTful requests
+ * and @RequestMapping to define the base path for all endpoints.
+ * 
+ * 
+ * @author Adrián Mahía
+ * @version 1.0
+ * @since 2025-06-06
+ */
 @RestController
+@RequiredArgsConstructor
 @RequestMapping("/songs")
 public class SongController {
+
     private final SongService songService;
 
-    public SongController(SongService songService) {
-        this.songService = songService;
-    }
-
+    /**
+     * Fetches all songs from the service and returns them as a list of SongDTOs.
+     *
+     * @return List of SongDTOs representing all songs.
+     */
     @GetMapping
-    public List<Song> getAllSongs() {
+    public List<SongDTO> getAllSongs() {
         return songService.getAllSongs();
     }
 
+    /**
+     * Fetches a specific song by its ID and returns it as a SongDTO.
+     *
+     * @param id The ID of the song to fetch.
+     * @return ResponseEntity containing the SongDTO if found, or 404 Not Found if not found.
+     */
     @GetMapping("/{id}")
-    public ResponseEntity<Song> getSongById(@PathVariable Long id) {
-        Optional<Song> song = Optional.ofNullable(songService.getSongById(id));
-        return song.map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.notFound().build());
+    public ResponseEntity<SongDTO> getSongById(@PathVariable Long id) {
+        return songService.getSongById(id)
+                .map(ResponseEntity::ok)
+                .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
+    /**
+     * Creates a new song from the provided SongDTO and returns the created song.
+     *
+     * @param songDto The SongDTO containing the details of the song to create.
+     * @return ResponseEntity containing the created SongDTO with status 201 Created.
+     */
     @PostMapping
-    public Song createSong(@RequestBody Song song) {
-        return songService.saveSong(song);
+    public ResponseEntity<SongDTO> createSong(@RequestBody SongDTO songDto) {
+        SongDTO created = songService.createSong(songDto);
+        return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
 
+    /**
+     * Updates an existing song identified by its ID with the provided SongDTO.
+     *
+     * @param id The ID of the song to update.
+     * @param songDto The SongDTO containing the updated details of the song.
+     * @return ResponseEntity containing the updated SongDTO if successful, or 404 Not Found if not found.
+     */
     @PutMapping("/{id}")
-    public ResponseEntity<Song> updateSong(@PathVariable Long id, @RequestBody Song songDetails) {
-        Song existingSong = songService.getSongById(id);
-        if (existingSong == null) {
-            return ResponseEntity.notFound().build();
-        }
-        existingSong.setTitle(songDetails.getTitle());
-        existingSong.setArtist(songDetails.getArtist());
-        existingSong.setGenre(songDetails.getGenre());
-        existingSong.setLyricsURL(songDetails.getLyricsURL());
-        existingSong.setDescription(songDetails.getDescription());
-        existingSong.setChords(songDetails.getChords());
-        existingSong.setVideos(songDetails.getVideos());
-        existingSong.setTags(songDetails.getTags());
-        return ResponseEntity.ok(songService.saveSong(existingSong));
+    public ResponseEntity<SongDTO> updateSong(@PathVariable Long id, @RequestBody SongDTO songDto) {
+        return songService.updateSong(id, songDto)
+                .map(ResponseEntity::ok)
+                .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
+    /**
+     * Deletes a song identified by its ID.
+     *
+     * @param id The ID of the song to delete.
+     * @return ResponseEntity with status 204 No Content if successful, or 404 Not Found if not found.
+     */
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteSong(@PathVariable Long id) {
-        songService.deleteSong(id);
-        return ResponseEntity.noContent().build();
+        if (songService.deleteSong(id)) {
+            return ResponseEntity.noContent().build();
+        }
+        return ResponseEntity.notFound().build();
     }
 }
