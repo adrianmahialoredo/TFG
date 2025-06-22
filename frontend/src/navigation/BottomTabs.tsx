@@ -8,6 +8,12 @@ import LearnScreen from '../screens/LearnScreen';
 import { COLORS } from '../constants/Theme';
 import GenresScreen from '../screens/GenresScreen';
 import SongsScreen from '../screens/SongsScreen';
+import GenreMainScreen from '../screens/GenreMainScreen';
+import RegisterScreen from '../screens/RegisterScreen';
+import LoginScreen from '../screens/LoginScreen';
+import ProfileScreen from '../screens/ProfileScreen';
+import ListScreen from '../screens/ListScreen';
+import AddItemScreen from '../screens/AddItemScreen';
 
 const Tab = createBottomTabNavigator();
 
@@ -19,7 +25,7 @@ export default function BottomTabs() {
         tabBarShowLabel: true,
         tabBarStyle: {
           position: 'absolute',
-          backgroundColor: 'rgba(0, 0, 0, 0.7)',
+          backgroundColor: 'rgba(0, 0, 0, 0.8)',
           elevation: 0,
           borderTopWidth: 0,
           height: 70,
@@ -44,9 +50,9 @@ export default function BottomTabs() {
       })}
     >
       <Tab.Screen name="Inicio" component={HomeScreen} />
-      <Tab.Screen name="Aprender" component={LearnScreen} />
-      <Tab.Screen name="Canciones" component={SongsScreen} />
-      <Tab.Screen name="Generos" component={SongScreen} />
+      <Tab.Screen name="Aprender" component={GenreMainScreen} />
+      <Tab.Screen name="Canciones" component={AddItemScreen} />
+      <Tab.Screen name="Generos" component={ProfileScreen} />
     </Tab.Navigator>
   );
 }

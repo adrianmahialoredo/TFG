@@ -2,7 +2,7 @@ import { ScrollView, View, TouchableOpacity, Image, Text} from "react-native";
 import AppLayout from "../components/AppLayout";
 import { useState } from "react";
 import SearchBar from "../components/SearchBar";
-import HorizontalSongsCarousel from "../components/HorizontalSongsCarousel";
+import HorizontalSongsCarousel from "../components/carousels/SongsCarousel";
 
 const recommendations = [
   { id: '1', title: 'Canción recomendada', imgUrl: 'https://upload.wikimedia.org/wikipedia/en/thumb/e/e8/Taylor_Swift_-_Red.png/250px-Taylor_Swift_-_Red.png' },

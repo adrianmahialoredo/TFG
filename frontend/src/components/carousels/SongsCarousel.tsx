@@ -9,14 +9,6 @@ type Item = {
   imgUrl: string;
 };
 
-type Lesson = {
-  videoUrl: string;
-  chordImages: { name: string; imageUrl: string }[];
-  lyrics: string;
-};
-
-type SongLevel = 'Fácil' | 'Medio' | 'Original';
-
 type CarouselProps = {
   title: string;
   data: Item[];

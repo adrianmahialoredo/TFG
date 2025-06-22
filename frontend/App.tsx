@@ -2,25 +2,18 @@
 import './global.css';
 import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
-import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { StatusBar } from 'expo-status-bar';
-
-import BottomTabs from './src/navigation/BottomTabs';
-import SongScreen from './src/screens/SongsScreen';
-
-const Stack = createNativeStackNavigator();
+import { AuthProvider } from './src/context/AuthContext';
+import AppNavigator from './src/navigation/AppNavigator';
 
 export default function App() {
   return (
-    <>
+    <AuthProvider>
       <NavigationContainer>
-        <Stack.Navigator screenOptions={{ headerShown: false }}>
-          <Stack.Screen name="BottomTab" component={BottomTabs} />
-          <Stack.Screen name="SongScreen" component={SongScreen} />
-        </Stack.Navigator>
+        <AppNavigator />
       </NavigationContainer>
       <StatusBar style="light" />
-    </>
+    </AuthProvider>
   );
 }
 

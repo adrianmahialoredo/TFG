@@ -1,14 +1,15 @@
 package com.demo.demo.service;
 
 import java.util.List;
-
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
-
 import com.demo.demo.dto.UserDto;
+import com.demo.demo.dto.UserResponseDTO;
 import com.demo.demo.model.User;
+import com.demo.demo.model.LoginResponse;
 import com.demo.demo.model.Role;
 import com.demo.demo.repository.UserRepository;
 import com.demo.demo.security.JwtUtil;
@@ -25,7 +26,7 @@ public class UserService {
 
     private final UserRepository userRepository;
     //private final AuthenticationManager authenticationManager;
-    //private final BCryptPasswordEncoder passwordEncoder;
+    private final BCryptPasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
 
     /**
@@ -34,7 +35,10 @@ public class UserService {
      * @return The registered user.
      */
     public User registerUser(UserDto userDto) {
+
         // Encrypt the password before saving
+
+
         User user = new User();
         user.setEmail(userDto.getEmail());
         user.setUsername(userDto.getUsername());
@@ -44,19 +48,25 @@ public class UserService {
         return userRepository.save(user);
     }
 
-    /**
-     * Login a user by authenticating their credentials.
-     * @param userDto The user credentials.
-     * @return A JWT token if authentication is successful.
-     */
-    public String loginUser(UserDto userDto) {
-        // Autenticación del usuario
-        //authenticationManager.authenticate(
-            //new UsernamePasswordAuthenticationToken(userDto.getUsername(), userDto.getPassword())
-        //);
+    public LoginResponse loginUser(UserDto userDto) {
+    // validar usuario y contraseña (lanzar BadCredentialsException si falla)
 
-        // Generación del token JWT
-        return jwtUtil.generateToken(userDto.getUsername());
+    User user = findByEmail(userDto.getEmail());
+    if (user == null)
+        throw new BadCredentialsException("User not found");
+    //else if ( ! passwordEncoder.matches(userDto.getPassword(), user.getPassword())) {
+      //  throw new BadCredentialsException("Password does not match");
+    //}
+
+    String token = jwtUtil.generateToken(user.getUsername());
+
+    UserResponseDTO userResponse = new UserResponseDTO(
+        user.getId(),
+        user.getEmail(),
+        user.getName()
+    );
+
+        return new LoginResponse(token, userResponse);
     }
 
     /**

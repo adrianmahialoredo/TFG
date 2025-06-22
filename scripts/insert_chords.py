@@ -12,7 +12,7 @@ with open('../data/chords.json', 'r') as file:  # Ajusta la ruta relativa
 def insert_chord(chord):
     response = requests.post(api_url, json=chord)
     
-    if response.status_code == 200:  # HTTP 201: Created
+    if response.status_code == 201:  # HTTP 201: Created
         print(f"Acorde '{chord['name']}' insertado correctamente.")
     else:
         print(f"Error al insertar el acorde '{chord['name']}': {response.status_code}, {response.text}")

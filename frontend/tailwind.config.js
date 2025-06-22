@@ -17,6 +17,7 @@ module.exports = {
         artistName: "#A3A3A3", // Light Gray
         background: "#000000", // Black
         text: "#111827", // Dark Gray
+        spotify: '#1DB954'
       },
       fontFamily: {
         sans: ["Inter", "sans-serif"],

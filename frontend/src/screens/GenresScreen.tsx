@@ -2,8 +2,8 @@ import { ScrollView, View, TouchableOpacity, Image, Text} from "react-native";
 import AppLayout from "../components/AppLayout";
 import { useState } from "react";
 import SearchBar from "../components/SearchBar";
-import HorizontalSongsCarousel from "../components/HorizontalSongsCarousel";
-import VerticalButtonsCarousel from "../components/VerticalGenresCarousel";
+import HorizontalSongsCarousel from "../components/carousels/SongsCarousel";
+import VerticalButtonsCarousel from "../components/carousels/GenresCarousel";
 
 const genres = [
   { id: '1', label: 'Pop Punk', imgUrl: 'https://i.ibb.co/ccNvtdqm/poppunk.jpg', onPress: () => {} },

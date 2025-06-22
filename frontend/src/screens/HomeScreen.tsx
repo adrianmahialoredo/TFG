@@ -1,10 +1,12 @@
 // src/screens/HomeScreen.tsx
 
-import { Dimensions, View, Text, TouchableOpacity, Image } from 'react-native';
+import { Dimensions, View, Text, TouchableOpacity, Image, ScrollView } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { Activity, CircleCheckBig, Headphones } from 'lucide-react-native';
-import HorizontalItemsCarousel from '../components/HorizontalItemsCarousel'; // Asegúrate de que la ruta es correcta
+import { Activity, CircleCheckBig, Headphones, List } from 'lucide-react-native';
+import HorizontalItemsCarousel from '../components/carousels/HorizontalItemsCarousel'; // Asegúrate de que la ruta es correcta
 import AppLayout from '../components/AppLayout'; // Asegúrate de que la ruta es correcta
+import { ToolButton } from '../components/buttons/ToolButton';
+import ListItem from '../components/ListItem';
 
 const recentItems = [
   { id: '1', title: 'Lección de guitarra', imgUrl: 'https://upload.wikimedia.org/wikipedia/en/thumb/e/e8/Taylor_Swift_-_Red.png/250px-Taylor_Swift_-_Red.png' },
@@ -24,6 +26,15 @@ const recommendations = [
   { id: '6', title: 'Canción recomendada', imgUrl: 'https://upload.wikimedia.org/wikipedia/en/thumb/e/e8/Taylor_Swift_-_Red.png/250px-Taylor_Swift_-_Red.png' },
 ];
 
+const item = {
+  id: '1',
+  title: 'Lección de guitarra',
+  description: 'Aprende los acordes básicos de guitarra.',
+  imageUrl: 'https://m.media-amazon.com/images/I/71Z0rLIvpuL._UF894,1000_QL80_.jpg',
+  info: `American Idiot
+  Cancion - Green Day`,
+};
+
 /* NO TOCAR POR DIOS */
 const screenWidth = Dimensions.get('window').width;
 const padding = 18;
@@ -35,6 +46,10 @@ export default function HomeScreen() {
 
   return (
     <AppLayout>
+      <ScrollView
+                  showsVerticalScrollIndicator={false}
+                  contentContainerStyle={{ paddingBottom: 120 }}
+              >
       <View className="flex-1 bg-background">
         {/* Icono de perfil */}
         <View className="flex-row justify-center my-7">
@@ -54,53 +69,16 @@ export default function HomeScreen() {
 
         {/* Botones de herramientas */}
         <View className="flex-row justify-between mt-12 mb-11">
-          <View className="">
-            <TouchableOpacity style={{
-              width: buttonSize,
-              height: buttonSize,
-              marginRight: 8,
-              backgroundColor: '#C1853C', // bg-primary
-              borderRadius: 6,
-              justifyContent: 'center',
-              alignItems: 'center',
-            }}>
-              <Activity size={75} color="white" strokeWidth={1} />  
-            </TouchableOpacity>
-            <Text className="text-secondary text-xl font-semibold text-center mt-2 mr-2">Metrónomo</Text>
-          </View>
-          <View className="">
-            <TouchableOpacity style={{
-              width: buttonSize,
-              height: buttonSize,
-              marginRight: 8,
-              backgroundColor: '#C1853C', // bg-primary
-              borderRadius: 6,
-              justifyContent: 'center',
-              alignItems: 'center',
-            }}>
-              <CircleCheckBig size={75} color="white" strokeWidth={1} />
-            </TouchableOpacity>
-            <Text className="text-secondary text-xl font-semibold text-center mt-2 mr-2.5">Afinador</Text>
-          </View>
-          <View className="">
-            <TouchableOpacity style={{
-              width: buttonSize,
-              height: buttonSize,
-              marginRight: 8,
-              backgroundColor: '#C1853C', // bg-primary
-              borderRadius: 6,
-              justifyContent: 'center',
-              alignItems: 'center',
-            }}>
-              <Headphones size={75} color="white" strokeWidth={1} />  
-            </TouchableOpacity>
-            <Text className="text-secondary text-xl font-semibold text-center mt-2 mr-2.5">Identificador</Text>
-          </View>
+          <ToolButton icon={<Activity size={75} color="white" strokeWidth={1} />} label="Metrónomo" />
+          <ToolButton icon={<CircleCheckBig size={75} color="white" strokeWidth={1} />} label="Afinador" />
+          <ToolButton icon={<Headphones size={75} color="white" strokeWidth={1} />} label="Identificador" />
         </View>
 
         {/* Carrusel: Recomendaciones */}
         <HorizontalItemsCarousel title="Recomendaciones" data={recommendations} />
+        <ListItem item={item} onPress={() => {}}/>
       </View>
+      </ScrollView>
     </AppLayout>
   );
 }
