@@ -55,14 +55,6 @@ public class User implements UserDetails {
     @Column(nullable = false)
     private Role role = Role.USER; // Default role
 
-    @OneToOne(cascade = CascadeType.ALL)
-    @JoinColumn(name = "settings_id")
-    private Settings settings;
-
-    @OneToOne(cascade = CascadeType.ALL)
-    @JoinColumn(name = "preferences_id")
-    private Preferences preferences;
-
     @Column(name = "difficulty_level", nullable = false)
     private int difficultyLevel = 0;    // Between 0 and 100
 

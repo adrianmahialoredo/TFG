@@ -6,7 +6,11 @@ import { Activity, CircleCheckBig, Headphones, List } from 'lucide-react-native'
 import HorizontalItemsCarousel from '../components/carousels/HorizontalItemsCarousel'; // Asegúrate de que la ruta es correcta
 import AppLayout from '../components/AppLayout'; // Asegúrate de que la ruta es correcta
 import { ToolButton } from '../components/buttons/ToolButton';
-import ListItem from '../components/ListItem';
+import { useEffect, useState } from 'react';
+import { UserDTO } from '../types/UserDTO';
+import { getStoredUser } from '../services/storageService';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { RootStackParamList } from '../types/RootStackParamList';
 
 const recentItems = [
   { id: '1', title: 'Lección de guitarra', imgUrl: 'https://upload.wikimedia.org/wikipedia/en/thumb/e/e8/Taylor_Swift_-_Red.png/250px-Taylor_Swift_-_Red.png' },
@@ -26,43 +30,41 @@ const recommendations = [
   { id: '6', title: 'Canción recomendada', imgUrl: 'https://upload.wikimedia.org/wikipedia/en/thumb/e/e8/Taylor_Swift_-_Red.png/250px-Taylor_Swift_-_Red.png' },
 ];
 
-const item = {
-  id: '1',
-  title: 'Lección de guitarra',
-  description: 'Aprende los acordes básicos de guitarra.',
-  imageUrl: 'https://m.media-amazon.com/images/I/71Z0rLIvpuL._UF894,1000_QL80_.jpg',
-  info: `American Idiot
-  Cancion - Green Day`,
-};
-
-/* NO TOCAR POR DIOS */
-const screenWidth = Dimensions.get('window').width;
-const padding = 18;
-const spacing = 18;
-const buttonSize = (screenWidth - padding * 2 - spacing * 2) / 3;
-
 export default function HomeScreen() {
-  const navigation = useNavigation();
 
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const [user, setUser] = useState<UserDTO | null>(null);
+
+  useEffect(() => {
+      const loadUser = async () => {
+        const data = await getStoredUser();
+        if (data) {
+          setUser(data.user);
+        }
+      };
+  
+      loadUser();
+    }, []);
+  
   return (
     <AppLayout>
       <ScrollView
-                  showsVerticalScrollIndicator={false}
-                  contentContainerStyle={{ paddingBottom: 120 }}
-              >
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: 120 }}
+      >
       <View className="flex-1 bg-background">
         {/* Icono de perfil */}
         <View className="flex-row justify-center my-7">
-          <TouchableOpacity>
+          <TouchableOpacity onPress={() => navigation.navigate('ProfileScreen')}>
             <Image
-              source={{ uri: 'https://i.pravatar.cc/100' }}
+              source={{ uri: user?.profileImageUrl }}
               className="w-20 h-20 rounded-full border"
             />
           </TouchableOpacity>
         </View>
 
         {/* Mensaje de bienvenida */}
-        <Text className="text-3xl font-roboto font-bold text-primary text-center mb-11">Bienvenido Adrián!</Text>
+        <Text className="text-3xl font-roboto font-bold text-primary text-center mb-11">Bienvenido, {user?.name}</Text>
 
         {/* Carrusel: Recientes */}
         <HorizontalItemsCarousel title="Recientes" data={recentItems} />
@@ -76,7 +78,7 @@ export default function HomeScreen() {
 
         {/* Carrusel: Recomendaciones */}
         <HorizontalItemsCarousel title="Recomendaciones" data={recommendations} />
-        <ListItem item={item} onPress={() => {}}/>
+
       </View>
       </ScrollView>
     </AppLayout>

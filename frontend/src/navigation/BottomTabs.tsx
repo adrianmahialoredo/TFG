@@ -3,17 +3,10 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import HomeScreen from '../screens/HomeScreen';
 import { Home, BookOpen, Music, Disc3 } from 'lucide-react-native';
 import { View } from 'react-native';
-import SongScreen from '../screens/SongScreen';
 import LearnScreen from '../screens/LearnScreen';
-import { COLORS } from '../constants/Theme';
 import GenresScreen from '../screens/GenresScreen';
 import SongsScreen from '../screens/SongsScreen';
-import GenreMainScreen from '../screens/GenreMainScreen';
-import RegisterScreen from '../screens/RegisterScreen';
-import LoginScreen from '../screens/LoginScreen';
-import ProfileScreen from '../screens/ProfileScreen';
-import ListScreen from '../screens/ListScreen';
-import AddItemScreen from '../screens/AddItemScreen';
+
 
 const Tab = createBottomTabNavigator();
 
@@ -50,9 +43,9 @@ export default function BottomTabs() {
       })}
     >
       <Tab.Screen name="Inicio" component={HomeScreen} />
-      <Tab.Screen name="Aprender" component={GenreMainScreen} />
-      <Tab.Screen name="Canciones" component={AddItemScreen} />
-      <Tab.Screen name="Generos" component={ProfileScreen} />
+      <Tab.Screen name="Aprender" component={LearnScreen} />
+      <Tab.Screen name="Canciones" component={SongsScreen} />
+      <Tab.Screen name="Generos" component={GenresScreen} />
     </Tab.Navigator>
   );
 }

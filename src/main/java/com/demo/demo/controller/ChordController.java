@@ -31,7 +31,7 @@ import org.springframework.http.HttpStatus;
  * @since 2025-06-06
  */
 @RestController
-@RequestMapping("/chords")
+@RequestMapping("/api/chords")
 @RequiredArgsConstructor
 public class ChordController {
 

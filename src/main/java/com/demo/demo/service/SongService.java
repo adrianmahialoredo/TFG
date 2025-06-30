@@ -91,6 +91,70 @@ public class SongService {
         return true;
     }
 
+    /**
+     * Fetches all songs by a specific decade and converts them to DTOs.
+     * 
+     * @param decade The decade to filter songs by (e.g., "1980s", "1990s").
+     * @return List of SongDTOs representing songs from the specified decade.
+     */
+    public List<SongDTO> getSongsByDecade(String decade) {
+        return songRepository.findByDecade(decade).stream()
+                .map(this::toDto)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Fetches all popular songs and converts them to DTOs.
+     * 
+     * @return List of SongDTOs representing popular songs.
+     */
+    public List<SongDTO> getPopularSongs() {
+        return songRepository.findAll().stream()
+                .filter(Song::isPopular)
+                .map(this::toDto)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Fetches all popular songs by genre and converts them to DTOs.
+     * 
+     * @param genreId The ID of the genre to filter popular songs by.
+     * @return List of SongDTOs representing popular songs in the specified genre.
+     */
+    public List<SongDTO> getPopularSongsByGenre(Long genreId) {
+        return songRepository.findAll().stream()
+                .filter(song -> song.getGenres().stream().anyMatch(genre -> genre.getId().equals(genreId)) && song.isGenrePopular())
+                .map(this::toDto)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Fetches all classic songs by gebnre and converts them to DTOs.
+     * 
+     * @param genreId The ID of the genre to filter classic songs by.
+     * @return List of SongDTOs representing classic songs in the specified genre.
+     */
+    public List<SongDTO> getClassicSongsByGenre(Long genreId) {
+        return songRepository.findAll().stream()
+                .filter(song -> song.getGenres().stream().anyMatch(genre -> genre.getId().equals(genreId)) && song.isGenreClassic())
+                .map(this::toDto)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Fetches all new songs by genre and converts them to DTOs.
+     * 
+     * @param genreId The ID of the genre to filter new songs by.
+     * @return List of SongDTOs representing new songs in the specified genre.
+     */
+    public List<SongDTO> getNewSongsByGenre(Long genreId) {
+        return songRepository.findAll().stream()
+                .filter(song -> song.getGenres().stream().anyMatch(genre -> genre.getId().equals(genreId)) && song.isGenreNew())
+                .map(this::toDto)
+                .collect(Collectors.toList());
+    }
+
+
     // -------- DTO Mapping --------
 
     /**

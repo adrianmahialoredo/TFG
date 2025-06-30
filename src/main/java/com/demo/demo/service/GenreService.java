@@ -105,16 +105,19 @@ public class GenreService {
         GenreDTO dto = new GenreDTO();
         dto.setId(genre.getId());
         dto.setName(genre.getName());
+        dto.setImageUrl(genre.getImageUrl());
         dto.setDescription(genre.getDescription());
         dto.setBannerUrl(genre.getBannerUrl());
-        dto.setWelcomeIntroVideo(genre.getWelcomeIntroVideo());
-        dto.setWelcomeSongVideo(genre.getWelcomeSongVideo());
+        dto.setWelcomeIntroVideoId(genre.getWelcomeIntroVideo());
+        dto.setWelcomeSongVideoId(genre.getWelcomeSongVideo());
 
+        if (genre.getSongs() == null) return dto;
         dto.setSongIds(genre.getSongs()
                 .stream()
                 .map(Song::getId)
                 .collect(Collectors.toList()));
 
+        if (genre.getLessons() == null) return dto;
         dto.setLessonIds(genre.getLessons()
                 .stream()
                 .map(Lesson::getId)
@@ -133,11 +136,17 @@ public class GenreService {
         Genre genre = new Genre(); 
         genre.setName(dto.getName());
         genre.setDescription(dto.getDescription());
+        genre.setImageUrl(dto.getImageUrl());
         genre.setBannerUrl(dto.getBannerUrl());
-        genre.setWelcomeIntroVideo(dto.getWelcomeIntroVideo());
-        genre.setWelcomeSongVideo(dto.getWelcomeSongVideo());
+        genre.setWelcomeIntroVideo(dto.getWelcomeIntroVideoId());
+        genre.setWelcomeSongVideo(dto.getWelcomeSongVideoId());
+
+        if (dto.getSongIds() == null) return genre;
         genre.setSongs(resolveSongs(dto.getSongIds()));
+
+        if (dto.getLessonIds() == null) return genre;
         genre.setLessons(resolveLessons(dto.getLessonIds()));
+        
         return genre;
     }
 
@@ -152,8 +161,8 @@ public class GenreService {
         existing.setName(dto.getName());
         existing.setDescription(dto.getDescription());
         existing.setBannerUrl(dto.getBannerUrl());
-        existing.setWelcomeIntroVideo(dto.getWelcomeIntroVideo());
-        existing.setWelcomeSongVideo(dto.getWelcomeSongVideo());
+        existing.setWelcomeIntroVideo(dto.getWelcomeIntroVideoId());
+        existing.setWelcomeSongVideo(dto.getWelcomeSongVideoId());
         existing.setSongs(resolveSongs(dto.getSongIds()));
         existing.setLessons(resolveLessons(dto.getLessonIds()));
         return existing;

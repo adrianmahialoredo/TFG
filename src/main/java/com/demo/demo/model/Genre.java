@@ -40,6 +40,8 @@ public class Genre extends Item {
      * Description of the genre.
      */
     @Lob
+    @Column(name = "description", nullable = false, columnDefinition = "TEXT")
+    @NotBlank
     private String description;
 
     /**

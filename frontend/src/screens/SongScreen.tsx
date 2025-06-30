@@ -75,7 +75,7 @@ function parseLyrics(lyrics: string): { chord?: string; text: string }[] {
   return result;
 }
 
-export default function SongScreen() {
+export default function SongScreen(song: Song) {
   const [selectedLevel, setSelectedLevel] = useState<SongLevel>(sampleSong.levels[0]);
   const lesson = sampleSong.lessons[selectedLevel];
   const parsedLyrics = parseLyrics(lesson.lyrics);
@@ -98,12 +98,12 @@ export default function SongScreen() {
 
       <View className="items-center mb-1 mx-4">
         <Image
-          source={{ uri: sampleSong.imageUrl }}
+          source={{ uri: song.imageUrl }}
           className="w-24 h-24 rounded-lg mb-2"
           resizeMode="cover"
         />
-        <Text className="text-songTitle text-base text-center">{sampleSong.title}</Text>
-        <Text className="text-artistName text-base text-center mb-2">{sampleSong.artist}</Text>
+        <Text className="text-songTitle text-base text-center">{song.title}</Text>
+        <Text className="text-artistName text-base text-center mb-2">{song.artist}</Text>
       </View>
 
         {/* Estrellas de dificultad */}

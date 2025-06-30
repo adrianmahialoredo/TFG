@@ -1,50 +1,50 @@
-import { CirclePlus } from "lucide-react-native";
-import { useState } from "react";
-import { TouchableOpacity, View, Text } from "react-native";
+import React, { useEffect, useState } from 'react';
+import { View, Text, TouchableOpacity } from 'react-native';
+import { GenreDTO } from '../types/GenreDTO';
+import { CirclePlus } from 'lucide-react-native';
+import { getStoredGenres } from '../services/storageService';
 
-const genres = [
-  "Rock",
-  "Pop",
-  "Jazz",
-  "Blues",
-  "Reggae",
-  "Metal",
-  "Hip-Hop",
-  "Country",
-  "Folk",
-  "Classical",
-  "Electronic",
-  "Latin",
-];
+type Props = {
+  onSelectionChange?: (selected: string[]) => void;
+};
 
-export default function GenrePicker() {
-    const [selectedGenres, setSelectedGenres] = useState<string[]>([]);
-    const toggleInstrument = (instrument: string) => {
+export default function GenrePicker({ onSelectionChange }: Props) {
+  const [genres, setGenres] = useState<GenreDTO[]>([]);
+  const [selectedGenres, setSelectedGenres] = useState<string[]>([]);
+
+  useEffect(() => {
+    const loadGenres = async () => {
+      const stored = await getStoredGenres();
+      if (stored) setGenres(stored);
+    };
+    loadGenres();
+  }, []);
+
+  useEffect(() => {
+    onSelectionChange?.(selectedGenres);
+  }, [selectedGenres]);
+
+  const toggleGenre = (id: string) => {
     setSelectedGenres((prev) =>
-      prev.includes(instrument)
-        ? prev.filter((i) => i !== instrument)
-        : [...prev, instrument]
+      prev.includes(id) ? prev.filter((g) => g !== id) : [...prev, id]
     );
   };
+
   return (
     <View className="mb-5">
-      <View className="flex-row flex-wrap justify-left gap-2 mb-4">
-        <Text className="text-base text-secondary font-semibold">
-          Escoge al menos un género
-        </Text>
-      </View>
+      <Text className="text-base text-secondary font-semibold mb-4">
+        Escoge al menos un género
+      </Text>
       <View className="flex-row flex-wrap justify-left gap-2">
         {genres.map((genre) => {
-          const isSelected = selectedGenres.includes(genre);
+          const isSelected = selectedGenres.includes(genre.id);
           return (
             <TouchableOpacity
-              key={genre}
-              className={`px-3 py-1 bg-secondary rounded-lg ${
-                  isSelected ? "opacity-60" : ""
-              }`}
-              onPress={() => toggleInstrument(genre)}
+              key={genre.id}
+              className={`px-3 py-1 bg-secondary rounded-lg ${isSelected ? "opacity-60" : ""}`}
+              onPress={() => toggleGenre(genre.id)}
             >
-              <Text className="text-primary text-base">{genre}</Text>
+              <Text className="text-primary text-base">{genre.name}</Text>
             </TouchableOpacity>
           );
         })}

@@ -2,26 +2,20 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, FlatList, Image, StyleSheet } from 'react-native';
 
-type ButtonItem = {
+type GenreButton = {
   id: string;
-  label: string;
-  imgUrl: string; // Puedes usar una URL o nombre de icono si usas vector icons
+  imageUrl: string; // Puedes usar una URL o nombre de icono si usas vector icons
   onPress: () => void;
 };
 
-type Props = {
-  title?: string;
-  data: ButtonItem[];
-};
-
-export default function VerticalButtonsCarousel({ title, data }: Props) {
-  const renderItem = ({ item }: { item: ButtonItem }) => (
+export default function VerticalButtonsCarousel({ data }: { data: GenreButton[] }) {
+  const renderItem = ({ item }: { item: GenreButton }) => (
     <TouchableOpacity
       className="mb-3 rounded-xl"
       onPress={item.onPress}
     >
       <Image
-        source={{ uri: item.imgUrl }}
+        source={{ uri: item.imageUrl }}
         className="w-[158px] h-[158px]"
         resizeMode="cover"
         borderRadius={12}

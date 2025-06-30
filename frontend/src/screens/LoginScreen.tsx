@@ -12,7 +12,7 @@ export default function LoginScreen() {
 
   const { login } = useAuth();
 
-  type LoginScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Login'>;
+  type LoginScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'LoginScreen'>;
 
   const navigation = useNavigation<LoginScreenNavigationProp>();
 
@@ -76,7 +76,10 @@ export default function LoginScreen() {
         >
           <Text className="text-primary text-lg self-center">Iniciar Sesión</Text>
         </TouchableOpacity>
-        <TouchableOpacity className="bg-primary border border-secondary px-6 py-3 rounded-lg w-full">
+        <TouchableOpacity 
+          className="bg-primary border border-secondary px-6 py-3 rounded-lg w-full" 
+          onPress={() => navigation.navigate("RegisterScreen")}
+        >
           <Text className="text-secondary text-lg self-center">Registrarse</Text>
         </TouchableOpacity>
       </View>

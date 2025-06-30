@@ -1,22 +1,24 @@
 import json
 import requests
 
-# URL de la API de Spring Boot donde quieres insertar los acordes
-api_url = 'http://localhost:8080/chords'
+# API URL
+api_url = 'http://localhost:8080/api/chords'
 
-# Cargar los acordes desde el archivo JSON
-with open('../data/chords.json', 'r') as file:  # Ajusta la ruta relativa
+# Load chords from JSON file
+with open('../data/chords.json', 'r') as file: 
     chords = json.load(file)
 
-# Función para insertar cada acorde
+# Function for inserting each chord
 def insert_chord(chord):
     response = requests.post(api_url, json=chord)
     
     if response.status_code == 201:  # HTTP 201: Created
-        print(f"Acorde '{chord['name']}' insertado correctamente.")
+        print(f"Chord '{chord['name']}' added succsesfully.")
     else:
-        print(f"Error al insertar el acorde '{chord['name']}': {response.status_code}, {response.text}")
+        print(f"Error when adding chord: '{chord['name']}': {response.status_code}, {response.text}")
 
-# Insertar todos los acordes en el archivo JSON
+# Insert every chord from the file
 for chord in chords:
     insert_chord(chord)
+
+

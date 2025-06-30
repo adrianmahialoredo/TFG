@@ -11,8 +11,9 @@ public class GenreDTO {
     private String name;
     private String description;
     private String bannerUrl;
-    private String welcomeIntroVideo;
-    private String welcomeSongVideo;
+    private String imageUrl;
+    private String welcomeIntroVideoId;
+    private String welcomeSongVideoId;
     private List<Long> songIds;
     private List<Long> lessonIds;
 

@@ -20,6 +20,11 @@ import org.springframework.http.HttpStatus;
  * Endpoints:
  * - GET /songs: Fetch all songs
  * - GET /songs/{id}: Fetch a specific song by ID
+ * - GET /songs/decades/{decade}: Fetch all songs by a specific decade
+ * - GET /songs/popular: Fetch all popular songs
+ * - GET /songs/popular/{id}: Fetch all popular songs by genre ID
+ * - GET /songs/new/{id}: Fetch all new songs by genre ID
+ * - GET /songs/classic/{id}: Fetch all classic songs by genre ID
  * - POST /songs: Create a new song
  * - PUT /songs/{id}: Update an existing song by ID
  * - DELETE /songs/{id}: Delete a song by ID
@@ -101,4 +106,59 @@ public class SongController {
         }
         return ResponseEntity.notFound().build();
     }
+
+    /**
+     * Fetches all songs by a specific decade and returns them as a list of SongDTOs.
+     *
+     * @param decade The decade to filter songs by.
+     * @return List of SongDTOs representing all songs from the specified decade.
+     */
+    @GetMapping("/decades/{decade}")
+    public List<SongDTO> getSongsByDecade(@PathVariable String decade) {
+        return songService.getSongsByDecade(decade);
+    }
+
+    /**
+     * Fetches all popular songs and returns them as a list of SongDTOs.
+     * 
+     * @return List of SongDTOs representing all popular songs.
+     */
+    @GetMapping("/popular")
+    public List<SongDTO> getPopularSongs() {
+        return songService.getPopularSongs();
+    }
+
+    /**
+     * Fetches all popular songs by a specific genre and returns them as a list of SongDTOs.
+     * 
+     * @param genre The genre to filter popular songs by.
+     * @return List of SongDTOs representing all popular songs from the specified genre.
+     */
+    @GetMapping("/popular/{id}")
+    public List<SongDTO> getPopularSongsByGenre(@PathVariable Long id) {
+        return songService.getPopularSongsByGenre(id);
+    }
+
+    /**
+     * Fetches all new songs by a specific genre and returns them as a list of SongDTOs.
+     * 
+     * @param genre The genre to filter new songs by.
+     * @return List of SongDTOs representing all new songs from the specified genre.
+     */
+    @GetMapping("/new/{id}")
+    public List<SongDTO> getNewSongsByGenre(@PathVariable Long id) {
+        return songService.getNewSongsByGenre(id);
+    }
+
+    /**
+     * Fetches all classic songs by a specific genre and returns them as a list of SongDTOs.
+     * 
+     * @param genre The genre to filter classic songs by.
+     * @return List of SongDTOs representing all classic songs from the specified genre.
+     */
+    @GetMapping("/classic/{id}")
+    public List<SongDTO> getClassicSongsByGenre(@PathVariable Long id) {
+        return songService.getClassicSongsByGenre(id);
+    }
+
 }

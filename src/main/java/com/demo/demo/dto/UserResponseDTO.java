@@ -1,14 +1,18 @@
 package com.demo.demo.dto;
 
-import lombok.AllArgsConstructor;
-import lombok.Data;
+import java.util.List;
+import lombok.*;
 
 @Data
-@AllArgsConstructor
+@NoArgsConstructor
 public class UserResponseDTO {
 
     private Long id;
     private String email;
     private String name; // o lo que tengas de usuario público
+    private String username;
+    private String profileImageUrl;
+    private List<Long> favouriteGenresIds;
+    private List<Long> favouriteInstrumentsIds;
 
 }

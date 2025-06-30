@@ -38,45 +38,43 @@ public abstract class Item {
      */
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    protected Long id;
 
     /**
      * Name of the item.
      * This field is optional and can be null.
      */
     @Column(nullable = true)
-    private String name;
-
-    /**
-     * Description of the item.
-     * This field is optional and can be null.
-     */
-    private String description;
+    protected String name;
 
     /**
      * URL of the image representing the item.
      * This field is optional and can be null.
      */
-    private String imageUrl;
+    @Column(nullable = false)
+    protected String imageUrl;
 
     /**
      * Level of the item, represented as a rating between 1 and 5 stars.
      * This field is optional and can be null.
      */
-    private int level;  // between 1 and 5 stars
+    @Column(nullable = true)
+    protected int level;  // between 1 and 5 stars
 
     /**
      * Timestamp indicating when the item was created.
      * This field is automatically set to the current date and time when the item is created.
      */
-    private LocalDateTime createdAt = LocalDateTime.now();
-    
+    @Column(nullable = true)
+    protected LocalDateTime createdAt = LocalDateTime.now();
+
     /**
      * Type of the item, represented as an enum.
      * This field is used to categorize the item into different types such as Song, Lesson, Genre, or InstrumentGenre.
      */
+    @Column(nullable = true)
     @Enumerated(EnumType.STRING)
-    private Type type;
+    protected Type type;
 
     /**
      * Enum representing the different types of items.

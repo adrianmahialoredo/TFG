@@ -40,18 +40,18 @@ public class Instrument {
     private Long id;
 
     /**
+     * URL of the image representing the item.
+     * This field is optional and can be null.
+     */
+    @Column(nullable = false)
+    protected String imageUrl;
+
+    /**
      * Name of the instrument.
      * This field is required and must be unique.
      */
     @Column(nullable = false, unique = true)
     private String name;
-
-    /**
-     * URL of the image representing the instrument.
-     * This field is optional and can be null.
-     */
-    @Column(nullable = true)
-    private String imageUrl;
 
     /**
      * Set of songs associated with the instrument.

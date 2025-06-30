@@ -1,11 +1,9 @@
 package com.demo.demo.controller;
 
 import com.demo.demo.dto.UserDto;
-import com.demo.demo.model.User;
 import com.demo.demo.service.UserService;
 import com.demo.demo.model.LoginResponse;
 import lombok.RequiredArgsConstructor;
-
 import java.io.Console;
 import java.util.Map;
 import org.springframework.http.*;
@@ -23,7 +21,7 @@ public class AuthController {
     @PostMapping("/register")
     public ResponseEntity<?> register(@Valid @RequestBody UserDto userDto) {
         try {
-            User user = userService.registerUser(userDto);
+            UserDto user = userService.registerUser(userDto);
             return ResponseEntity.ok("User registered successfully: " + user.getEmail());
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(e.getMessage());

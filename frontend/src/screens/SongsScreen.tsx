@@ -3,6 +3,7 @@ import AppLayout from "../components/AppLayout";
 import { useState } from "react";
 import SearchBar from "../components/SearchBar";
 import HorizontalSongsCarousel from "../components/carousels/SongsCarousel";
+import ProfileHeader from "../components/ProfileHeader";
 
 const recommendations = [
   { id: '1', title: 'Canción recomendada', imgUrl: 'https://upload.wikimedia.org/wikipedia/en/thumb/e/e8/Taylor_Swift_-_Red.png/250px-Taylor_Swift_-_Red.png' },
@@ -21,16 +22,7 @@ export default function SongScreen() {
     <AppLayout>
       <View className = "bg-background flex-1 pt-2">
 
-        {/* Icono de perfil y titulo */}
-        <View className="flex-row justify-left items-center mt-6 mb-7">
-          <TouchableOpacity>
-            <Image
-              source={{ uri: 'https://i.pravatar.cc/100' }}
-              className="w-14 h-14 rounded-full border"
-            />
-          </TouchableOpacity>
-          <Text className="text-[24px] font-roboto font-bold text-primary text-center ml-3">Canciones</Text>
-        </View> 
+        <ProfileHeader title="Canciones" />
 
         {/* Barra de búsqueda */}
         <View className="bg-background mt-3 mb-4">

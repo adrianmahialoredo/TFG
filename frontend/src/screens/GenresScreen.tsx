@@ -1,57 +1,59 @@
 import { ScrollView, View, TouchableOpacity, Image, Text} from "react-native";
 import AppLayout from "../components/AppLayout";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import SearchBar from "../components/SearchBar";
-import HorizontalSongsCarousel from "../components/carousels/SongsCarousel";
 import VerticalButtonsCarousel from "../components/carousels/GenresCarousel";
-
-const genres = [
-  { id: '1', label: 'Pop Punk', imgUrl: 'https://i.ibb.co/ccNvtdqm/poppunk.jpg', onPress: () => {} },
-  { id: '2', label: 'Nueva Ola', imgUrl: 'https://i.ibb.co/rRNsSWQ9/nuevaola.jpg', onPress: () => {} },
-  { id: '3', label: 'Pop Rock', imgUrl: 'https://i.ibb.co/Vc1VD22p/poprock.jpg', onPress: () => {} },
-  { id: '4', label: 'Rock & Roll', imgUrl: 'https://i.ibb.co/67L3VGRr/rock2.jpg', onPress: () => {} },
-  { id: '5', label: 'Country', imgUrl: 'https://i.ibb.co/mrhxjCTS/country.jpg', onPress: () => {} },
-  { id: '6', label: 'Funk', imgUrl: 'https://i.ibb.co/Kc0Pkvd5/funk.jpg', onPress: () => {} },
-  { id: '7', label: 'Pop Punk', imgUrl: 'https://i.ibb.co/ccNvtdqm/poppunk.jpg', onPress: () => {} },
-  { id: '8', label: 'Nueva Ola', imgUrl: 'https://i.ibb.co/rRNsSWQ9/nuevaola.jpg', onPress: () => {} },
-  { id: '9', label: 'Pop Rock', imgUrl: 'https://i.ibb.co/Vc1VD22p/poprock.jpg', onPress: () => {} },
-  { id: '10', label: 'Rock & Roll', imgUrl: 'https://i.ibb.co/67L3VGRr/rock2.jpg', onPress: () => {} },
-  { id: '11', label: 'Country', imgUrl: 'https://i.ibb.co/mrhxjCTS/country.jpg', onPress: () => {} },
-  { id: '12', label: 'Funk', imgUrl: 'https://i.ibb.co/Kc0Pkvd5/funk.jpg', onPress: () => {} },
-];
-
+import { GenreDTO } from "../types/GenreDTO";
+import { getAllGenres } from "../services/genreService";
+import { useNavigation } from "@react-navigation/native";
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { RootStackParamList } from "../types/RootStackParamList";
+import ProfileHeader from "../components/ProfileHeader";
 
 export default function GenresScreen() {
 
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const [query, setQuery] = useState('');
+  const [genres, setGenres] = useState<
+    { id: string; imageUrl: string; onPress: () => void }[]
+  >([]);
+
+  useEffect(() => {
+    const fetchGenres = async () => {
+      try {
+        const genresFromApi: GenreDTO[] = await getAllGenres();
+        const formattedGenres = genresFromApi.map((genre) => ({
+          id: genre.id,
+          imageUrl: genre.imageUrl,
+          onPress: () => navigation.navigate('GenreMainScreen', { genreId: genre.id }),
+        }));
+        setGenres(formattedGenres);
+      } catch (error) {
+        console.error('Error al obtener géneros:', error);
+      }
+    };
+
+    fetchGenres();
+  }, []);
 
   return (
     <AppLayout>
       <View className = "bg-background flex-1 pt-2">
 
         {/* Icono de perfil y titulo */}
-        <View className="flex-row justify-left items-center mt-6 mb-7">
-          <TouchableOpacity>
-            <Image
-              source={{ uri: 'https://i.pravatar.cc/100' }}
-              className="w-14 h-14 rounded-full border"
-            />
-          </TouchableOpacity>
-          <Text className="text-[24px] font-roboto font-bold text-primary text-center ml-3">Géneros</Text>
-        </View> 
-
-        {/* Barra de búsqueda */}
-        <View className="bg-background mt-3 mb-10">
-          <SearchBar value={query} onChangeText={setQuery} />
-          {/* Aquí puedes mostrar resultados filtrados */}
-        </View>
+        <ProfileHeader title="Géneros" />
     
         <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 120 }}
         >
+        {/* Barra de búsqueda */}
+        <View className="bg-background mt-3 mb-10">
+          <SearchBar value={query} onChangeText={setQuery} />
+          {/* Aquí puedes mostrar resultados filtrados */}
+        </View>
         
-        <VerticalButtonsCarousel title="Géneros" data={genres} />
+        <VerticalButtonsCarousel data={genres} />
 
         </ScrollView>
       </View>

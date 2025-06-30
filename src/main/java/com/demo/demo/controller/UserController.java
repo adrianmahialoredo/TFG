@@ -1,7 +1,6 @@
 package com.demo.demo.controller;
 
 import com.demo.demo.dto.UserDto;
-import com.demo.demo.model.User;
 import com.demo.demo.service.UserService;
 import lombok.RequiredArgsConstructor;
 import java.util.List;
@@ -18,17 +17,17 @@ public class UserController {
     private final UserService userService;
 
     @GetMapping
-    public List<User> getAllUsers() {
+    public List<UserDto> getAllUsers() {
         return userService.getAllUsers();
     }
 
     @GetMapping("/{id}")
-    public User getUserById(@PathVariable Long id) {
+    public UserDto getUserById(@PathVariable Long id) {
         return userService.getUserById(id);
     }
 
     @PutMapping("/{id}")
-    public User updateUser(@PathVariable Long id, @RequestBody UserDto updatedUser) {
+    public UserDto updateUser(@PathVariable Long id, @RequestBody UserDto updatedUser) {
         return userService.updateUser(id, updatedUser);
     }
 

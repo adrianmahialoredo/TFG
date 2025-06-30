@@ -1,4 +1,4 @@
-import { Image, View, Text, FlatList, TouchableOpacity } from 'react-native';
+import { Image, View, Text, FlatList, TouchableOpacity, Dimensions } from 'react-native';
 import React from 'react';
 
 type Item = {
@@ -12,25 +12,32 @@ type CarouselProps = {
   data: Item[];
 };
 
+/* NO TOCAR POR DIOS */
+const screenWidth = Dimensions.get('window').width;
+const padding = 18;
+const spacing = 18;
+const buttonSize = (screenWidth - padding * 2 - spacing * 2) / 3;
+
 export default function HorizontalItemsCarousel({ title, data }: CarouselProps) {
 
   const renderItem = ({ item }: { item: Item }) => (
-    <View className="w-[72px] bg-surface rounded-xl">
+    <View className="bg-surface rounded-xl" style={{width: buttonSize}}>
       <TouchableOpacity>
         <Image
           source={{ uri: item.imgUrl }}
-          className="w-[72px] h-[72px] mb-1"
+          className="mb-1"
+          style={{ width: buttonSize, height: buttonSize }}
           resizeMode="cover"
         />
       </TouchableOpacity>
-      <Text className="text-songTitle text-[8px] leading-tight"
+      <Text className="text-songTitle text-[12px] leading-tight"
         numberOfLines={1}
         ellipsizeMode="tail"
         style={{ flexWrap: 'wrap' }}
       >
         {item.title}
       </Text>
-      <Text className="text-artistName text-[8px] leading-tight"
+      <Text className="text-artistName text-[12px] leading-tight"
         numberOfLines={1}
         ellipsizeMode="tail"
         style={{ flexWrap: 'wrap' }}

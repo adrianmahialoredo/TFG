@@ -9,7 +9,7 @@ export const login = async (email: string, password: string): Promise<{ token: s
   return response.data;
 };
 
-export const register = async (email: string, password: string): Promise<{ token: string; user: UserDTO }> => {
-  const response = await axios.post(`${API_URL}/auth/register`, { email, password });
+export const register = async (user: UserDTO): Promise<{ user: UserDTO }> => {
+  const response = await axios.post(`${API_URL}/auth/register`, user);
   return response.data;
 };

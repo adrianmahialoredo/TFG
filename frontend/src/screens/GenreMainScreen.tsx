@@ -3,34 +3,35 @@ import AppLayout from "../components/AppLayout";
 import { Image, Text, TouchableOpacity } from "react-native";
 import { StyleSheet } from "react-native";
 import TopButton from "../components/buttons/TopButton";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import GenreInstruments from "../components/GenreInstruments";
 import GenreSongs from "../components/GenreSongs";
 import GenreDescription from "../components/GenreDescription";
+import { GenreDTO } from "../types/GenreDTO";
+import { getGenreById } from "../services/genreService";
+import { useRoute } from "@react-navigation/native";
 
-type Genre = {
-  id: string;
-  name: string;
-  bannerUrl: string;
-  welcomeVideoId: string;
-  welcomeSongId: string;
-  description: string;
-}
-
-const poppunk: Genre = {
-  id: '1',
-  name: 'Pop Punk',
-  bannerUrl: 'https://i.ibb.co/wr4BSxk6/36ffe640309721-5790d08d50f7d.png',
-  welcomeVideoId: 'hoKPrLBDcl8',
-  welcomeSongId: 'CMX2lPum_pg',
-  description: `El pop punk es un subgénero del punk rock que combina melodías pegajosas con la energía cruda del punk. Surgió en la década de 1970 y ha influido en bandas como Blink-182 y Green Day. Es conocido por sus letras emocionales y ritmos rápidos, convirtiéndose en un favorito entre los jóvenes. El pop punk ha evolucionado a lo largo de los años, incorporando elementos de otros géneros como el emo y el pop rock, pero siempre manteniendo su esencia rebelde y divertida.
-
-El pop punk es un subgénero del punk rock que combina melodías pegajosas con la energía cruda del punk. Surgió en la década de 1970 y ha influido en bandas como Blink-182 y Green Day. Es conocido por sus letras emocionales y ritmos rápidos, convirtiéndose en un favorito entre los jóvenes. El pop punk ha evolucionado a lo largo de los años, incorporando elementos de otros géneros como el emo y el pop rock, pero siempre manteniendo su esencia rebelde y divertida.`
-};
 
 export default function GenreMainScreen() {
 
+  const route = useRoute();
+  const { genreId } = route.params as { genreId: string };
+
   const [selectedTab, setSelectedTab] = useState<'Instrumentos' | 'Canciones' | 'Género'>('Género');
+  const [genre, setGenre] = useState<GenreDTO>();
+
+  useEffect(() => {
+    const fetchGenre = async () => {
+      try {
+        const data = await getGenreById(genreId);
+        setGenre(data);
+      } catch (error) {
+        console.error('Error al cargar el género:', error);
+      }
+    };
+
+    fetchGenre();
+  }, [genreId]);
 
   return (
     <AppLayout>
@@ -59,7 +60,7 @@ export default function GenreMainScreen() {
 
         <View className="">
             <Text className="text-[24px] font-roboto font-semibold text-primary text-center mb-2">
-                {poppunk.name}
+                {genre?.name}
             </Text>
         </View>
 
@@ -67,10 +68,10 @@ export default function GenreMainScreen() {
         {selectedTab === 'Canciones' && <GenreSongs description="songds" />}
         {selectedTab === 'Género' && 
           <GenreDescription 
-            description= {poppunk.description}
-            bannerUrl={poppunk.bannerUrl} 
-            welcomeVideoId={poppunk.welcomeVideoId} 
-            welcomeSongId={poppunk.welcomeSongId} 
+            description={genre?.description ?? ""}
+            bannerUrl={genre?.bannerUrl ?? ""} 
+            welcomeVideoId={genre?.welcomeIntroVideoId ?? ""} 
+            welcomeSongId={genre?.welcomeSongVideoId ?? ""} 
           />}
 
       </View>
