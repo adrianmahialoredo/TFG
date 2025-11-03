@@ -1,7 +1,7 @@
-// context/AuthContext.tsx
 import { createContext, useContext, useState, useEffect } from 'react';
 import { UserDTO } from '../types/UserDTO';
-import { getStoredUser, storeGenres, storeUserData } from '../services/storageService';
+import { getStoredUser, storeUserData } from '../services/storage/userStorageService';
+import { storeGenres } from '../services/storage/genreStorageService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AuthContextType } from '../types/AuthContextType';
 import { login as loginRequest } from '../services/authService';

@@ -3,7 +3,7 @@ import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { TouchableOpacity, View, Image, Text } from "react-native";
 import { RootStackParamList } from "../types/RootStackParamList";
 import { useEffect, useState } from "react";
-import { getStoredUser } from "../services/storageService";
+import { getStoredUser } from "../services/storage/userStorageService";
 import { UserDTO } from "../types/UserDTO";
 
 export default function ProfileHeader({title} : {title: string}) {

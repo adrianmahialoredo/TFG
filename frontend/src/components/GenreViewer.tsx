@@ -3,7 +3,7 @@ import { TouchableOpacity, View, Text } from "react-native";
 import { COLORS } from "../constants/Theme";
 import { UserDTO } from "../types/UserDTO";
 import { useEffect, useState } from "react";
-import { getStoredGenresByIdList, getStoredUser } from "../services/storageService";
+import { getStoredGenresByIdList, getStoredUser } from "../services/storage/storageService";
 import { GenreDTO } from "../types/GenreDTO";
 
 export default function GenreViewer() {

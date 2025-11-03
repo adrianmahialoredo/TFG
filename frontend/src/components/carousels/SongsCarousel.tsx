@@ -14,7 +14,7 @@ type CarouselProps = {
   data: Item[];
 };
 
-export default function HorizontalItemsCarousel({ title, data }: CarouselProps) {
+export default function SongsCarousel({ title, data }: CarouselProps) {
   const navigation = useNavigation();
   const renderItem = ({ item }: { item: Item }) => (
     <View className="w-[72px] bg-surface rounded-xl">

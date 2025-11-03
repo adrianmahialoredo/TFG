@@ -1,15 +1,18 @@
-import { ScrollView, View, Image, Text, TextInput, TouchableOpacity, Modal, Pressable } from "react-native";
+import { ScrollView, View, Image, Text, TextInput, TouchableOpacity, Modal, Pressable, Alert } from "react-native";
 import AppLayout from "../components/AppLayout";
-import { Copy } from "lucide-react-native";
+import { Copy, List } from "lucide-react-native";
 import React, { useEffect, useState } from "react";
 import Slider from '@react-native-community/slider';
 import GenreViewer from "../components/GenreViewer";
 import InstrumentViewer from "../components/InstrumentViewer";
 import { COLORS } from "../constants/Theme";
-import { getStoredUser, storeUserData } from "../services/storageService";
+import { getStoredUser, storeUserData } from "../services/storage/userStorageService";
 import { UserDTO } from "../types/UserDTO";
 import * as ImagePicker from 'expo-image-picker';
 import { updateUserProfile } from "../services/userService";
+import * as Clipboard from 'expo-clipboard';
+import ListCarousel from "../components/carousels/ListCarousel";
+import { SpotifyButton } from "../components/buttons/SpotifyButton";
 
 export default function ProfileScreen() {
 
@@ -98,8 +101,13 @@ export default function ProfileScreen() {
       await storeUserData(token, updatedUser);
       await updateUserProfile(updatedUser);
       setUser(updatedUser);
-      alert("Perfil actualizado correctamente");
+      Alert.alert("Perfil actualizado correctamente");
     }
+  };
+
+  const handleCopy = async () => {
+    await Clipboard.setStringAsync(user?.id?.toString() || '');
+    /* Alert.alert("El texto se ha copiado al portapapeles correctamente"); /* poner? */
   };
 
   return (
@@ -118,7 +126,7 @@ export default function ProfileScreen() {
           <Text className="text-2xl font-bold text-primary mb-3">@{user?.username}</Text>
           <View className="flex-row gap-2">
             <Text className="text-xl font-bold text-secondary mb-3">#{user?.id}</Text>
-            <Copy size={20} color="white" strokeWidth={1} />
+            <Copy size={20} color="white" strokeWidth={1} onPress={handleCopy}/>
           </View>
 
           {/* Modal de opciones */}
@@ -176,6 +184,8 @@ export default function ProfileScreen() {
             thumbTintColor= {COLORS.secondary}
           />
         </View>
+        
+        <ListCarousel data={[]} />
 
         <View className="h-px bg-primary my-4 h-2.5 w-full" />
 
@@ -227,9 +237,7 @@ export default function ProfileScreen() {
           >
             <Text className="text-primary text-lg self-center">Guardar ajustes</Text>
           </TouchableOpacity>
-          <TouchableOpacity className="bg-spotify px-4 py-3 rounded-full self-center">
-            <Text className="text-secondary text-lg self-center">Conectar con Spotify</Text>
-          </TouchableOpacity>
+          <SpotifyButton />
           <TouchableOpacity className="bg-secondary px-4 py-3 rounded-full self-center">
             <Text className="text-primary text-lg self-center">Cambiar contraseña</Text>
           </TouchableOpacity>

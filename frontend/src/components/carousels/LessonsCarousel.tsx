@@ -12,7 +12,7 @@ type CarouselProps = {
   data: Item[];
 };
 
-export default function HorizontalItemsCarousel({ title, data }: CarouselProps) {
+export default function LessonsCarousel({ title, data }: CarouselProps) {
 
   const renderItem = ({ item }: { item: Item }) => (
     <View className="w-[51px] bg-surface rounded-xl">

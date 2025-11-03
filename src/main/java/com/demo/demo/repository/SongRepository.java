@@ -1,11 +1,8 @@
 package com.demo.demo.repository;
 
-import com.demo.demo.dto.SongDTO;
 import com.demo.demo.model.Song;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
-
-import java.util.Collection;
 import java.util.List;
 
 /**
@@ -20,6 +17,10 @@ import java.util.List;
  */
 @Repository
 public interface SongRepository extends JpaRepository<Song, Long> {
+
+    Song findByTitle(String title);
+
+    Song findById(long id);
 
     /**
      * Finds all songs associated with a specific genre ID.

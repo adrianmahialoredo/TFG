@@ -9,10 +9,14 @@ import GenreSongs from "../components/GenreSongs";
 import GenreDescription from "../components/GenreDescription";
 import { GenreDTO } from "../types/GenreDTO";
 import { getGenreById } from "../services/genreService";
-import { useRoute } from "@react-navigation/native";
+import { useNavigation, useRoute } from "@react-navigation/native";
+import { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { RootStackParamList } from "../types/RootStackParamList";
 
 
 export default function GenreMainScreen() {
+
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
   const route = useRoute();
   const { genreId } = route.params as { genreId: string };
@@ -40,7 +44,9 @@ export default function GenreMainScreen() {
         {/* Icono de perfil y botones */}
         <View className="flex-row justify-left items-center mt-6 mb-11 gap-2.5">
 
-          <TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => navigation.navigate('ProfileScreen')}
+          >
             <Image
               source={{ uri: 'https://i.pravatar.cc/100' }}
               className="w-14 h-14 rounded-full border"

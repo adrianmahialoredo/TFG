@@ -4,7 +4,6 @@ import { View, ScrollView, Text } from "react-native";
 import LessonsCarousel from "./carousels/LessonsCarousel";
 import { ToolButton } from "./buttons/ToolButton";
 import { Guitar, Keyboard, Drum} from 'lucide-react-native';
-import SlidePanel from "./SlidePanel";
 import InstrumentGenre from "./InstrumentGenre";
 
 const recommendations = [

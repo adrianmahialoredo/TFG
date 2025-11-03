@@ -3,12 +3,12 @@
 import { Dimensions, View, Text, TouchableOpacity, Image, ScrollView } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Activity, CircleCheckBig, Headphones, List } from 'lucide-react-native';
-import HorizontalItemsCarousel from '../components/carousels/HorizontalItemsCarousel'; // Asegúrate de que la ruta es correcta
-import AppLayout from '../components/AppLayout'; // Asegúrate de que la ruta es correcta
+import HorizontalItemsCarousel from '../components/carousels/HorizontalItemsCarousel';
+import AppLayout from '../components/AppLayout'; 
 import { ToolButton } from '../components/buttons/ToolButton';
 import { useEffect, useState } from 'react';
 import { UserDTO } from '../types/UserDTO';
-import { getStoredUser } from '../services/storageService';
+import { getStoredUser } from '../services/storage/userStorageService';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../types/RootStackParamList';
 

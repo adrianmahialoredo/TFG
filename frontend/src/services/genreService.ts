@@ -2,7 +2,7 @@
 import axios from 'axios';
 import { GenreDTO } from '../types/GenreDTO';
 
-const API_URL = 'http://192.168.0.22:8080/genres'; // misma base que en tu servicio de auth
+const API_URL = 'http://192.168.0.22:8080/genres'; 
 
 export const getAllGenres = async (): Promise<GenreDTO[]> => {
   const response = await axios.get(`${API_URL}`);

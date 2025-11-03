@@ -16,8 +16,6 @@ import EdgeButton from './buttons/EdgeButton';
 // Obtenemos las dimensiones de la pantalla del dispositivo
 const { width, height } = Dimensions.get('window');
 
-
-
 type Lesson = {
   id: string;
   title: string;
@@ -258,33 +256,3 @@ export default function EdgePanel({ lessons, onSelectLesson }: Props){
     </>
   );
 };
-
-/**
- * VENTAJAS DE USAR NATIVEWIND:
- * 
- * 1. SINTAXIS FAMILIAR:
- *    - Usa clases de Tailwind CSS que ya conoces
- *    - Más legible y conciso que StyleSheet
- * 
- * 2. DESARROLLO MÁS RÁPIDO:
- *    - No necesitas cambiar entre JSX y StyleSheet
- *    - Autocompletado de clases en tu editor
- * 
- * 3. CONSISTENCIA:
- *    - Misma sintaxis que Tailwind en web
- *    - Fácil migración entre proyectos
- * 
- * 4. RESPONSIVE:
- *    - Clases responsive integradas
- *    - Mejor control de espaciado y sizing
- * 
- * 5. MANTENIMIENTO:
- *    - Estilos inline más fáciles de mantener
- *    - No más objetos de estilo separados
- * 
- * CONFIGURACIÓN REQUERIDA:
- * - npm install nativewind
- * - npm install --save-dev tailwindcss
- * - Configurar tailwind.config.js
- * - Configurar babel.config.js
- */

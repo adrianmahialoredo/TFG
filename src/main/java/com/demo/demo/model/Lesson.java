@@ -1,7 +1,6 @@
 package com.demo.demo.model;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 import lombok.*;
 import jakarta.persistence.*;
 
@@ -45,7 +44,7 @@ public class Lesson extends Item {
      */
     @ManyToOne
     @JoinColumn(name = "genre_id")
-    private Genre genre;    // The genre to which the lesson belongs, if any
+    private Genre genre;   
 
     /**
      * List of sections that make up the lesson.
