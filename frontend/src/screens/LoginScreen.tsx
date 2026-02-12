@@ -21,13 +21,13 @@ export default function LoginScreen() {
 
   const handleLogin = async () => {
     try {
-      await login(email, password);
+      //await login(email, password);
       navigation.reset({
       index: 0,
       routes: [{ name: 'BottomTab' }],
     });
     } catch (error) {
-      console.error('Login failed', error);
+      console.error('Login failed: ', error);
     }
   };
 

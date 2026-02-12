@@ -71,7 +71,8 @@ export default function HomeScreen() {
 
         {/* Botones de herramientas */}
         <View className="flex-row justify-between mt-12 mb-11">
-          <ToolButton icon={<Activity size={75} color="white" strokeWidth={1} />} label="Metrónomo" />
+          <ToolButton icon={<Activity size={75} color="white" strokeWidth={1} />} label="Metrónomo"
+                      onPress={() => navigation.navigate("MetronomeScreen")}/>
           <ToolButton icon={<CircleCheckBig size={75} color="white" strokeWidth={1} />} label="Afinador" />
           <ToolButton icon={<Headphones size={75} color="white" strokeWidth={1} />} label="Identificador" />
         </View>

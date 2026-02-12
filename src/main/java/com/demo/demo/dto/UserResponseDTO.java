@@ -9,7 +9,7 @@ public class UserResponseDTO {
 
     private Long id;
     private String email;
-    private String name; // o lo que tengas de usuario público
+    private String name;
     private String username;
     private String profileImageUrl;
     private List<Long> favouriteGenresIds;

@@ -8,6 +8,7 @@ import { RootStackParamList } from '../types/RootStackParamList';
 import GenreMainScreen from '../screens/GenreMainScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import RegisterScreen from '../screens/RegisterScreen';
+import MetronomeScreen from "../screens/MetronomeScreen";
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -20,6 +21,7 @@ export default function AppNavigator() {
       <Stack.Screen name="SongScreen" component={SongScreen} />
       <Stack.Screen name="GenreMainScreen" component={GenreMainScreen} />
       <Stack.Screen name="ProfileScreen" component={ProfileScreen} />
+        <Stack.Screen name={"MetronomeScreen"} component={MetronomeScreen} />
     </Stack.Navigator>
   );
 }
