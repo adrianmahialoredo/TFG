@@ -45,10 +45,9 @@ public class User implements UserDetails {
     @Column(nullable = false)
     private String password;
 
-    @Column(nullable = true)
+    @Column(nullable = false)
     private String name;
 
-    @Column(nullable = true)
     private String profileImageUrl;
 
     @Enumerated(EnumType.STRING)

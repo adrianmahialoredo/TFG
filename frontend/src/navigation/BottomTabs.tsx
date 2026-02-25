@@ -1,4 +1,4 @@
-// src/navigation/BottomTabs.tsx
+ // src/navigation/BottomTabs.tsx
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import HomeScreen from '../screens/HomeScreen';
 import { Home, BookOpen, Music, Disc3 } from 'lucide-react-native';

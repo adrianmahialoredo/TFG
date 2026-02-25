@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 import { UserDTO } from '../types/UserDTO';
 import { getStoredUser, storeUserData } from '../services/storage/userStorageService';
 import { storeGenres } from '../services/storage/genreStorageService';

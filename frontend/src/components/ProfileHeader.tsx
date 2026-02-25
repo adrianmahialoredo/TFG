@@ -12,16 +12,16 @@ export default function ProfileHeader({title} : {title: string}) {
 
     const [user, setUser] = useState<UserDTO | null>(null);
     
-      useEffect(() => {
-          const loadUser = async () => {
-            const data = await getStoredUser();
-            if (data) {
-              setUser(data.user);
-            }
-          };
-      
-          loadUser();
-        }, []);
+    useEffect(() => {
+      const loadUser = async () => {
+        const data = await getStoredUser();
+        if (data) {
+          setUser(data.user);
+        }
+      };
+
+      loadUser();
+    }, []);
 
     return (
       <View className="flex-row justify-left items-center mt-6 mb-7">

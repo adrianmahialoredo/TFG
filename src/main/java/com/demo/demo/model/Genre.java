@@ -77,7 +77,6 @@ public class Genre extends Item {
      * Relation with Song
      * This is a many-to-many relationship, meaning that many songs can belong to many genres.
      * A genre can have multiple songs, and a song can be associated with multiple genres.
-     * A song can be associated with multiple genres, and a genre can have multiple songs.
      */
     @ManyToMany(mappedBy = "genres")
     private Set<Song> songs = new HashSet<>();

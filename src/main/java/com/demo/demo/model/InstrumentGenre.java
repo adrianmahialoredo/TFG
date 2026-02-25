@@ -48,7 +48,7 @@ public class InstrumentGenre extends Item {
     /**
      * Relation InstrumentGenre - Genre
      * This is a many-to-one relationship, meaning that many InstrumentGenres can belong to the same Genre.
-     * An InstrumentGenre can be associated with one Genre, but a Genre can have many InstrumentGenres.
+     * An InstrumentGenre can only be associated with one Genre, but a Genre can have many InstrumentGenres.
      */
     @NotBlank
     @ManyToOne
