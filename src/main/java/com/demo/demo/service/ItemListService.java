@@ -7,6 +7,7 @@ import com.demo.demo.repository.*;
 import java.util.*;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * Service class for managing item lists.
@@ -21,6 +22,7 @@ import lombok.RequiredArgsConstructor;
  * @version 1.0
  * @since 2025-06-06
  */
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class ItemListService {
@@ -36,6 +38,28 @@ public class ItemListService {
      */
     public List<ItemListDTO> getAllItemLists() {
         return itemListRepository.findAll().stream()
+                .map(this::toDTO)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Retrieves all item list IDs associated with a specific user.
+     *
+     * @param userId The ID of the user.
+     * @return A list of item list IDs for the user.
+     */
+    public List<Long> getAllItemListIdsByUserId(Long userId) {
+        return itemListRepository.findIdsByUserId(userId);
+    }
+
+    /**
+     * Retrieves all item lists by a list of IDs and converts them to DTOs.
+     *
+     * @param ids The list of item list IDs to retrieve.
+     * @return A list of ItemListDTOs representing all item lists with the provided IDs.
+     */
+    public List<ItemListDTO> getAllItemListsByIds(List<Long> ids) {
+        return itemListRepository.findAllById(ids).stream()
                 .map(this::toDTO)
                 .collect(Collectors.toList());
     }
@@ -70,9 +94,9 @@ public class ItemListService {
      * @return An Optional containing the updated ItemListDTO if found, otherwise empty.
      */
     public Optional<ItemListDTO> updateItemList(Long id, ItemListDTO dto) {
-        return itemListRepository.findById(id).map(existing -> {
-            return toDTO(itemListRepository.save(updateItemListFromDto(existing, dto)));
-        });
+        return itemListRepository.findById(id).map(
+                existing -> toDTO(itemListRepository.save(updateItemListFromDto(existing, dto)))
+        );
     }
 
     /**

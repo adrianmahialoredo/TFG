@@ -8,9 +8,9 @@ import AppLayout from '../components/AppLayout';
 import { ToolButton } from '../components/buttons/ToolButton';
 import { useEffect, useState } from 'react';
 import { UserDTO } from '../types/UserDTO';
-import { getStoredUser } from '../services/storage/userStorageService';
+import { getStoredUser } from '../local/user.local';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { RootStackParamList } from '../types/RootStackParamList';
+import { RootStackParamList } from '../types';
 
 const recentItems = [
   { id: '1', title: 'Lección de guitarra', imgUrl: 'https://upload.wikimedia.org/wikipedia/en/thumb/e/e8/Taylor_Swift_-_Red.png/250px-Taylor_Swift_-_Red.png' },

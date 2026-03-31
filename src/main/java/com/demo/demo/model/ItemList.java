@@ -2,6 +2,7 @@ package com.demo.demo.model;
 
 import java.util.*;
 import jakarta.persistence.*;
+import jakarta.validation.constraints.*;
 import lombok.*;
 
 /**
@@ -40,6 +41,8 @@ public class ItemList {
      * This field is required and cannot be null.
      */
     @Column(nullable = false)
+    @NotBlank(message = "Item list name cannot be blank")
+    @Size(min = 2, max = 100, message = "Item list name must be between 2 and 100 characters")
     private String name;
 
     /**
@@ -47,6 +50,7 @@ public class ItemList {
      * This field is optional and can be null.
      */
     @Column(nullable = true)
+    @Pattern(regexp = "^https?://.+|^$", message = "Image URL must be a valid HTTP/HTTPS URL or empty")
     private String imageUrl;
 
     /**
@@ -54,6 +58,7 @@ public class ItemList {
      * This is a many-to-one relationship, meaning that many item lists can belong to the same user.
      * An item list can be associated with one user, but a user can have multiple item lists.
      */
+    @NotNull(message = "User cannot be null")
     @ManyToOne
     @JoinColumn(name = "user_id", nullable = false)
     private User user;

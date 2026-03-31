@@ -8,7 +8,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
-
+import jakarta.validation.constraints.*;
 import java.util.List;
 import java.util.Set;
 
@@ -37,17 +37,26 @@ public class User implements UserDetails {
     private Long id;
 
     @Column(nullable = false, unique = true)
+    @Email(message = "Email must be valid")
     private String email;
 
     @Column(nullable = false, unique = true)
+    @NotBlank(message = "Username cannot be blank")
+    @Size(min = 3, max = 50, message = "Username must be between 3 and 50 characters")
+    @Pattern(regexp = "^[a-zA-Z0-9_.-]+$", message = "Username can only contain letters, numbers, dots, hyphens and underscores")
     private String username;
 
     @Column(nullable = false)
+    @NotBlank(message = "Password cannot be blank")
+    @Size(min = 8, message = "Password must be at least 8 characters long")
     private String password;
 
     @Column(nullable = false)
+    @NotBlank(message = "Name cannot be blank")
+    @Size(min = 2, max = 100, message = "Name must be between 2 and 100 characters")
     private String name;
 
+    @Pattern(regexp = "^https?://.+|^$", message = "Profile image URL must be a valid HTTP/HTTPS URL or empty")
     private String profileImageUrl;
 
     @Enumerated(EnumType.STRING)
@@ -55,6 +64,8 @@ public class User implements UserDetails {
     private Role role = Role.USER; // Default role
 
     @Column(name = "difficulty_level", nullable = false)
+    @Min(value = 0, message = "Difficulty level must be at least 0")
+    @Max(value = 100, message = "Difficulty level must be at most 100")
     private int difficultyLevel = 0;    // Between 0 and 100
 
     @ManyToMany
@@ -76,6 +87,10 @@ public class User implements UserDetails {
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     @JsonIgnore
     private List<ItemList> itemLists = new ArrayList<>();
+
+    @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true)
+    @JoinColumn(name = "spotify_user_id")
+    private SpotifyUser spotifyUser;
 
     // Timestamps
 
@@ -100,26 +115,6 @@ public class User implements UserDetails {
     @Override
     public String getUsername() {
         return username;
-    }
-
-    @Override
-    public boolean isAccountNonExpired() {
-        return true;
-    }
-
-    @Override
-    public boolean isAccountNonLocked() {
-        return true;
-    }
-
-    @Override
-    public boolean isCredentialsNonExpired() {
-        return true;
-    }
-
-    @Override
-    public boolean isEnabled() {
-        return true;
     }
 
 }

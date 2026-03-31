@@ -5,6 +5,7 @@ import com.demo.demo.model.*;
 import com.demo.demo.repository.*;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -22,6 +23,7 @@ import java.util.stream.Collectors;
  * @version 1.0
  * @since 2025-06-06
  */
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class GenreService {
@@ -160,11 +162,16 @@ public class GenreService {
     private Genre updateGenreFromDTO(Genre existing, GenreDTO dto) {
         existing.setName(dto.getName());
         existing.setDescription(dto.getDescription());
+        existing.setImageUrl(dto.getImageUrl());
         existing.setBannerUrl(dto.getBannerUrl());
         existing.setWelcomeIntroVideo(dto.getWelcomeIntroVideoId());
         existing.setWelcomeSongVideo(dto.getWelcomeSongVideoId());
-        existing.setSongs(resolveSongs(dto.getSongIds()));
-        existing.setLessons(resolveLessons(dto.getLessonIds()));
+        if (dto.getSongIds() != null) {
+            existing.setSongs(resolveSongs(dto.getSongIds()));
+        }
+        if (dto.getLessonIds() != null) {
+            existing.setLessons(resolveLessons(dto.getLessonIds()));
+        }
         return existing;
     }
 
@@ -175,6 +182,9 @@ public class GenreService {
      * @return A set of Song entities corresponding to the provided IDs.
      */
     private Set<Song> resolveSongs(List<Long> songIds) {
+        if (songIds == null || songIds.isEmpty()) {
+            return new HashSet<>();
+        }
         return songIds.stream()
                 .map(id -> songRepository.findById(id)
                         .orElseThrow(() -> new IllegalArgumentException("Song not found: " + id)))
@@ -188,6 +198,9 @@ public class GenreService {
      * @return A set of Lesson entities corresponding to the provided IDs.
      */
     private Set<Lesson> resolveLessons(List<Long> lessonIds) {
+        if (lessonIds == null || lessonIds.isEmpty()) {
+            return new HashSet<>();
+        }
         return lessonIds.stream()
                 .map(id -> lessonRepository.findById(id)
                         .orElseThrow(() -> new IllegalArgumentException("Lesson not found: " + id)))

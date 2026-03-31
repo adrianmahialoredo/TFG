@@ -33,7 +33,7 @@ public class AuthController {
         try {
             // Ahora loginUser devuelve un objeto que incluye token y usuario
             LoginResponse response = userService.loginUser(userDto);
-            
+
             Console console = System.console();
             console.printf(response.getToken());
 

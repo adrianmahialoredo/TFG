@@ -8,7 +8,7 @@ import com.demo.demo.model.User;
  * 
  * This interface extends JpaRepository to provide CRUD operations
  * for User entities, including methods to find users by their email.
- * 
+ *
  * @author Adrián Mahía
  * @version 1.0
  * @since 2025-06-06
@@ -22,5 +22,13 @@ public interface UserRepository extends JpaRepository<User, Long> {
      * @return the User entity associated with the given email, or null if not found
      */
     User findByEmail(String email);
+
+    /**
+     * Finds a User entity by its username.
+     * 
+     * @param username the username of the user to search for
+     * @return the User entity associated with the given username, or null if not found
+     */
+    User findByUsername(String username);
 
 }

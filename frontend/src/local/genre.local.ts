@@ -1,14 +1,17 @@
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { GenreDTO } from "../../types/GenreDTO";
-import { getData, storeData } from "./storageService";
+import { GenreDTO } from "../types";
+import {getData, storeData} from "./storage.local";
 
 const GENRES_KEY = 'genres';
 
 /* Guarda todos los géneros */
-export const storeGenres = (genres: GenreDTO[]) => storeData(GENRES_KEY, genres);
+export const storeGenres = async (genres: GenreDTO[]): Promise<void> => {
+  return storeData(GENRES_KEY, genres);
+};
 
 /* Obtiene todos los géneros */
-export const getStoredGenres = () => getData<GenreDTO[]>(GENRES_KEY);
+export const getStoredGenres = async (): Promise<GenreDTO[] | null> => {
+  return getData<GenreDTO[]>(GENRES_KEY);
+};
 
 /* Obtiene un género por su ID */
 export const getStoredGenresById = async (id: string): Promise<GenreDTO | null> => {
@@ -21,3 +24,4 @@ export const getStoredGenresByIdList = async (ids: string[]): Promise<GenreDTO[]
   const genres = await getStoredGenres();
   return genres?.filter((genre) => ids.includes(genre.id)) || [];
 };
+

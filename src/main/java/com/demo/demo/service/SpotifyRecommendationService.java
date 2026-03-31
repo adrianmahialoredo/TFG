@@ -15,31 +15,60 @@ import com.demo.demo.model.SpotifyUser;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
+/**
+ * Service class for managing Spotify music recommendations.
+ *
+ * Provides methods to fetch personalized music recommendations from the Spotify API
+ * based on the user's favorite artists. The service retrieves top artists for a user
+ * and uses them as seed data to get recommendations.
+ *
+ * @author Adrián Mahía
+ * @version 1.0
+ * @since 2025-06-06
+ */
 @Slf4j
 @RequiredArgsConstructor
 @Service
 public class SpotifyRecommendationService {
 
+    /**
+     * RestTemplate for making HTTP requests to external APIs.
+     */
     private final RestTemplate restTemplate;
+
+    /**
+     * Repository for accessing Spotify user data from the database.
+     */
     private final SpotifyUserRepository spotifyUserRepository;
 
-
-    /*
-     * Método para obtener recomendaciones de Spotify.
-     * Recibe el token de acceso del usuario y hace una llamada a la API de Spotify
-     * para obtener recomendaciones basadas en los artistas favoritos del usuario.
-     * 
-     * @param accessToken El token de acceso del usuario.
-     * @return Una lista de recomendaciones de canciones.
-     * 
-     * @throws RuntimeException Si no se encuentran artistas favoritos del usuario.
-     * 
+    /**
+     * Retrieves music recommendations from Spotify based on the user's top artists.
+     *
+     * This method fetches the user's top 2 artists from Spotify, uses the first artist's ID
+     * as a seed, and then retrieves the top tracks for that artist as recommendations.
+     *
+     * @param spotifyUserId The unique identifier of the Spotify user
+     * @return A list of maps containing song recommendation data from Spotify
+     * @throws RuntimeException if the user is not found, no favorite artists are found,
+     *                          or the Spotify API request fails
+     * @throws IllegalArgumentException if the spotifyUserId is null or empty
      */
     public List<Map<String, Object>> getRecommendations(String spotifyUserId) {
+        
+        // Validar entrada
+        if (spotifyUserId == null || spotifyUserId.isEmpty()) {
+            log.error("Invalid Spotify user ID: {}", spotifyUserId);
+            throw new IllegalArgumentException("Spotify user ID cannot be null or empty");
+        }
+
+        log.info("Fetching recommendations for Spotify user: {}", spotifyUserId);
 
         // Obtener el usuario de Spotify desde la base de datos
         SpotifyUser spotifyUser = spotifyUserRepository.findBySpotifyUserId(spotifyUserId)
-                .orElseThrow(() -> new RuntimeException("Usuario de Spotify no encontrado"));
+                .orElseThrow(() -> {
+                    log.error("Spotify user not found: {}", spotifyUserId);
+                    return new RuntimeException("Usuario de Spotify no encontrado");
+                });
 
         String accessToken = spotifyUser.getAccessToken();
 
@@ -70,7 +99,6 @@ public class SpotifyRecommendationService {
         // 2. Pedir recomendaciones
         String url = "https://api.spotify.com/v1/artists/" + seedArtist + "/top-tracks";
         log.info("Seed artist: {}", seedArtist);
-        log.info("Access token: {}", accessToken);
         log.info("Requesting recommendations from Spotify API: {}", url);
 
         try {
@@ -79,7 +107,10 @@ public class SpotifyRecommendationService {
             );
 
             if (recResponse.getStatusCode().is2xxSuccessful() && recResponse.getBody() != null) {
-                return (List<Map<String, Object>>) recResponse.getBody().get("tracks");
+                List<Map<String, Object>> recommendations = (List<Map<String, Object>>) recResponse.getBody().get("tracks");
+                log.info("Successfully fetched {} recommendations for user: {}", 
+                    recommendations != null ? recommendations.size() : 0, spotifyUserId);
+                return recommendations;
             } else {
                 log.error("Spotify API returned non-successful status: {} with body: {}",
                         recResponse.getStatusCode(), recResponse.getBody());

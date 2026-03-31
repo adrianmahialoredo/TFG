@@ -3,6 +3,7 @@ package com.demo.demo.model;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
 import lombok.*;
 import java.util.*;
 
@@ -81,6 +82,7 @@ public class Song extends Item {
 
     // --- FILTERS --- //
     private boolean popular;
+    @Pattern(regexp = "^(19|20)\\d{2}s$|^$", message = "Decade must be in format like '1980s', '1990s', '2000s', etc. or empty")
     private String decade;  // e.g., "1980s", "1990s"
     private boolean genreClassic;
     private boolean genrePopular;

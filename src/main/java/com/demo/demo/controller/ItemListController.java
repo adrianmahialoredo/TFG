@@ -50,6 +50,28 @@ public class ItemListController {
     }
 
     /**
+     * Retrieves all item list IDs associated with a specific user.
+     *
+     * @param userId The ID of the user.
+     * @return A list of item list IDs for the user.
+     */
+    @GetMapping("/by-user/{userId}")
+    public List<Long> getAllItemListIdsByUserId(@PathVariable Long userId) {
+        return itemListService.getAllItemListIdsByUserId(userId);
+    }
+
+    /**
+     * Retrieves all item lists by a list of IDs.
+     *
+     * @param ids The list of item list IDs to retrieve.
+     * @return A list of ItemListDTOs representing all item lists with the provided IDs.
+     */
+    @GetMapping("/by-ids")
+    public List<ItemListDTO> getAllItemListsByIds(@RequestParam List<Long> ids) {
+        return itemListService.getAllItemListsByIds(ids);
+    }
+
+    /**
      * Retrieves an item list by its ID.
      *
      * @param id The ID of the item list to retrieve.

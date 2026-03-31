@@ -48,6 +48,28 @@ public class ChordController {
     }
 
     /**
+     * Retrieves all chords by a list of IDs.
+     *
+     * @param ids The list of chord IDs to retrieve.
+     * @return A list of ChordDto representing all chords with the provided IDs.
+     */
+    @GetMapping("/by-ids")
+    public List<ChordDto> getAllChordsByIds(@RequestParam List<Long> ids) {
+        return chordService.getAllChordsByIds(ids);
+    }
+
+    /**
+     * Retrieves all chord IDs associated with a specific song lesson.
+     *
+     * @param songLessonId The ID of the song lesson.
+     * @return A list of chord IDs associated with the song lesson.
+     */
+    @GetMapping("/by-song-lesson/{songLessonId}")
+    public List<Long> getChordsBySongLessonId(@PathVariable Long songLessonId) {
+        return chordService.getChordsBySongLessonId(songLessonId);
+    }
+
+    /**
      * Retrieves a chord by its ID.
      *
      * @param id The ID of the chord to retrieve.
@@ -90,7 +112,6 @@ public class ChordController {
      * Deletes a chord by its ID.
      *
      * @param id The ID of the chord to delete.
-     * @return A ResponseEntity with a 204 No Content status if successful.
      */
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)

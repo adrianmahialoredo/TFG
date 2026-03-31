@@ -1,6 +1,7 @@
 package com.demo.demo.model;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.*;
 import lombok.*;
 import java.util.List;
 
@@ -48,6 +49,7 @@ public class Chord {
      * This field is required and must be unique.
      */
     @Column(nullable = false, unique = true)
+    @NotBlank(message = "Chord name cannot be blank")
     private String name;
     
     /**
@@ -57,6 +59,7 @@ public class Chord {
     @ElementCollection
     @CollectionTable(name = "chord_notes", joinColumns = @JoinColumn(name = "chord_id"))
     @Column(name = "note")
+    @NotEmpty(message = "Chord must have at least one note")
     private List<String> notes;
     
     /**
@@ -64,6 +67,8 @@ public class Chord {
      * This field is required and can be used to display a chord diagram.
      */
     @Column(nullable = false)
+    @NotBlank(message = "Image URL cannot be blank")
+    @Pattern(regexp = "^https?://.+", message = "Image URL must be a valid HTTP/HTTPS URL")
     private String imageUrl;
 
     /**

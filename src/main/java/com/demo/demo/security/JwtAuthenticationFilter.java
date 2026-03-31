@@ -7,44 +7,88 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
-import org.springframework.lang.NonNull; // Importación de @NonNull
+import org.springframework.lang.NonNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
+/**
+ * JWT Authentication Filter for Spring Security.
+ *
+ * This filter intercepts incoming HTTP requests and extracts JWT tokens from
+ * the Authorization header. It validates the tokens and establishes the authentication
+ * context for authenticated users.
+ *
+ * The filter expects tokens in the format: Authorization: Bearer {token}
+ *
+ * @author Adrián Mahía
+ * @version 1.0
+ * @since 2025-06-06
+ */
 @Component
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
+    private static final Logger logger = LoggerFactory.getLogger(JwtAuthenticationFilter.class);
+
+    /**
+     * JWT utility for token validation and extraction.
+     */
     private final JwtUtil jwtUtil;
 
+    /**
+     * Constructs a new JwtAuthenticationFilter with the specified JwtUtil.
+     *
+     * @param jwtUtil The JWT utility for token operations
+     */
     public JwtAuthenticationFilter(JwtUtil jwtUtil) {
         this.jwtUtil = jwtUtil;
     }
 
+    /**
+     * Filters incoming requests to extract and validate JWT tokens.
+     *
+     * Extracts the JWT token from the Authorization header, validates it,
+     * and sets up the authentication context if the token is valid.
+     *
+     * @param request The HTTP request
+     * @param response The HTTP response
+     * @param filterChain The filter chain to continue processing
+     * @throws ServletException if a servlet error occurs
+     * @throws IOException if an I/O error occurs
+     */
     @Override
     protected void doFilterInternal(@NonNull HttpServletRequest request, @NonNull HttpServletResponse response, @NonNull FilterChain filterChain) throws ServletException, IOException {
-        // Extraer el token del encabezado Authorization
-        String authorizationHeader = request.getHeader("Authorization");
+        try {
+            // Extract the token from the Authorization header
+            String authorizationHeader = request.getHeader("Authorization");
 
-        // Si no contiene "Bearer ", no procesamos el token
-        if (authorizationHeader != null && authorizationHeader.startsWith("Bearer ")) {
-            String token = authorizationHeader.substring(7); // Extraer el token sin "Bearer "
+            // Process the token only if it starts with "Bearer "
+            if (authorizationHeader != null && authorizationHeader.startsWith("Bearer ")) {
+                String token = authorizationHeader.substring(7); // Extract token without "Bearer "
 
-            // Validar el token
-            String username = jwtUtil.extractUsername(token);
+                // Validate the token
+                String username = jwtUtil.extractUsername(token);
 
-            if (username != null && jwtUtil.validateToken(token, username)) {
-                // Aquí puedes configurar un Authentication (usuario autenticado)
-                // Suponiendo que tienes roles o permisos en el token, puedes cargarlos
-                UsernamePasswordAuthenticationToken authentication = 
-                    new UsernamePasswordAuthenticationToken(username, null, new ArrayList<>());
-                SecurityContextHolder.getContext().setAuthentication(authentication);
+                if (username != null && jwtUtil.validateToken(token, username)) {
+                    // Set up the authentication context for the authenticated user
+                    UsernamePasswordAuthenticationToken authentication = 
+                        new UsernamePasswordAuthenticationToken(username, null, new ArrayList<>());
+                    SecurityContextHolder.getContext().setAuthentication(authentication);
+                    logger.debug("JWT authentication successful for user: {}", username);
+                } else {
+                    logger.warn("JWT token validation failed for request: {}", request.getRequestURI());
+                }
             }
+        } catch (Exception e) {
+            logger.error("Error in JWT authentication filter: {}", e.getMessage(), e);
+            // Continue with the filter chain even if there's an error
         }
 
-        // Continuar con la cadena de filtros
+        // Continue with the filter chain
         filterChain.doFilter(request, response);
     }
 

@@ -2,6 +2,7 @@ package com.demo.demo.model;
 
 import java.util.*;
 import jakarta.persistence.*;
+import jakarta.validation.constraints.*;
 import lombok.*;
 
 /**
@@ -44,6 +45,8 @@ public class Instrument {
      * This field is optional and can be null.
      */
     @Column(nullable = false)
+    @NotBlank(message = "Image URL cannot be blank")
+    @Pattern(regexp = "^https?://.+", message = "Image URL must be a valid HTTP/HTTPS URL")
     protected String imageUrl;
 
     /**
@@ -51,6 +54,8 @@ public class Instrument {
      * This field is required and must be unique.
      */
     @Column(nullable = false, unique = true)
+    @NotBlank(message = "Instrument name cannot be blank")
+    @Size(min = 2, max = 100, message = "Instrument name must be between 2 and 100 characters")
     private String name;
 
     /**

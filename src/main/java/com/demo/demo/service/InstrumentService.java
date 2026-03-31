@@ -7,6 +7,7 @@ import com.demo.demo.dto.InstrumentDTO;
 import com.demo.demo.model.*;
 import com.demo.demo.repository.*;
 import lombok.AllArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * Service class for managing instruments.
@@ -21,6 +22,7 @@ import lombok.AllArgsConstructor;
  * @version 1.0
  * @since 2025-06-06
  */
+@Slf4j
 @AllArgsConstructor
 @Service
 public class InstrumentService {
@@ -145,6 +147,9 @@ public class InstrumentService {
      * @return A set of Song entities corresponding to the provided IDs.
      */
     private Set<Song> resolveSongs(List<Long> songIds) {
+        if (songIds == null || songIds.isEmpty()) {
+            return new HashSet<>();
+        }
         return songIds.stream()
                 .map(id -> songRepository.findById(id).orElseThrow(() ->
                         new IllegalArgumentException("Song not found: " + id)))

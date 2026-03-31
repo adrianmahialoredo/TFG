@@ -1,18 +1,16 @@
 import { View } from "react-native";
 import AppLayout from "../components/AppLayout";
 import { Image, Text, TouchableOpacity } from "react-native";
-import { StyleSheet } from "react-native";
 import TopButton from "../components/buttons/TopButton";
 import { useEffect, useState } from "react";
 import GenreInstruments from "../components/GenreInstruments";
 import GenreSongs from "../components/GenreSongs";
 import GenreDescription from "../components/GenreDescription";
-import { GenreDTO } from "../types/GenreDTO";
-import { getGenreById } from "../services/genreService";
+import { GenreDTO } from "../types";
+import * as genreRepository from "../repositories/genre.repository";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { RootStackParamList } from "../types/RootStackParamList";
-
+import { RootStackParamList } from "../types";
 
 export default function GenreMainScreen() {
 
@@ -27,7 +25,8 @@ export default function GenreMainScreen() {
   useEffect(() => {
     const fetchGenre = async () => {
       try {
-        const data = await getGenreById(genreId);
+        // Obtener del repositorio (cache first, backend fallback)
+        const data = await genreRepository.getGenreById(genreId);
         setGenre(data);
       } catch (error) {
         console.error('Error al cargar el género:', error);

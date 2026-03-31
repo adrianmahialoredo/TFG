@@ -5,7 +5,7 @@ import java.util.Set;
 
 
 import jakarta.persistence.*;
-import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import lombok.*;
 
 /**
@@ -41,7 +41,7 @@ public class InstrumentGenre extends Item {
      * This is a many-to-one relationship, meaning that many InstrumentGenres can use the same Instrument.
      * An InstrumentGenre can be associated with one Instrument, but an Instrument can be used in many InstrumentGenres.
      */
-    @NotBlank
+    @NotNull(message = "Instrument cannot be null")
     @ManyToOne
     private Instrument instrument;
 
@@ -50,7 +50,7 @@ public class InstrumentGenre extends Item {
      * This is a many-to-one relationship, meaning that many InstrumentGenres can belong to the same Genre.
      * An InstrumentGenre can only be associated with one Genre, but a Genre can have many InstrumentGenres.
      */
-    @NotBlank
+    @NotNull(message = "Genre cannot be null")
     @ManyToOne
     private Genre genre;
 

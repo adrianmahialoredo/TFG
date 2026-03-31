@@ -1,5 +1,5 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { UserDTO } from "../../types/UserDTO";
+import { UserDTO } from "../types";
 
 const TOKEN_KEY = 'token';
 const USER_KEY = 'user';
@@ -22,3 +22,4 @@ export const clearUserData = async () => {
   await AsyncStorage.removeItem(TOKEN_KEY);
   await AsyncStorage.removeItem(USER_KEY);
 };
+

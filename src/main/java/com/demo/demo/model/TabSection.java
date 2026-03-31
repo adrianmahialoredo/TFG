@@ -1,6 +1,7 @@
 package com.demo.demo.model;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.*;
 import lombok.*;
 
 /**
@@ -38,6 +39,7 @@ public class TabSection {
      * Identifier for the tab section.
      * This field is used to categorize the section, such as "intro", "solo", etc.
      */
+    @NotBlank(message = "Tab section identifier cannot be blank")
     private String identifier;
 
     /**
@@ -46,12 +48,14 @@ public class TabSection {
      * This field is required and cannot be blank.
      */
     @Lob
+    @NotBlank(message = "Tab section content cannot be blank")
     private String content; // tab real en multilinea
 
     /**
      * The song lesson to which this tab section belongs.
      * This is a many-to-one relationship, meaning that many tab sections can belong to the same song lesson.
      */
+    @NotNull(message = "Song lesson cannot be null")
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "song_lesson_id")
     private SongLesson songLesson;

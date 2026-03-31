@@ -2,6 +2,8 @@ package com.demo.demo.repository;
 
 import com.demo.demo.model.Song;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import java.util.List;
 
@@ -10,7 +12,7 @@ import java.util.List;
  * 
  * This interface extends JpaRepository to provide CRUD operations
  * for Song entities, including methods to find songs by artist name.
- * 
+ *
  * @author Adrián Mahía
  * @version 1.0
  * @since 2025-06-06
@@ -24,12 +26,21 @@ public interface SongRepository extends JpaRepository<Song, Long> {
 
     /**
      * Finds all songs associated with a specific genre ID.
-     * 
+     *
      * @param artist the name of the artist whose songs are to be retrieved
      * @return a list of songs associated with the given artist name
      */
     List<Song> findByArtist(String artist);
 
     List<Song> findByDecade(String decade);
-    
+
+    /**
+     * Finds all popular songs with a limit.
+     *
+     * @param limit the maximum number of popular songs to retrieve
+     * @return a list of popular songs limited by the specified limit
+     */
+    @Query(value = "SELECT * FROM songs WHERE popular = true LIMIT :limit", nativeQuery = true)
+    List<Song> findPopularSongsWithLimit(@Param("limit") int limit);
+
 }

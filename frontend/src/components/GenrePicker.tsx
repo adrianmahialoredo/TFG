@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
-import { GenreDTO } from '../types/GenreDTO';
+import { GenreDTO } from '../types';
 import { CirclePlus } from 'lucide-react-native';
-import { getStoredGenres } from '../services/storage/storageService';
+import { getStoredGenres } from '../storage';
 
 type Props = {
   onSelectionChange?: (selected: string[]) => void;

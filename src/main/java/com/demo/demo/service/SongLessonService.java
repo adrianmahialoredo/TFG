@@ -4,6 +4,7 @@ import com.demo.demo.dto.SongLessonDTO;
 import com.demo.demo.model.*;
 import com.demo.demo.repository.*;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -21,6 +22,7 @@ import java.util.stream.Collectors;
  * @version 1.0
  * @since 2025-06-06
  */
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class SongLessonService {
@@ -104,7 +106,7 @@ public class SongLessonService {
         SongLessonDTO dto = new SongLessonDTO();
         dto.setId(lesson.getId());
         dto.setDifficulty(lesson.getDifficulty().toString());
-        dto.setChordedLyrics(lesson.getChordedLyrics());
+        dto.setCordedLyrics(lesson.getChordedLyrics());
         dto.setVideoUrl(lesson.getVideoUrl());
         dto.setSongId(lesson.getSong().getId());
         dto.setInstrumentId(lesson.getInstrument().getId());
@@ -122,7 +124,7 @@ public class SongLessonService {
     private SongLesson toEntity(SongLessonDTO dto) {
         SongLesson lesson = new SongLesson();
         lesson.setDifficulty(SongLesson.DifficultyLevel.valueOf(dto.getDifficulty()));
-        lesson.setChordedLyrics(dto.getChordedLyrics());
+        lesson.setChordedLyrics(dto.getCordedLyrics());
         lesson.setVideoUrl(dto.getVideoUrl());
         lesson.setSong(resolveSong(dto.getSongId()));
         lesson.setInstrument(resolveInstrument(dto.getInstrumentId()));
@@ -139,7 +141,7 @@ public class SongLessonService {
      */
     private void updateEntity(SongLesson existing, SongLessonDTO dto) {
         existing.setDifficulty(SongLesson.DifficultyLevel.valueOf(dto.getDifficulty()));
-        existing.setChordedLyrics(dto.getChordedLyrics());
+        existing.setChordedLyrics(dto.getCordedLyrics());
         existing.setVideoUrl(dto.getVideoUrl());
 
         if (!existing.getSong().getId().equals(dto.getSongId())) {
@@ -185,6 +187,9 @@ public class SongLessonService {
      * @throws IllegalArgumentException if any chord is not found.
      */
     private List<Chord> resolveChords(List<Long> chordIds) {
+        if (chordIds == null || chordIds.isEmpty()) {
+            return new ArrayList<>();
+        }
         return chordIds.stream()
                 .map(id -> chordRepository.findById(id)
                         .orElseThrow(() -> new IllegalArgumentException("Chord not found: " + id)))

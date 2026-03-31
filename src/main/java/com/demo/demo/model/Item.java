@@ -1,6 +1,7 @@
 package com.demo.demo.model;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.*;
 import lombok.*;
 import java.time.LocalDateTime;
 
@@ -45,6 +46,7 @@ public abstract class Item {
      * This field is optional and can be null.
      */
     @Column(nullable = true)
+    @NotBlank(message = "Item name cannot be blank")
     protected String name;
 
     /**
@@ -52,6 +54,7 @@ public abstract class Item {
      * This field is optional and can be null.
      */
     @Column(nullable = false)
+    @NotBlank(message = "Image URL cannot be blank")
     protected String imageUrl;
 
     /**
@@ -59,6 +62,8 @@ public abstract class Item {
      * This field is optional and can be null.
      */
     @Column(nullable = true)
+    @Min(value = 1, message = "Level must be at least 1")
+    @Max(value = 5, message = "Level must be at most 5")
     protected int level;  // between 1 and 5 stars
 
     /**
@@ -81,9 +86,7 @@ public abstract class Item {
      * This enum is used to categorize items into specific types such as Song, Lesson, Genre, or InstrumentGenre.
      */
     public enum Type {
-
         Song, Lesson, Genre, InstrumentGenre
-
     }
 
 }

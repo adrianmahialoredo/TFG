@@ -1,6 +1,9 @@
 package com.demo.demo.repository;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Repository;
 
 import com.demo.demo.model.ItemList;
@@ -19,15 +22,24 @@ import java.util.List;
  */
 @Repository
 public interface ItemListRepository extends JpaRepository<ItemList, Long> {
-    
-    /**
-     * Finds all ItemLists associated with a specific user ID.
-     * 
-     * @param userId the ID of the user whose ItemLists are to be retrieved
-     * @return a list of ItemLists associated with the given user ID
-     */
-    List<ItemList> findByUserId(Long userId);
 
+    /**
+     * Finds all item list IDs associated with a specific user ID.
+     *
+     * @param userId The ID of the user.
+     * @return A list of item list IDs for the user.
+     */
+    @Query("SELECT il.id FROM ItemList il WHERE il.user.id = :userId")
+    List<Long> findIdsByUserId(@Param("userId") Long userId);
+
+    /**
+     * Finds all item lists by a list of IDs.
+     *
+     * @param ids The list of item list IDs to search for.
+     * @return A list of ItemList entities matching the provided IDs.
+     */
+    @NonNull
+    List<ItemList> findAllById(@NonNull Iterable<Long> ids);
 }
 
 

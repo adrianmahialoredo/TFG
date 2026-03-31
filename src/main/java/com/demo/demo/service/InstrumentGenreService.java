@@ -4,6 +4,7 @@ import com.demo.demo.dto.InstrumentGenreDTO;
 import com.demo.demo.model.*;
 import com.demo.demo.repository.*;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -22,6 +23,7 @@ import java.util.stream.Collectors;
  * @since 2025-06-06
  * 
  */
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class InstrumentGenreService {
@@ -194,6 +196,9 @@ public class InstrumentGenreService {
      * @throws IllegalArgumentException if any lesson is not found.
      */
     private Set<Lesson> resolveLessons(List<Long> lessonIds) {
+        if (lessonIds == null || lessonIds.isEmpty()) {
+            return new HashSet<>();
+        }
         return lessonIds.stream()
                 .map(id -> lessonRepository.findById(id)
                         .orElseThrow(() -> new IllegalArgumentException("Lesson not found: " + id)))

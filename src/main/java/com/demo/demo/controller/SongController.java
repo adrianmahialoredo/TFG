@@ -119,19 +119,25 @@ public class SongController {
     }
 
     /**
-     * Fetches all popular songs and returns them as a list of SongDTOs.
+     * Fetches popular song IDs with an optional limit and returns them as a list.
      * 
-     * @return List of SongDTOs representing all popular songs.
+     * @param limit The maximum number of popular songs to retrieve. Optional.
+     * @return List of song IDs representing popular songs up to the specified limit.
      */
     @GetMapping("/popular")
-    public List<SongDTO> getPopularSongs() {
-        return songService.getPopularSongs();
+    public List<Long> getPopularSongsWithLimit(@RequestParam(required = false) Integer limit) {
+        if (limit == null) {
+            return songService.getPopularSongs().stream()
+                    .map(SongDTO::getId)
+                    .collect(java.util.stream.Collectors.toList());
+        }
+        return songService.getPopularSongsWithLimit(limit);
     }
 
     /**
      * Fetches all popular songs by a specific genre and returns them as a list of SongDTOs.
      * 
-     * @param genre The genre to filter popular songs by.
+     * @param id The genre to filter popular songs by.
      * @return List of SongDTOs representing all popular songs from the specified genre.
      */
     @GetMapping("/popular/{id}")
@@ -142,7 +148,7 @@ public class SongController {
     /**
      * Fetches all new songs by a specific genre and returns them as a list of SongDTOs.
      * 
-     * @param genre The genre to filter new songs by.
+     * @param id The genre to filter new songs by.
      * @return List of SongDTOs representing all new songs from the specified genre.
      */
     @GetMapping("/new/{id}")
@@ -153,7 +159,7 @@ public class SongController {
     /**
      * Fetches all classic songs by a specific genre and returns them as a list of SongDTOs.
      * 
-     * @param genre The genre to filter classic songs by.
+     * @param id The genre to filter classic songs by.
      * @return List of SongDTOs representing all classic songs from the specified genre.
      */
     @GetMapping("/classic/{id}")
@@ -161,4 +167,14 @@ public class SongController {
         return songService.getClassicSongsByGenre(id);
     }
 
+    /**
+     * Fetches all songs by a list of IDs and returns them as a list of SongDTOs.
+     * 
+     * @param ids The list of song IDs to fetch.
+     * @return List of SongDTOs representing all songs with the specified IDs.
+     */
+    @GetMapping("/ids")
+    public List<SongDTO> getSongsByIds(@RequestBody List<Long> ids) {
+        return songService.getSongsByIds(ids);
+    }
 }

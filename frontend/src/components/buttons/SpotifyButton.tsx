@@ -1,14 +1,13 @@
 import { TouchableOpacity, Text, Alert } from "react-native";
 import * as WebBrowser from 'expo-web-browser';
-
-const API_URL = "http://127.0.0.1:8080"; 
+import { spotifyLogin } from "../../services/spotify.service";
 
 export const SpotifyButton = () => {
 
     const handleSpotifyLogin = async () => {
     try {
-      // Abre el endpoint del backend que inicia el flujo OAuth
-      await WebBrowser.openBrowserAsync(`${API_URL}/api/spotify/login`);
+      const { authUrl } = await spotifyLogin();
+      await WebBrowser.openBrowserAsync(authUrl);
     } catch (error) {
       Alert.alert("Error", "No se pudo iniciar sesión con Spotify.");
       console.error(error);

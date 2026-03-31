@@ -1,10 +1,11 @@
 import { CirclePlus } from "lucide-react-native";
 import { TouchableOpacity, View, Text } from "react-native";
 import { COLORS } from "../constants/Theme";
-import { UserDTO } from "../types/UserDTO";
+import { UserDTO } from "../types";
 import { useEffect, useState } from "react";
-import { getStoredGenresByIdList, getStoredUser } from "../services/storage/storageService";
-import { GenreDTO } from "../types/GenreDTO";
+import { getStoredGenresByIdList } from "../local";
+import { GenreDTO } from "../types";
+import {getStoredUser} from "../local";
 
 export default function GenreViewer() {
 

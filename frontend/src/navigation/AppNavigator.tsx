@@ -21,7 +21,7 @@ export default function AppNavigator() {
       <Stack.Screen name="SongScreen" component={SongScreen} />
       <Stack.Screen name="GenreMainScreen" component={GenreMainScreen} />
       <Stack.Screen name="ProfileScreen" component={ProfileScreen} />
-        <Stack.Screen name={"MetronomeScreen"} component={MetronomeScreen} />
+      <Stack.Screen name={"MetronomeScreen"} component={MetronomeScreen} />
     </Stack.Navigator>
   );
 }

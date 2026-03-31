@@ -6,7 +6,7 @@ import GenrePicker from "../components/GenrePicker";
 import InstrumentPicker from "../components/InstrumentPicker";
 import { COLORS } from "../constants/Theme";
 import { useState } from "react";
-import { register } from "../services/authService";
+import { register } from "../services/auth.service";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../types/RootStackParamList";

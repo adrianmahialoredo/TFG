@@ -16,13 +16,18 @@ export default function MetronomeSlider( {onTempoChange} : MetronomeSliderProps)
 
     const [tempo, setTempo] = useState(defaultTempo);
 
+    const updateTempo = (value: number) => {
+        const nextTempo = Math.min(maxTempo, Math.max(minTempo, value));
+        setTempo(nextTempo);
+        onTempoChange?.(nextTempo);
+    }
+
     const handleTempoChangeByButton = (value: number) => {
-        setTempo(tempo + value);
+        updateTempo(tempo + value);
     }
 
     const handleTempoChangeBySlider = (value: number) => {
-        setTempo(value);
-        onTempoChange?.(value);
+        updateTempo(value);
     }
 
   return (

@@ -4,6 +4,7 @@ import java.util.HashSet;
 import java.util.Set;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
 import lombok.*;
 
 /**
@@ -48,21 +49,24 @@ public class Genre extends Item {
      * URL of the banner image for the genre.
      * This field is required and must not be blank.
      */
-    @NotBlank
+    @NotBlank(message = "Banner URL cannot be blank")
+    @Pattern(regexp = "^https?://.+", message = "Banner URL must be a valid HTTP/HTTPS URL")
     private String bannerUrl;
 
     /**
      * URL of the welcome introduction video for the genre.
      * This field is required and must not be blank.
      */
-    @NotBlank
+    @NotBlank(message = "Welcome intro video URL cannot be blank")
+    @Pattern(regexp = "^https?://.+", message = "Welcome intro video URL must be a valid HTTP/HTTPS URL")
     private String welcomeIntroVideo;
 
     /**
      * URL of the welcome song video for the genre.
      * This field is required and must not be blank.
      */
-    @NotBlank
+    @NotBlank(message = "Welcome song video URL cannot be blank")
+    @Pattern(regexp = "^https?://.+", message = "Welcome song video URL must be a valid HTTP/HTTPS URL")
     private String welcomeSongVideo;
 
 

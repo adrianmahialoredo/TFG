@@ -1,19 +1,71 @@
-package com.demo.demo.security;  // Ajusta según tu estructura
+package com.demo.demo.security;
 
 import org.springframework.stereotype.Component;
+import org.springframework.beans.factory.annotation.Value;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.security.Key;
 import java.util.Date;
+import jakarta.annotation.PostConstruct;
 
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
 
+/**
+ * Utility class for JWT (JSON Web Token) operations.
+ *
+ * Provides methods to generate, validate, and extract information from JWT tokens.
+ * Tokens are signed using HMAC-SHA algorithms and have an expiration time of 24 hours.
+ *
+ * @author Adrián Mahía
+ * @version 1.0
+ * @since 2025-06-06
+ */
 @Component
 public class JwtUtil {
-    private static final String SECRET_KEY = "cambiarPorUnaClaveSegura1234567890123456";
-    private static final long EXPIRATION_TIME = 86400000; // 1 día
 
-    private final Key key = Keys.hmacShaKeyFor(SECRET_KEY.getBytes());
+    private static final Logger logger = LoggerFactory.getLogger(JwtUtil.class);
 
+    /**
+     * Secret key used for signing and validating JWT tokens.
+     * This is injected from application.properties using the jwt.secret-key property.
+     * If not provided, a default value is used (should be changed in production).
+     */
+    @Value("${jwt.secret-key:cambiarPorUnaClaveSeguraEnProduccion1234567890}")
+    private String secretKey;
+
+    /**
+     * Token expiration time in milliseconds (24 hours).
+     */
+    private static final long EXPIRATION_TIME = 86400000;
+
+    /**
+     * The cryptographic key used for signing tokens.
+     */
+    private Key key;
+
+    /**
+     * Initializes the cryptographic key after the properties are injected.
+     */
+    @PostConstruct
+    public void init() {
+        if (secretKey == null || secretKey.isEmpty()) {
+            logger.warn("WARNING: JWT secret key is not configured. Using default insecure key. Configure 'jwt.secret-key' in application.properties for production.");
+            secretKey = "cambiarPorUnaClaveSeguraEnProduccion1234567890";
+        }
+        if (secretKey.length() < 32) {
+            logger.warn("WARNING: JWT secret key is too short. Minimum recommended length is 32 characters.");
+        }
+        this.key = Keys.hmacShaKeyFor(secretKey.getBytes());
+    }
+
+    /**
+     * Generates a new JWT token for the specified username.
+     *
+     * @param username The username to encode in the token
+     * @return A signed JWT token string
+     */
     public String generateToken(String username) {
         return Jwts.builder()
                 .setSubject(username)
@@ -22,26 +74,70 @@ public class JwtUtil {
                 .compact();
     }
 
+    /**
+     * Extracts the username from a JWT token.
+     *
+     * @param token The JWT token string
+     * @return The username encoded in the token, or null if token is invalid
+     */
     public String extractUsername(String token) {
-        return Jwts.parserBuilder()
-                .setSigningKey(key)
-                .build()
-                .parseClaimsJws(token)
-                .getBody()
-                .getSubject();
+        try {
+            return Jwts.parserBuilder()
+                    .setSigningKey(key)
+                    .build()
+                    .parseClaimsJws(token)
+                    .getBody()
+                    .getSubject();
+        } catch (JwtException e) {
+            logger.error("JWT exception while extracting username: {}", e.getMessage());
+            return null;
+        } catch (IllegalArgumentException e) {
+            logger.error("Illegal argument while extracting username from JWT: {}", e.getMessage());
+            return null;
+        }
     }
 
+    /**
+     * Validates a JWT token for a specific username.
+     *
+     * Checks if the username in the token matches the provided username
+     * and if the token has not expired.
+     *
+     * @param token The JWT token string to validate
+     * @param username The username to match against the token
+     * @return true if the token is valid and not expired, false otherwise
+     */
     public boolean validateToken(String token, String username) {
-        return username.equals(extractUsername(token)) && !isTokenExpired(token);
+        try {
+            String extractedUsername = extractUsername(token);
+            if (extractedUsername == null) {
+                return false;
+            }
+            return username.equals(extractedUsername) && !isTokenExpired(token);
+        } catch (Exception e) {
+            logger.error("Error validating token: {}", e.getMessage());
+            return false;
+        }
     }
 
+    /**
+     * Checks if a JWT token has expired.
+     *
+     * @param token The JWT token string to check
+     * @return true if the token has expired, false otherwise
+     */
     private boolean isTokenExpired(String token) {
-        return Jwts.parserBuilder()
-                .setSigningKey(key)
-                .build()
-                .parseClaimsJws(token)
-                .getBody()
-                .getExpiration()
-                .before(new Date());
+        try {
+            return Jwts.parserBuilder()
+                    .setSigningKey(key)
+                    .build()
+                    .parseClaimsJws(token)
+                    .getBody()
+                    .getExpiration()
+                    .before(new Date());
+        } catch (JwtException e) {
+            logger.error("JWT exception while checking expiration: {}", e.getMessage());
+            return true;
+        }
     }
 }

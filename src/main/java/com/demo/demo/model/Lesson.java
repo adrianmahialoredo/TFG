@@ -3,6 +3,7 @@ package com.demo.demo.model;
 import java.util.*;
 import lombok.*;
 import jakarta.persistence.*;
+import jakarta.validation.constraints.*;
 
 /**
  * Represents a music lesson in the application.
@@ -53,6 +54,7 @@ public class Lesson extends Item {
      */
     @OneToMany(mappedBy = "lesson", cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("orderIndex ASC")
+    @NotEmpty(message = "Lesson must have at least one section")
     private List<LessonSection> sections = new ArrayList<>();
 
 }

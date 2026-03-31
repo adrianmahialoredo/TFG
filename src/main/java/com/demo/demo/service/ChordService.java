@@ -8,6 +8,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * Service class for managing chords.
@@ -22,6 +23,7 @@ import lombok.RequiredArgsConstructor;
  * @version 1.0
  * @since 2025-06-06
  */
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class ChordService {
@@ -85,6 +87,30 @@ public class ChordService {
             throw new EntityNotFoundException("Chord not found with id " + id);
         }
         chordRepository.deleteById(id);
+    }
+
+    /**
+     * Retrieves all chords by a list of chord IDs and converts them to DTOs.
+     *
+     * @param ids The list of chord IDs to retrieve.
+     * @return A list of ChordDto representing all chords with the provided IDs.
+     */
+    public List<ChordDto> getAllChordsByIds(List<Long> ids) {
+        return chordRepository.findAllById(ids).stream()
+                .map(this::toDto)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Retrieves all chord IDs associated with a specific song lesson.
+     *
+     * @param songLessonId The ID of the song lesson.
+     * @return A list of chord IDs associated with the song lesson.
+     */
+    public List<Long> getChordsBySongLessonId(Long songLessonId) {
+        return chordRepository.findAllBySongLessonId(songLessonId).stream()
+                .map(Chord::getId)
+                .collect(Collectors.toList());
     }
 
     // ------------

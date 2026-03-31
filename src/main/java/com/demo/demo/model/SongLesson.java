@@ -2,6 +2,7 @@ package com.demo.demo.model;
 
 import java.util.*;
 import jakarta.persistence.*;
+import jakarta.validation.constraints.*;
 import lombok.*;
 
 /**
@@ -39,6 +40,7 @@ public class SongLesson {
      * Enumerated representing the difficulty of the lesson, which can be EASY, MEDIUM, or ORIGINAL.
      */
     @Enumerated(EnumType.STRING)
+    @NotNull(message = "Difficulty level cannot be null")
     private DifficultyLevel difficulty; // EASY, MEDIUM, ORIGINAL
 
     /**
@@ -59,6 +61,7 @@ public class SongLesson {
      * This field is required and stored as a large object (LOB) in the database.
      */
     @Lob
+    @NotBlank(message = "Chorded lyrics cannot be blank")
     private String chordedLyrics; // format "[chord] lyric line 1\n[chord] lyric line 2\n..."
 
     /**
@@ -66,6 +69,7 @@ public class SongLesson {
      * This field is optional and can be null.
      */
     @Column(nullable = true)
+    @Pattern(regexp = "^https?://.+|^$", message = "Video URL must be a valid HTTP/HTTPS URL or empty")
     private String videoUrl;
 
 
@@ -82,6 +86,7 @@ public class SongLesson {
      * This is a many-to-one relationship, meaning that many song lessons can belong to one song.
      * A song can have multiple lessons, but a lesson is associated with one specific song.
      */
+    @NotNull(message = "Song cannot be null")
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "song_id")
     private Song song;
@@ -91,6 +96,7 @@ public class SongLesson {
      * This is a many-to-one relationship, meaning that many song lessons can be associated with one instrument.
      * A lesson can be tailored for a specific instrument, but multiple lessons can be created for the same instrument.
      */
+    @NotNull(message = "Instrument cannot be null")
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "instrument_id")
     private Instrument instrument;

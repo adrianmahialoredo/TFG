@@ -3,6 +3,7 @@ package com.demo.demo.service;
 import com.demo.demo.model.*;
 import com.demo.demo.repository.*;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import com.demo.demo.dto.SongDTO;
 import org.springframework.stereotype.Service;
 import java.util.*;
@@ -21,6 +22,7 @@ import java.util.stream.Collectors;
  * @version 1.0
  * @since 2025-06-06
  */
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class SongService {
@@ -112,6 +114,18 @@ public class SongService {
         return songRepository.findAll().stream()
                 .filter(Song::isPopular)
                 .map(this::toDto)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Fetches popular song IDs with a specified limit.
+     * 
+     * @param limit The maximum number of popular songs to retrieve.
+     * @return List of song IDs representing popular songs up to the specified limit.
+     */
+    public List<Long> getPopularSongsWithLimit(int limit) {
+        return songRepository.findPopularSongsWithLimit(limit).stream()
+                .map(Song::getId)
                 .collect(Collectors.toList());
     }
 
@@ -212,6 +226,9 @@ public class SongService {
      * @throws IllegalArgumentException if any genre ID does not exist.
      */
     private Set<Genre> resolveGenres(List<Long> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return new HashSet<>();
+        }
         return ids.stream()
                 .map(id -> genreRepository.findById(id)
                         .orElseThrow(() -> new IllegalArgumentException("Genre not found: " + id)))
@@ -226,10 +243,28 @@ public class SongService {
      * @throws IllegalArgumentException if any instrument ID does not exist.
      */
     private Set<Instrument> resolveInstruments(List<Long> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return new HashSet<>();
+        }
         return ids.stream()
                 .map(id -> instrumentRepository.findById(id)
                         .orElseThrow(() -> new IllegalArgumentException("Instrument not found: " + id)))
                 .collect(Collectors.toSet());
+    }
+
+    /**
+     * Fetches all songs by a list of IDs and converts them to DTOs.
+     *
+     * @param ids The list of song IDs to fetch.
+     * @return List of SongDTOs representing all songs with the specified IDs.
+     */
+    public List<SongDTO> getSongsByIds(List<Long> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return new ArrayList<>();
+        }
+        return songRepository.findAllById(ids).stream()
+                .map(this::toDto)
+                .collect(Collectors.toList());
     }
 
     /**
@@ -240,6 +275,9 @@ public class SongService {
      * @throws IllegalArgumentException if any lesson ID does not exist.
      */
     private List<SongLesson> resolveLessons(List<Long> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return new ArrayList<>();
+        }
         return ids.stream()
                 .map(id -> songLessonRepository.findById(id)
                         .orElseThrow(() -> new IllegalArgumentException("Lesson not found: " + id)))

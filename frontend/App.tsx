@@ -7,8 +7,7 @@ import { AuthProvider, useAuth } from './src/context/AuthContext';
 import AppNavigator from './src/navigation/AppNavigator';
 import { ActivityIndicator, View } from 'react-native';
 
-export default function App() {
-
+function AppContent() {
   const { loading } = useAuth();
 
   if (loading) {
@@ -20,11 +19,19 @@ export default function App() {
   }
 
   return (
-    <AuthProvider>
+    <>
       <NavigationContainer>
         <AppNavigator />
       </NavigationContainer>
       <StatusBar style="light" />
+    </>
+  );
+}
+
+export default function App() {
+  return (
+    <AuthProvider>
+      <AppContent />
     </AuthProvider>
   );
 }

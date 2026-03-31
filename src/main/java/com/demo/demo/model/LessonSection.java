@@ -2,6 +2,7 @@ package com.demo.demo.model;
 
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import lombok.*;
 
 /**
@@ -56,6 +57,7 @@ public class LessonSection {
      * The lesson to which this section belongs.
      * This is a many-to-one relationship, meaning that many sections can belong to the same lesson.
      */
+    @NotNull(message = "Lesson cannot be null")
     @ManyToOne
     @JoinColumn(name = "lesson_id")
     private Lesson lesson;
