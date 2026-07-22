@@ -1,15 +1,22 @@
 // src/services/GenreService.ts
 import axios from 'axios';
-import { GenreDTO } from '../types/GenreDTO';
+import { GenreDTO } from '../types';
 import { API_ENDPOINTS } from '../config/apiConfig';
 
-export const getAllGenres = async (): Promise<GenreDTO[]> => {
+export const getAll = async (): Promise<GenreDTO[]> => {
   const response = await axios.get(API_ENDPOINTS.GENRES.BASE);
   return response.data;
 };
 
-export const getGenreById = async (id: string): Promise<GenreDTO> => {
+export const getById = async (id: string): Promise<GenreDTO> => {
   const response = await axios.get(API_ENDPOINTS.GENRES.BY_ID(id));
+  return response.data;
+};
+
+export const getAllById = async (ids: string[]): Promise<GenreDTO[]> => {
+  const response = await axios.get(API_ENDPOINTS.GENRES.BASE, {
+    params: { ids },
+  });
   return response.data;
 };
 

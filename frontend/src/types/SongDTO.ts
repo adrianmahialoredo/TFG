@@ -1,8 +1,8 @@
-export interface SongDTO {
-  id: string;
-  title: string;
+import {ItemDTO, ItemType} from "./ItemDTO";
+
+export interface SongDTO extends ItemDTO {
+  type: ItemType.SONG;
   artist: string;
-  imageUrl: string;
   genreIds: string[];
   instrumentIds: string[];
   lessonIds: string[];

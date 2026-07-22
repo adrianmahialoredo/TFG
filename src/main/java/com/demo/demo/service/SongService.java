@@ -1,286 +1,57 @@
 package com.demo.demo.service;
 
-import com.demo.demo.model.*;
-import com.demo.demo.repository.*;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import com.demo.demo.dto.SongDTO;
-import org.springframework.stereotype.Service;
-import java.util.*;
-import java.util.stream.Collectors;
+
+import java.util.List;
+import java.util.Optional;
 
 /**
- * Service class for managing songs.
- * 
- * Provides methods to create, read, update, and delete songs,
- * as well as methods to fetch songs by ID and convert them to DTOs.
- * 
- * This service uses repositories to interact with the database
- * and convert entities to DTOs for API responses.
- * 
+ * Service contract for managing songs.
+ *
+ * Provides methods to create, read, update, and delete songs, plus several
+ * read queries used to build the genre and Home screens.
+ *
  * @author Adrián Mahía
  * @version 1.0
  * @since 2025-06-06
  */
-@Slf4j
-@Service
-@RequiredArgsConstructor
-public class SongService {
+public interface SongService {
 
-    private final SongRepository songRepository;
-    private final GenreRepository genreRepository;
-    private final InstrumentRepository instrumentRepository;
-    private final SongLessonRepository songLessonRepository;
+    List<SongDTO> getAllSongs();
 
-    /**
-     * Fetches all songs from the repository and converts them to DTOs.
-     *
-     * @return List of SongDTOs representing all songs.
-     */
-    public List<SongDTO> getAllSongs() {
-        return songRepository.findAll().stream()
-                .map(this::toDto)
-                .collect(Collectors.toList());
-    }
+    Optional<SongDTO> getSongById(Long id);
 
-    /**
-     * Fetches a song by its ID and converts it to a DTO.
-     *
-     * @param id The ID of the song to fetch.
-     * @return An Optional containing the SongDTO if found, otherwise empty.
-     */
-    public Optional<SongDTO> getSongById(Long id) {
-        return songRepository.findById(id)
-                .map(this::toDto);
-    }
+    SongDTO createSong(SongDTO dto);
 
-    /**
-     * Creates a new song from the provided DTO and saves it to the repository.
-     *
-     * @param dto The SongDTO containing the details of the song to create.
-     * @return The created SongDTO.
-     */
-    public SongDTO createSong(SongDTO dto) {
-        Song song = toEntity(dto);
-        return toDto(songRepository.save(song));
-    }
+    Optional<SongDTO> updateSong(Long id, SongDTO dto);
 
-    /**
-     * Updates an existing song with the provided DTO and saves it to the repository.
-     *
-     * @param id  The ID of the song to update.
-     * @param dto The SongDTO containing the updated details of the song.
-     * @return An Optional containing the updated SongDTO if found, otherwise empty.
-     */
-    public Optional<SongDTO> updateSong(Long id, SongDTO dto) {
-        return songRepository.findById(id).map(existing -> {
-            updateSongFromDto(existing, dto);
-            return toDto(songRepository.save(existing));
-        });
-    }
+    boolean deleteSong(Long id);
 
-    /**
-     * Deletes a song by its ID.
-     *
-     * @param id The ID of the song to delete.
-     * @return true if the song was deleted, false if it did not exist.
-     */
-    public boolean deleteSong(Long id) {
-        if (!songRepository.existsById(id)) {
-            return false;
-        }
-        songRepository.deleteById(id);
-        return true;
-    }
+    List<SongDTO> getSongsByDecade(String decade);
 
-    /**
-     * Fetches all songs by a specific decade and converts them to DTOs.
-     * 
-     * @param decade The decade to filter songs by (e.g., "1980s", "1990s").
-     * @return List of SongDTOs representing songs from the specified decade.
-     */
-    public List<SongDTO> getSongsByDecade(String decade) {
-        return songRepository.findByDecade(decade).stream()
-                .map(this::toDto)
-                .collect(Collectors.toList());
-    }
+    List<SongDTO> getPopularSongs();
 
-    /**
-     * Fetches all popular songs and converts them to DTOs.
-     * 
-     * @return List of SongDTOs representing popular songs.
-     */
-    public List<SongDTO> getPopularSongs() {
-        return songRepository.findAll().stream()
-                .filter(Song::isPopular)
-                .map(this::toDto)
-                .collect(Collectors.toList());
-    }
+    List<Long> getPopularSongsWithLimit(int limit);
 
-    /**
-     * Fetches popular song IDs with a specified limit.
-     * 
-     * @param limit The maximum number of popular songs to retrieve.
-     * @return List of song IDs representing popular songs up to the specified limit.
-     */
-    public List<Long> getPopularSongsWithLimit(int limit) {
-        return songRepository.findPopularSongsWithLimit(limit).stream()
-                .map(Song::getId)
-                .collect(Collectors.toList());
-    }
+    List<SongDTO> getPopularSongsByGenre(Long genreId);
 
-    /**
-     * Fetches all popular songs by genre and converts them to DTOs.
-     * 
-     * @param genreId The ID of the genre to filter popular songs by.
-     * @return List of SongDTOs representing popular songs in the specified genre.
-     */
-    public List<SongDTO> getPopularSongsByGenre(Long genreId) {
-        return songRepository.findAll().stream()
-                .filter(song -> song.getGenres().stream().anyMatch(genre -> genre.getId().equals(genreId)) && song.isGenrePopular())
-                .map(this::toDto)
-                .collect(Collectors.toList());
-    }
+    List<SongDTO> getClassicSongsByGenre(Long genreId);
 
-    /**
-     * Fetches all classic songs by gebnre and converts them to DTOs.
-     * 
-     * @param genreId The ID of the genre to filter classic songs by.
-     * @return List of SongDTOs representing classic songs in the specified genre.
-     */
-    public List<SongDTO> getClassicSongsByGenre(Long genreId) {
-        return songRepository.findAll().stream()
-                .filter(song -> song.getGenres().stream().anyMatch(genre -> genre.getId().equals(genreId)) && song.isGenreClassic())
-                .map(this::toDto)
-                .collect(Collectors.toList());
-    }
+    List<SongDTO> getNewSongsByGenre(Long genreId);
 
-    /**
-     * Fetches all new songs by genre and converts them to DTOs.
-     * 
-     * @param genreId The ID of the genre to filter new songs by.
-     * @return List of SongDTOs representing new songs in the specified genre.
-     */
-    public List<SongDTO> getNewSongsByGenre(Long genreId) {
-        return songRepository.findAll().stream()
-                .filter(song -> song.getGenres().stream().anyMatch(genre -> genre.getId().equals(genreId)) && song.isGenreNew())
-                .map(this::toDto)
-                .collect(Collectors.toList());
-    }
+    List<SongDTO> getPopularByGenreId(Long genreId);
 
+    List<SongDTO> getClassicByGenreId(Long genreId);
 
-    // -------- DTO Mapping --------
+    List<SongDTO> getNewByGenreId(Long genreId);
 
-    /**
-     * Converts a Song entity to a SongDTO.
-     *
-     * @param song The Song entity to convert.
-     * @return The corresponding SongDTO.
-     */
-    private SongDTO toDto(Song song) {
-        SongDTO dto = new SongDTO();
-        dto.setId(song.getId());
-        dto.setTitle(song.getTitle());
-        dto.setArtist(song.getArtist());
-        dto.setGenreIds(song.getGenres().stream().map(Genre::getId).collect(Collectors.toList()));
-        dto.setInstrumentIds(song.getInstruments().stream().map(Instrument::getId).collect(Collectors.toList()));
-        dto.setLessons(song.getLessons().stream().map(SongLesson::getId).collect(Collectors.toList()));
-        return dto;
-    }
+    List<SongDTO> getSongsByIds(List<Long> ids);
 
-    /**
-     * Converts a SongDTO to a Song entity.
-     *
-     * @param dto The SongDTO to convert.
-     * @return The corresponding Song entity.
-     */
-    private Song toEntity(SongDTO dto) {
-        Song song = new Song();
-        song.setTitle(dto.getTitle());
-        song.setArtist(dto.getArtist());
-        song.setGenres(resolveGenres(dto.getGenreIds()));
-        song.setInstruments(resolveInstruments(dto.getInstrumentIds()));
-        song.setLessons(resolveLessons(dto.getLessons()));
-        return song;
-    }
+    List<SongDTO> getHomeSongsPopular();
 
-    /**
-     * Updates an existing Song entity with the details from the provided SongDTO.
-     *
-     * @param song The existing Song entity to update.
-     * @param dto  The SongDTO containing the updated details.
-     */
-    private void updateSongFromDto(Song song, SongDTO dto) {
-        song.setTitle(dto.getTitle());
-        song.setArtist(dto.getArtist());
-        song.setGenres(resolveGenres(dto.getGenreIds()));
-        song.setInstruments(resolveInstruments(dto.getInstrumentIds()));
-        song.setLessons(resolveLessons(dto.getLessons()));
-    }
+    List<SongDTO> getHomeSongsNew();
 
-    /**
-     * Resolves a set of Genre entities from a list of genre IDs.
-     * 
-     * @param ids The list of genre IDs to resolve.
-     * @return A set of Genre entities corresponding to the provided IDs.
-     * @throws IllegalArgumentException if any genre ID does not exist.
-     */
-    private Set<Genre> resolveGenres(List<Long> ids) {
-        if (ids == null || ids.isEmpty()) {
-            return new HashSet<>();
-        }
-        return ids.stream()
-                .map(id -> genreRepository.findById(id)
-                        .orElseThrow(() -> new IllegalArgumentException("Genre not found: " + id)))
-                .collect(Collectors.toSet());
-    }
+    List<SongDTO> getHomeSongsRecommended();
 
-    /**
-     * Resolves a set of Instrument entities from a list of instrument IDs.
-     * 
-     * @param ids The list of instrument IDs to resolve.
-     * @return A set of Instrument entities corresponding to the provided IDs.
-     * @throws IllegalArgumentException if any instrument ID does not exist.
-     */
-    private Set<Instrument> resolveInstruments(List<Long> ids) {
-        if (ids == null || ids.isEmpty()) {
-            return new HashSet<>();
-        }
-        return ids.stream()
-                .map(id -> instrumentRepository.findById(id)
-                        .orElseThrow(() -> new IllegalArgumentException("Instrument not found: " + id)))
-                .collect(Collectors.toSet());
-    }
-
-    /**
-     * Fetches all songs by a list of IDs and converts them to DTOs.
-     *
-     * @param ids The list of song IDs to fetch.
-     * @return List of SongDTOs representing all songs with the specified IDs.
-     */
-    public List<SongDTO> getSongsByIds(List<Long> ids) {
-        if (ids == null || ids.isEmpty()) {
-            return new ArrayList<>();
-        }
-        return songRepository.findAllById(ids).stream()
-                .map(this::toDto)
-                .collect(Collectors.toList());
-    }
-
-    /**
-     * Resolves a list of SongLesson entities from a list of lesson IDs.
-     * 
-     * @param ids The list of lesson IDs to resolve.
-     * @return A list of SongLesson entities corresponding to the provided IDs.
-     * @throws IllegalArgumentException if any lesson ID does not exist.
-     */
-    private List<SongLesson> resolveLessons(List<Long> ids) {
-        if (ids == null || ids.isEmpty()) {
-            return new ArrayList<>();
-        }
-        return ids.stream()
-                .map(id -> songLessonRepository.findById(id)
-                        .orElseThrow(() -> new IllegalArgumentException("Lesson not found: " + id)))
-                .collect(Collectors.toList());
-    }
+    List<SongDTO> getHomeSongsFromSpotify();
 }

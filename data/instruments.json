@@ -1,2 +1,28 @@
-[]
+[
+  {
+    "id": 1,
+    "name": "Guitarra",
+    "imageUrl": "https://example.com/images/guitar.png"
+  },
+  {
+    "id": 2,
+    "name": "Ukelele",
+    "imageUrl": "https://example.com/images/ukulele.png"
+  },
+  {
+    "id": 3,
+    "name": "Bajo",
+    "imageUrl": "https://example.com/images/bass.png"
+  },
+  {
+    "id": 4,
+    "name": "Batería",
+    "imageUrl": "https://example.com/images/drums.png"
+  },
+  {
+    "id": 5,
+    "name": "Piano",
+    "imageUrl": "https://example.com/images/piano.png"
+  }
+]
 

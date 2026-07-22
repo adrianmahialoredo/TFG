@@ -1,8 +1,9 @@
 /**
- * Barrel export para todos los servicios
- * Facilita las importaciones desde otros archivos
+ * Barrel export para servicios sin conflictos
+ * Para servicios con métodos similares (getAll, getById, getAllById), use imports específicos:
  * 
- * Uso: import { getSongById, getAllGenres } from '@/services';
+ * Uso: import * as genreService from './genre.service';
+ *      import { getAll, getById } from './genre.service';
  */
 
 // Auth
@@ -11,29 +12,11 @@ export * from './auth.service';
 // Users
 export * from './user.service';
 
-// Genres
-export * from './genre.service';
-
-// Songs
-export * from './song.service';
-
-// Chords
-export * from './chord.service';
-
 // Instruments
 export * from './instrument.service';
 
 // Instrument Genres
 export * from './instrumentGenre.service';
-
-// Song Lessons
-export * from './songLesson.service';
-
-// Tab Sections
-export * from './tabSection.service';
-
-// Item Lists
-export * from './itemList.service';
 
 
 // Spotify

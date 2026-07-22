@@ -1,6 +1,5 @@
 package com.demo.demo.model;
 
-import java.util.*;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
 import lombok.*;
@@ -37,7 +36,6 @@ public class Instrument {
      * This is the primary key of the Instrument entity.
      */
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     /**
@@ -57,19 +55,4 @@ public class Instrument {
     @NotBlank(message = "Instrument name cannot be blank")
     @Size(min = 2, max = 100, message = "Instrument name must be between 2 and 100 characters")
     private String name;
-
-    /**
-     * Set of songs associated with the instrument.
-     * This is a many-to-many relationship, meaning that an instrument can be associated with multiple songs,
-     * and a song can feature multiple instruments.
-     */
-    @ManyToMany
-    @JoinTable(
-        name = "instrument_song",
-        joinColumns = @JoinColumn(name = "instrument_id"),
-        inverseJoinColumns = @JoinColumn(name = "song_id")
-    )
-    private Set<Song> songs = new HashSet<>();
-
 }
-

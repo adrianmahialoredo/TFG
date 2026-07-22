@@ -1,112 +1,91 @@
-import { useState, useEffect } from 'react';
-import { SongDTO, SongLessonDTO, ChordDTO, TabSectionDTO } from '../types';
-import { getSongById } from '../services';
-import * as songStorage from '../local/song.local';
-import * as songLessonRepository from '../repositories/songLesson.repository';
-import * as chordRepository from '../repositories/chord.repository';
-import { parseLyrics } from './song.utils';
+import { useEffect, useMemo } from 'react';
+import {
+  useSongEntitiesStore,
+  useSongLessonEntitiesStore,
+  useChordEntitiesStore,
+  useTabSectionEntitiesStore // <-- Nueva despensa
+} from '../stores/entities';
+import { useSongScreenStore } from '../stores/ui/songScreen.store';
+import * as songRepository from '../repositories/song.repository';
+import * as itemRepository from '../repositories/item.repository';
+import { parseLyrics } from '../utils/song.utils';
+import { ChordDTO, SongLessonDTO, TabSectionDTO } from '../types';
 
-/**
- * Hook para gestionar la lógica de SongScreen
- * Maneja: canción, lecciones, acordes, tabs y cambios de dificultad
- */
 export const useSong = (songId: string) => {
-  const [song, setSong] = useState<SongDTO | null>(null);
-  const [songLessons, setSongLessons] = useState<SongLessonDTO[]>([]);
-  const [selectedLesson, setSelectedLesson] = useState<SongLessonDTO | null>(null);
-  const [chords, setChords] = useState<ChordDTO[]>([]);
-  const [tabSections, setTabSections] = useState<TabSectionDTO[]>([]);
-  const [availableDifficulties, setAvailableDifficulties] = useState<string[]>([]);
-  const [loading, setLoading] = useState(true);
+  // 1. Acceso a las Despensas (RAM)
+  const song = useSongEntitiesStore((state) => state.songs[songId]);
 
+  const allLessonsMap = useSongLessonEntitiesStore((state) => state.songLessons);
+  const allChordsMap = useChordEntitiesStore((state) => state.chords);
+  // Acceso a la despensa de Tabs
+  const allTabsMap = useTabSectionEntitiesStore((state) => state.tabSections);
+
+  // 2. Estado de Pantalla
+  const isLoading = useSongScreenStore((state) => state.isLoading);
+  const selectedDifficulty = useSongScreenStore((state) => state.selectedDifficulty);
+  const setLoading = useSongScreenStore((state) => state.setLoading);
+  const setDifficulty = useSongScreenStore((state) => state.setDifficulty);
+
+  // 3. Derivados estables: IDs -> DTOs (sin snapshots nuevos en cada render)
+  const allLessons = useMemo<SongLessonDTO[]>(() => {
+    if (!song?.lessonIds?.length) return [];
+
+    return song.lessonIds
+        .map((id) => allLessonsMap[id])
+        .filter((lesson): lesson is SongLessonDTO => Boolean(lesson));
+  }, [song?.lessonIds, allLessonsMap]);
+
+  // 4. Carga inicial
   useEffect(() => {
-    loadSongData();
+    const loadData = async () => {
+      setLoading(true);
+      await songRepository.getById(songId);
+      setLoading(false);
+    };
+    loadData();
+    // Marca el item como accedido para la sección "Recientes" del Home (fire-and-forget)
+    if (songId) itemRepository.markAsAccessed(songId);
   }, [songId]);
 
-  /**
-   * Carga todos los datos de la canción
-   */
-  const loadSongData = async () => {
-    try {
-      setLoading(true);
+  // 5. Lógica Derivada: Lección seleccionada
+  const currentDifficulty = selectedDifficulty || allLessons[0]?.difficulty;
 
-      // 1. Obtener la canción
-      let loadedSong = await songStorage.getCachedSong(parseInt(songId));
+  const selectedLesson = useMemo<SongLessonDTO | undefined>(() => {
+    if (allLessons.length === 0) return undefined;
+    return allLessons.find((lesson) => lesson.difficulty === currentDifficulty) || allLessons[0];
+  }, [allLessons, currentDifficulty]);
 
-      if (!loadedSong) {
-        loadedSong = await getSongById(songId);
-        if (loadedSong) {
-          await songStorage.cacheSong(loadedSong);
-        }
-      }
+  // 6. Hidratación de Entidades relacionadas (Chords y Tabs)
+  const chords = useMemo<ChordDTO[]>(() => {
+    if (!selectedLesson?.chordIds?.length) return [];
 
-      setSong(loadedSong);
+    return selectedLesson.chordIds
+        .map((id) => allChordsMap[id])
+        .filter((chord): chord is ChordDTO => Boolean(chord));
+  }, [selectedLesson?.chordIds, allChordsMap]);
 
-      // 2. Obtener song lessons, acordes y tab sections con cache fallback
-      const songScreenData = await songLessonRepository.getSongScreenData(songId);
+  const tabSections = useMemo<TabSectionDTO[]>(() => {
+    if (!selectedLesson?.tabSectionIds?.length) return [];
 
-      if (!songScreenData.defaultSongLesson) {
-        console.error('No hay lecciones disponibles para esta canción');
-        setLoading(false);
-        return;
-      }
+    return selectedLesson.tabSectionIds
+        .map((id) => allTabsMap[id])
+        .filter((tabSection): tabSection is TabSectionDTO => Boolean(tabSection));
+  }, [selectedLesson?.tabSectionIds, allTabsMap]);
 
-      // 3. Obtener las dificultades disponibles
-      const difficulties = songScreenData.songLessons.map(l => l.difficulty);
-
-      setSongLessons(songScreenData.songLessons);
-      setSelectedLesson(songScreenData.defaultSongLesson);
-      setChords(songScreenData.chords[songScreenData.defaultSongLesson.id] || []);
-      setTabSections(songScreenData.tabSections[songScreenData.defaultSongLesson.id] || []);
-      setAvailableDifficulties(difficulties);
-
-      setLoading(false);
-    } catch (error) {
-      console.error('Error loading song data:', error);
-      setLoading(false);
-    }
-  };
-
-  /**
-   * Cambia la dificultad de la lección
-   * @param difficulty Nueva dificultad a mostrar
-   */
-  const changeDifficulty = async (difficulty: string) => {
-    try {
-      const selectedLessonData = songLessons.find(l => l.difficulty === difficulty);
-
-      if (!selectedLessonData) {
-        console.error(`No hay lección con dificultad ${difficulty}`);
-        return;
-      }
-
-      // Obtener acordes para esta lección
-      const newChords = await chordRepository.getChordsByIds(selectedLessonData.chordIds);
-
-      // Obtener tab sections para esta lección
-      const newTabSections = await songLessonRepository.getTabSectionsByLesson(selectedLessonData.id);
-
-      setSelectedLesson(selectedLessonData);
-      setChords(newChords);
-      setTabSections(newTabSections);
-    } catch (error) {
-      console.error('Error changing difficulty:', error);
-    }
-  };
-
-  // Parsear letras de la lección seleccionada
-  const parsedLyrics = selectedLesson ? parseLyrics(selectedLesson.chordedLyrics) : [];
+  // 7. Parseo de letras
+  const parsedLyrics = useMemo(() => {
+    if (!selectedLesson?.chordedLyrics) return [];
+    return parseLyrics(selectedLesson.chordedLyrics);
+  }, [selectedLesson?.chordedLyrics]);
 
   return {
     song,
-    loading,
+    loading: isLoading,
     selectedLesson,
     chords,
     tabSections,
-    availableDifficulties,
-    changeDifficulty,
+    availableDifficulties: [...new Set(allLessons.map((lesson) => lesson.difficulty))],
+    changeDifficulty: setDifficulty,
     parsedLyrics,
   };
 };
-
-

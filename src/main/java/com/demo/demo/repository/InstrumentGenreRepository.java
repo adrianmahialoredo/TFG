@@ -6,12 +6,12 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import com.demo.demo.model.InstrumentGenre;
 
 /**
- * Repository interface for managing InstrumentGenre entities.
+ * Repository interface for managing InstrumentGenreScreen entities.
  * 
  * This interface extends JpaRepository to provide CRUD operations
- * and custom query methods for InstrumentGenre entities.
+ * and custom query methods for InstrumentGenreScreen entities.
  * 
- * It allows finding InstrumentGenre entities by genreId or instrumentId.
+ * It allows finding InstrumentGenreScreen entities by genreId or instrumentId.
  * 
  * @author Adrián Mahía
  * @version 1.0
@@ -20,20 +20,19 @@ import com.demo.demo.model.InstrumentGenre;
 @Repository
 public interface InstrumentGenreRepository extends JpaRepository<InstrumentGenre, Long> {
 
-
     /**
-     * Finds all InstrumentGenre entities by genreId.
+     * Finds all InstrumentGenreScreen entities by genreId.
      * 
      * @param genreId the ID of the genre to search for
-     * @return a list of InstrumentGenre entities associated with the given genreId
+     * @return a list of InstrumentGenreScreen entities associated with the given genreId
      */
     List<InstrumentGenre> findByGenreId(Long genreId);
     
     /**
-     * Finds all InstrumentGenre entities by instrumentId.
+     * Finds all InstrumentGenreScreen entities by instrumentId.
      * 
      * @param instrumentId the ID of the instrument to search for
-     * @return a list of InstrumentGenre entities associated with the given instrumentId
+     * @return a list of InstrumentGenreScreen entities associated with the given instrumentId
      */
     List<InstrumentGenre> findByInstrumentId(Long instrumentId);
     

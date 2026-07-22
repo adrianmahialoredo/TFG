@@ -16,12 +16,7 @@ import lombok.Data;
  * @since 2025-06-06
  */
 @Data
-public class InstrumentGenreDTO {
-    
-    /**
-     * The unique identifier of the instrument-genre relationship.
-     */
-    private Long id;
+public class InstrumentGenreDTO extends ItemDTO {
 
     /**
      * The ID of the associated instrument.

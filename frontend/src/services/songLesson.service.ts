@@ -2,18 +2,23 @@ import axios from 'axios';
 import { API_ENDPOINTS } from '../config/apiConfig';
 import { SongLessonDTO } from '../types';
 
-export const getAllSongLessons = async (): Promise<SongLessonDTO[]> => {
+export const getAll = async (): Promise<SongLessonDTO[]> => {
   const response = await axios.get(API_ENDPOINTS.SONG_LESSONS.BASE);
   return response.data;
 };
 
-export const getSongLessonById = async (id: string): Promise<SongLessonDTO> => {
+export const getById = async (id: string): Promise<SongLessonDTO> => {
   const response = await axios.get(API_ENDPOINTS.SONG_LESSONS.BY_ID(id));
   return response.data;
 };
 
-export const getSongLessonsBySong = async (songId: string): Promise<SongLessonDTO[]> => {
+export const getBySong = async (songId: string): Promise<SongLessonDTO[]> => {
   const response = await axios.get(API_ENDPOINTS.SONG_LESSONS.BY_SONG(songId));
+  return response.data;
+};
+
+export const getAllById = async (ids: string[]): Promise<SongLessonDTO[]> => {
+  const response = await axios.post(API_ENDPOINTS.SONG_LESSONS.BASE, ids);
   return response.data;
 };
 
@@ -30,4 +35,3 @@ export const updateSongLesson = async (id: string, songLesson: SongLessonDTO): P
 export const deleteSongLesson = async (id: string): Promise<void> => {
   await axios.delete(API_ENDPOINTS.SONG_LESSONS.BY_ID(id));
 };
-

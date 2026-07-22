@@ -1,8 +1,11 @@
 package com.demo.demo.model;
 
+import com.fasterxml.jackson.annotation.JsonSubTypes;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
 import lombok.*;
+
 import java.time.LocalDateTime;
 
 /**
@@ -31,6 +34,18 @@ import java.time.LocalDateTime;
 @Setter
 @AllArgsConstructor
 @NoArgsConstructor
+@JsonTypeInfo(
+        use = JsonTypeInfo.Id.NAME,
+        include = JsonTypeInfo.As.EXISTING_PROPERTY,
+        property = "type",
+        visible = true
+)
+@JsonSubTypes({
+        @JsonSubTypes.Type(value = Song.class, name = "Song"),
+        @JsonSubTypes.Type(value = Lesson.class, name = "Lesson"),
+        @JsonSubTypes.Type(value = Genre.class, name = "Genre"),
+        @JsonSubTypes.Type(value = InstrumentGenre.class, name = "InstrumentGenre")
+})
 public abstract class Item {
 
     /**
@@ -38,55 +53,57 @@ public abstract class Item {
      * This is the primary key of the Item entity.
      */
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
     protected Long id;
 
     /**
      * Name of the item.
      * This field is optional and can be null.
      */
-    @Column(nullable = true)
-    @NotBlank(message = "Item name cannot be blank")
-    protected String name;
+    @Column(nullable = false)
+    @NotBlank(message = "Item title cannot be blank")
+    protected String title;
 
     /**
      * URL of the image representing the item.
      * This field is optional and can be null.
      */
-    @Column(nullable = false)
-    @NotBlank(message = "Image URL cannot be blank")
     protected String imageUrl;
 
     /**
      * Level of the item, represented as a rating between 1 and 5 stars.
      * This field is optional and can be null.
      */
-    @Column(nullable = true)
-    @Min(value = 1, message = "Level must be at least 1")
-    @Max(value = 5, message = "Level must be at most 5")
+    //@Min(value = 1, message = "Level must be at least 1")
+    //@Max(value = 5, message = "Level must be at most 5")
     protected int level;  // between 1 and 5 stars
 
     /**
      * Timestamp indicating when the item was created.
      * This field is automatically set to the current date and time when the item is created.
      */
-    @Column(nullable = true)
     protected LocalDateTime createdAt = LocalDateTime.now();
 
     /**
-     * Type of the item, represented as an enum.
-     * This field is used to categorize the item into different types such as Song, Lesson, Genre, or InstrumentGenre.
+     * Timestamp indicating the last time this item was accessed/opened.
+     * It is updated every time a user opens the item's detail screen and it is
+     * used to build the "Recientes" (recent) section on the Home screen.
+     * Remains {@code null} until the item is accessed for the first time.
      */
-    @Column(nullable = true)
+    protected LocalDateTime lastTimeAccessed;
+
+    /**
+     * Type of the item, represented as an enum.
+     * This field is used to categorize the item into different types such as Song, Lesson, Genre, or InstrumentGenreScreen.
+     */
+    @Column(nullable = false)
     @Enumerated(EnumType.STRING)
     protected Type type;
 
     /**
      * Enum representing the different types of items.
-     * This enum is used to categorize items into specific types such as Song, Lesson, Genre, or InstrumentGenre.
+     * This enum is used to categorize items into specific types such as Song, Lesson, Genre, or InstrumentGenreScreen.
      */
     public enum Type {
         Song, Lesson, Genre, InstrumentGenre
     }
-
 }

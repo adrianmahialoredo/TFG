@@ -37,6 +37,8 @@ public class SongLessonDTO {
      */
     private List<Long> tabSectionsIds;
 
+    private List<TabSectionDTO> tabSections;
+
     /**
      * List of IDs of chords associated with this lesson.
      */
@@ -47,7 +49,7 @@ public class SongLessonDTO {
      * Maximum 5000 characters to prevent excessive data.
      */
     @Size(max = 5000, message = "Lyrics must not exceed 5000 characters")
-    private String cordedLyrics;
+    private String chordedLyrics;
 
     /**
      * URL of the lesson video content.

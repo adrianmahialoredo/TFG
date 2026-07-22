@@ -15,10 +15,12 @@ export enum ItemType {
  */
 export interface ItemDTO {
   id: string;
-  name?: string;
+  title: string;
   imageUrl: string;
   level?: number; // entre 1 y 5 estrellas
   createdAt?: string;
+  /** Fecha ISO del último acceso al item. Alimenta la sección "Recientes". */
+  lasttimeaccess?: string;
   type: ItemType;
 }
 

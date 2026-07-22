@@ -1,9 +1,9 @@
 package com.demo.demo.dto;
 
 import java.util.List;
-import jakarta.validation.constraints.*;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 import lombok.*;
-import org.hibernate.validator.constraints.URL;
 
 /**
  * Data Transfer Object for musical song information.
@@ -17,20 +17,7 @@ import org.hibernate.validator.constraints.URL;
  * @since 2025-06-06
  */
 @Data
-public class SongDTO {
-
-    /**
-     * The unique identifier of the song.
-     */
-    private Long id;
-
-    /**
-     * The title of the song.
-     * Must not be blank and must be between 1 and 200 characters.
-     */
-    @NotBlank(message = "Song title is required")
-    @Size(min = 1, max = 200, message = "Title must be between 1 and 200 characters")
-    private String title;
+public class SongDTO extends ItemDTO {
 
     /**
      * The artist or composer of the song.
@@ -39,13 +26,6 @@ public class SongDTO {
     @NotBlank(message = "Artist name is required")
     @Size(min = 1, max = 200, message = "Artist must be between 1 and 200 characters")
     private String artist;
-
-    /**
-     * The URL of the song's cover image.
-     * Must be a valid URL format if provided.
-     */
-    @URL(message = "Image URL must be a valid URL")
-    private String imageUrl;
 
     /**
      * List of IDs of genres associated with this song.
@@ -60,6 +40,8 @@ public class SongDTO {
     /**
      * List of IDs of lessons available for this song.
      */
-    private List<Long> lessons;
+    private List<Long> lessonIds;
+
+    private List<SongLessonDTO> lessons;
     
 }

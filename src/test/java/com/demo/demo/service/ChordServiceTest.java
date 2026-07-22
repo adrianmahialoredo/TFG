@@ -30,7 +30,7 @@ class ChordServiceTest {
     private ChordRepository chordRepository;
 
     @InjectMocks
-    private ChordService chordService;
+    private ChordServiceImpl chordService;
 
     private Chord testChord;
     private ChordDto testChordDto;

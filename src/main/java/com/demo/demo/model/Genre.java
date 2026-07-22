@@ -58,16 +58,16 @@ public class Genre extends Item {
      * This field is required and must not be blank.
      */
     @NotBlank(message = "Welcome intro video URL cannot be blank")
-    @Pattern(regexp = "^https?://.+", message = "Welcome intro video URL must be a valid HTTP/HTTPS URL")
-    private String welcomeIntroVideo;
+    @Column(name = "welcome_intro_video", nullable = false)
+    private String welcomeIntroVideoId;
 
     /**
      * URL of the welcome song video for the genre.
      * This field is required and must not be blank.
      */
     @NotBlank(message = "Welcome song video URL cannot be blank")
-    @Pattern(regexp = "^https?://.+", message = "Welcome song video URL must be a valid HTTP/HTTPS URL")
-    private String welcomeSongVideo;
+    @Column(name = "welcome_song_video", nullable = false)
+    private String welcomeSongVideoId;
 
 
     /**
@@ -76,13 +76,4 @@ public class Genre extends Item {
      */
     @OneToMany(mappedBy = "genre")
     private Set<Lesson> lessons = new HashSet<>();
-
-    /**
-     * Relation with Song
-     * This is a many-to-many relationship, meaning that many songs can belong to many genres.
-     * A genre can have multiple songs, and a song can be associated with multiple genres.
-     */
-    @ManyToMany(mappedBy = "genres")
-    private Set<Song> songs = new HashSet<>();
-
 }

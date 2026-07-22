@@ -1,6 +1,7 @@
 package com.demo.demo.model;
 
 import java.util.*;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import lombok.*;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
@@ -24,7 +25,7 @@ import jakarta.validation.constraints.*;
  * @since 2025-06-06
  */
 @Entity
-@Table(name = "songs")
+@Table(name = "lessons")
 @DiscriminatorValue("LESSON")
 @Getter
 @Setter
@@ -54,7 +55,18 @@ public class Lesson extends Item {
      */
     @OneToMany(mappedBy = "lesson", cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("orderIndex ASC")
-    @NotEmpty(message = "Lesson must have at least one section")
+    //@NotEmpty(message = "Lesson must have at least one section")
+    @JsonManagedReference
     private List<LessonSection> sections = new ArrayList<>();
 
+    // --- FILTERS --- //
+    /**
+     * Indicates whether the lesson is featured as popular on the Home screen.
+     */
+    private boolean popular;
+
+    public void addSection(LessonSection section) {
+        this.sections.add(section);
+        section.setLesson(this);
+    }
 }

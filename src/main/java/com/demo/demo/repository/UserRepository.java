@@ -30,5 +30,4 @@ public interface UserRepository extends JpaRepository<User, Long> {
      * @return the User entity associated with the given username, or null if not found
      */
     User findByUsername(String username);
-
 }

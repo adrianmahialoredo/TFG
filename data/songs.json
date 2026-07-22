@@ -1,2 +1,246 @@
-[]
+[
+  {
+    "id": 201,
+    "title": "All The Small Things",
+    "artist": "Blink-182",
+    "imageUrl": "https://res.cloudinary.com/dvm8qkmuo/image/upload/v1750595587/pop1.jpg",
+    "genreIds": [1],
+    "instrumentIds": [1],
+    "lessons": [
+      {
+        "id": 501,
+        "difficulty": "EASY",
+        "chordIds": [1, 5, 4],
+        "chordedLyrics": "[C]Say it ain't [G]so, I will [F]not go",
+        "videoUrl": "https://www.youtube.com/watch?v=9Ht5RZ_6pXU",
+        "instrumentId": 1,
+        "tabSections": [
+          { "identifier": "Intro Acordes", "content": "C (x35553) - G (355433) - F (133211)" }
+        ]
+      },
+      {
+        "id": 502,
+        "difficulty": "ORIGINAL",
+        "chordIds": [21, 22, 23],
+        "chordedLyrics": "[C5]Say it ain't [G5]so, I will [F5]not go",
+        "videoUrl": "https://www.youtube.com/watch?v=9Ht5RZ_6pXU",
+        "instrumentId": 1,
+        "tabSections": [
+          { "identifier": "Intro Power Chords", "content": "D|---5-----------|\nA|---3---5---3---|\nE|-------3---1---|" }
+        ]
+      }
+    ]
+  },
+  {
+    "id": 202,
+    "title": "Basket Case",
+    "artist": "Green Day",
+    "imageUrl": "https://res.cloudinary.com/dvm8qkmuo/image/upload/v1750595587/pop2.jpg",
+    "genreIds": [1],
+    "instrumentIds": [1],
+    "lessons": [
+      {
+        "id": 503,
+        "difficulty": "MEDIUM",
+        "chordIds": [18, 7, 3],
+        "chordedLyrics": "[F#]Do you have the [B]time to [E]listen...",
+        "videoUrl": "https://www.youtube.com/watch?v=NUTGr5t3MoY",
+        "instrumentId": 1,
+        "tabSections": [
+          { "identifier": "Palm Muted Verse", "content": "P.M.------------------\ne|--------------------|\nB|--------------------|\nG|---11---4----9------|\nD|---11---4----9------|\nA|---9----2----7------|" }
+        ]
+      }
+    ]
+  },
+  {
+    "id": 203,
+    "title": "Johnny B. Goode",
+    "artist": "Chuck Berry",
+    "imageUrl": "https://res.cloudinary.com/dvm8qkmuo/image/upload/v1750595587/rock1.jpg",
+    "genreIds": [2],
+    "instrumentIds": [1],
+    "lessons": [
+      {
+        "id": 504,
+        "difficulty": "EASY",
+        "chordIds": [6, 2, 5],
+        "chordedLyrics": "[A]Deep down in Loui[D]siana close to New [A]Orleans",
+        "videoUrl": "https://www.youtube.com/watch?v=T38v3-SSGcM",
+        "instrumentId": 1,
+        "tabSections": [
+          { "identifier": "Main Rhythm", "content": "A|---7-7-9-9-7-7-9-9---|\nE|---5-5-5-5-5-5-5-5---|" }
+        ]
+      },
+      {
+        "id": 505,
+        "difficulty": "ORIGINAL",
+        "chordIds": [6, 2, 5],
+        "chordedLyrics": "[A]Way back up in the [D]woods among the [A]evergreens",
+        "videoUrl": "https://www.youtube.com/watch?v=T38v3-SSGcM",
+        "instrumentId": 1,
+        "tabSections": [
+          { "identifier": "Johnny Solo Start", "content": "E|-------5-8p5---5-----|\nB|---5/8-------8---8b--|" }
+        ]
+      }
+    ]
+  },
+  {
+    "id": 204,
+    "title": "Back In Black",
+    "artist": "AC/DC",
+    "imageUrl": "https://res.cloudinary.com/dvm8qkmuo/image/upload/v1750595587/rock2.jpg",
+    "genreIds": [2],
+    "instrumentIds": [1],
+    "lessons": [
+      {
+        "id": 506,
+        "difficulty": "MEDIUM",
+        "chordIds": [3, 6, 2, 5],
+        "chordedLyrics": "[E]Back in black, [A]I hit the [G]sack...",
+        "videoUrl": "https://www.youtube.com/watch?v=fXvI-EOn3L8",
+        "instrumentId": 1,
+        "tabSections": [
+          { "identifier": "The Riff", "content": "E|---0-----------------|\nB|---0---3-3-3---------|\nG|---1---2-2-2---2p0---|\nD|---2---0-0-0-------2-|" }
+        ]
+      }
+    ]
+  },
+  {
+    "id": 205,
+    "title": "Yellow",
+    "artist": "Coldplay",
+    "imageUrl": "https://res.cloudinary.com/dvm8qkmuo/image/upload/v1750595587/poprock1.jpg",
+    "genreIds": [3],
+    "instrumentIds": [1],
+    "lessons": [
+      {
+        "id": 507,
+        "difficulty": "EASY",
+        "chordIds": [5, 2, 1],
+        "chordedLyrics": "[G]Look at the stars, look how they [D]shine for [C]you",
+        "videoUrl": "https://www.youtube.com/watch?v=1MwjX47qd64",
+        "instrumentId": 1,
+        "tabSections": [
+          { "identifier": "Strumming Pattern", "content": "D - D - U - U - D - U" }
+        ]
+      },
+      {
+        "id": 508,
+        "difficulty": "ORIGINAL",
+        "chordIds": [5, 2, 1],
+        "chordedLyrics": "Capo 4th fret - [G]Look at the stars...",
+        "videoUrl": "https://www.youtube.com/watch?v=1MwjX47qd64",
+        "instrumentId": 1,
+        "tabSections": [
+          { "identifier": "Alt Tuning Verse", "content": "EABGBE Tuning\nE|---0---0---0---0---|\nB|---0---0---0---0---|" }
+        ]
+      }
+    ]
+  },
+  {
+    "id": 206,
+    "title": "Wonderwall",
+    "artist": "Oasis",
+    "imageUrl": "https://res.cloudinary.com/dvm8qkmuo/image/upload/v1750595587/poprock2.jpg",
+    "genreIds": [3],
+    "instrumentIds": [1],
+    "lessons": [
+      {
+        "id": 509,
+        "difficulty": "MEDIUM",
+        "chordIds": [5, 1, 2, 10],
+        "chordedLyrics": "[G]Today is gonna be the day that they're [C]gonna throw it [D]back to [Em]you",
+        "videoUrl": "https://www.youtube.com/watch?v=6tu2wH09N6M",
+        "instrumentId": 1,
+        "tabSections": [
+          { "identifier": "Wonderwall Strum", "content": "e|---3---3---3---3---|\nB|---3---3---3---3---|\nG|---0---0---0---0---|" }
+        ]
+      }
+    ]
+  },
+  {
+    "id": 207,
+    "title": "Uptown Funk",
+    "artist": "Mark Ronson",
+    "imageUrl": "https://res.cloudinary.com/dvm8qkmuo/image/upload/v1750595587/funk1.jpg",
+    "genreIds": [4],
+    "instrumentIds": [1],
+    "lessons": [
+      {
+        "id": 510,
+        "difficulty": "ORIGINAL",
+        "chordIds": [2, 15, 5],
+        "chordedLyrics": "[D7]This hit, that ice [A7]cold...",
+        "videoUrl": "https://www.youtube.com/watch?v=OPf0YbXqDm0",
+        "instrumentId": 1,
+        "tabSections": [
+          { "identifier": "Funk Scratch", "content": "E|---10-x-x-10-x-x-x---|\nB|---10-x-x-10-x-x-x---|" }
+        ]
+      }
+    ]
+  },
+  {
+    "id": 208,
+    "title": "Get Lucky",
+    "artist": "Daft Punk",
+    "imageUrl": "https://res.cloudinary.com/dvm8qkmuo/image/upload/v1750595587/funk2.jpg",
+    "genreIds": [4],
+    "instrumentIds": [1],
+    "lessons": [
+      {
+        "id": 511,
+        "difficulty": "ORIGINAL",
+        "chordIds": [10, 5, 2, 1],
+        "chordedLyrics": "[Em]We're up all night to get [G]lucky, [D]all night for [C]fortune",
+        "videoUrl": "https://www.youtube.com/watch?v=50VNCymT-Cs",
+        "instrumentId": 1,
+        "tabSections": [
+          { "identifier": "Muted Chords", "content": "Bm7 - D - F#m7 - E" }
+        ]
+      }
+    ]
+  },
+  {
+    "id": 209,
+    "title": "Dos Días de Luto",
+    "artist": "Hens",
+    "imageUrl": "https://res.cloudinary.com/dvm8qkmuo/image/upload/v1750595587/ola1.jpg",
+    "genreIds": [6],
+    "instrumentIds": [1],
+    "lessons": [
+      {
+        "id": 512,
+        "difficulty": "EASY",
+        "chordIds": [8, 4, 1, 5],
+        "chordedLyrics": "[Am]Dos días de [F]luto me han bas[C]tado [G]ya",
+        "videoUrl": "https://www.youtube.com/watch?v=D-w-w7M8u7w",
+        "instrumentId": 1,
+        "tabSections": [
+          { "identifier": "Ola Verse", "content": "Am - F - C - G (4/4)" }
+        ]
+      }
+    ]
+  },
+  {
+    "id": 210,
+    "title": "Batmóvil (Remix)",
+    "artist": "Pole & Hens",
+    "imageUrl": "https://res.cloudinary.com/dvm8qkmuo/image/upload/v1750595587/ola2.jpg",
+    "genreIds": [6],
+    "instrumentIds": [1],
+    "lessons": [
+      {
+        "id": 513,
+        "difficulty": "EASY",
+        "chordIds": [1, 5, 8, 4],
+        "chordedLyrics": "[C]Súbete al batmóvil [G]vamos a cien, [Am]siempre que te [F]vas me siento bien",
+        "videoUrl": "https://www.youtube.com/watch?v=Zk-N8E6PZ9s",
+        "instrumentId": 1,
+        "tabSections": [
+          { "identifier": "Batmóvil Hook", "content": "C - G - Am - F" }
+        ]
+      }
+    ]
+  }
+]
 

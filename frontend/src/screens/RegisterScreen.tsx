@@ -1,145 +1,117 @@
-import { TextInput, View, Text, TouchableOpacity, ScrollView, Alert } from "react-native";
-import App from "../../App";
+import React, { useState } from "react";
+import { ScrollView, View, Text, TouchableOpacity, Alert, ActivityIndicator, TextInput } from "react-native";
+import { ArrowLeft, Mail, UserRound, Lock, Speech } from "lucide-react-native";
+import { useNavigation } from "@react-navigation/native";
+
 import AppLayout from "../components/AppLayout";
-import { ArrowLeft, Mail, UserRound,Lock, Speech } from "lucide-react-native";
 import GenrePicker from "../components/GenrePicker";
 import InstrumentPicker from "../components/InstrumentPicker";
 import { COLORS } from "../constants/Theme";
-import { useState } from "react";
-import { register } from "../services/auth.service";
-import { useNavigation } from "@react-navigation/native";
-import { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { RootStackParamList } from "../types/RootStackParamList";
+import { useRegister } from "../hooks/useRegister"; // Importamos el especialista
 
 export default function RegisterScreen() {
+  const navigation = useNavigation();
+  const { register, isLoading } = useRegister();
 
-  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-
-  const [email, setEmail] = useState('');
-  const [name, setName] = useState('');
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [favouriteGenresIds, setFavouriteGenresIds] = useState<string[]>([]);
+  const [form, setForm] = useState({
+    name: '',
+    email: '',
+    username: '',
+    password: '',
+    confirmPassword: '',
+    favouriteGenresIds: [] as string[],
+    favouriteInstrumentsIds: [] as string[]
+  });
 
   const handleRegister = async () => {
-    if (password !== confirmPassword) {
-      Alert.alert('Error', 'Password does not match');
-      return;
-    }
-
-    const newUser = { email, username, name, password, favouriteGenresIds }
-
     try {
-      const { user } = await register(newUser);
-      console.log('User registered:', user);
-      navigation.navigate("LoginScreen")
+      await register(form);
+      // No navegamos manualmente; el AppNavigator reaccionará al cambio de AuthStore
+      Alert.alert('¡Éxito!', 'Creando tu perfil musical...');
     } catch (error: any) {
-      console.error('Error al registrar:', error);
-      Alert.alert('Error', error?.response?.data?.message || 'No se pudo registrar');
+      Alert.alert('Error', error.message);
     }
   };
 
   return (
-    <AppLayout backgroundColor="bg-primary">
-        <View className="flex-row justify-left items-center my-8 gap-2">
-          <TouchableOpacity>
-            <ArrowLeft 
-              size={30} 
-              color={COLORS.secondary}
-              onPress={() => navigation.navigate("LoginScreen")}
-            />  
+      <AppLayout backgroundColor="bg-primary">
+        <View className="flex-row items-center my-8 gap-2">
+          <TouchableOpacity onPress={() => navigation.goBack()}>
+            <ArrowLeft size={30} color={COLORS.secondary} />
           </TouchableOpacity>
           <Text className="text-3xl font-bold text-secondary">Registrarse</Text>
         </View>
-        <ScrollView
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ paddingBottom: 120 }}
-        >
-            <View className="mb-7">
-              <Text className="text-lg font-bold text-secondary">Bienvenido a Toco</Text>
-              <Text className="text-lg font-bold text-secondary mb-4">Regístrate y empieza a aprender música!</Text>
-            </View>
 
-            <View className="relative mb-4">
-            <TextInput
-                className="text-secondary border border-secondary rounded-lg p-4 mb-2 pr-12"
-                placeholder="Nombre"
-                placeholderTextColor={COLORS.placeholder}
-                keyboardType="email-address"
-                value={name}
-                onChangeText={setName}
-            />
-            <View className="absolute right-4 top-1/3 transform -translate-y-1/4">
-                <Speech size={25} color={COLORS.secondary} />
-            </View>
-            </View>
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 120 }}>
 
-            <View className="relative mb-4">
-            <TextInput
-                className="text-secondary border border-secondary rounded-lg p-4 mb-2 pr-12"
-                placeholder="Email"
-                placeholderTextColor={COLORS.placeholder}
-                keyboardType="email-address"
-                value={email}
-                onChangeText={setEmail}
-            />
-            <View className="absolute right-4 top-1/3 transform -translate-y-1/4">
-                <Mail size={25} color={COLORS.secondary} />
-            </View>
-            </View>
+          <RegisterInput
+              placeholder="Nombre completo"
+              icon={<Speech size={22} color={COLORS.secondary}/>}
+              value={form.name}
+              onChange={(v: any) => setForm({...form, name: v})}
+          />
 
-            <View className="relative mb-4">
-            <TextInput
-                className="text-secondary border border-secondary rounded-lg p-4 mb-2 pr-12"
-                placeholder="Usuario"
-                placeholderTextColor={COLORS.placeholder}
-                keyboardType="email-address"
-                value={username}
-                onChangeText={setUsername}
-            />
-            <View className="absolute right-4 top-1/3 transform -translate-y-1/4">
-                <UserRound size={25} color={COLORS.secondary} />
-            </View>
-            </View>
+          <RegisterInput
+              placeholder="Email"
+              icon={<Mail size={22} color={COLORS.secondary}/>}
+              keyboardType="email-address"
+              value={form.email}
+              onChange={(v: any) => setForm({...form, email: v})}
+          />
 
-            <View className="relative mb-4">
-            <TextInput
-                className="text-secondary border border-secondary rounded-lg p-4 mb-2 pr-12"
-                placeholder="Contraseña"
-                placeholderTextColor={COLORS.placeholder}
-                secureTextEntry
-                value={password}
-                onChangeText={setPassword}
-            />
-            <View className="absolute right-4 top-1/3 transform -translate-y-1/4">
-                <Lock size={25} color={COLORS.secondary} />
-            </View>
-            </View>
+          <RegisterInput
+              placeholder="Usuario"
+              icon={<UserRound size={22} color={COLORS.secondary}/>}
+              value={form.username}
+              onChange={(v: any) => setForm({...form, username: v})}
+          />
 
-            <View className="relative mb-8">
-              <TextInput
-                className="text-secondary border border-secondary rounded-lg p-4 mb-2 pr-12"
-                placeholder="Repetir contraseña"
-                placeholderTextColor={COLORS.placeholder}
-                secureTextEntry
-                value={confirmPassword}
-                onChangeText={setConfirmPassword}
-              />
-              <View className="absolute right-4 top-1/3 transform -translate-y-1/4">
-                <Lock size={25} color={COLORS.secondary} />
-              </View>
-            </View>
-            
-            <GenrePicker onSelectionChange={(ids) => setFavouriteGenresIds(ids)} />
-            <InstrumentPicker/>
+          <RegisterInput
+              placeholder="Contraseña"
+              icon={<Lock size={22} color={COLORS.secondary}/>}
+              secureTextEntry
+              value={form.password}
+              onChange={(v: any) => setForm({...form, password: v})}
+          />
 
-            <View className="flex-row justify-center mt-4">
-              <TouchableOpacity className="bg-secondary px-6 py-5 rounded-lg w-full" onPress={handleRegister} >
-                <Text className="text-primary text-lg self-center">Crear Cuenta</Text>
-              </TouchableOpacity>
-            </View>
+          <RegisterInput
+              placeholder="Repetir contraseña"
+              icon={<Lock size={22} color={COLORS.secondary}/>}
+              secureTextEntry
+              value={form.confirmPassword}
+              onChange={(v: any) => setForm({...form, confirmPassword: v})}
+          />
+
+          <View className="mt-4 gap-y-4">
+            <GenrePicker onSelectionChange={(ids) => setForm({...form, favouriteGenresIds: ids})} />
+            <InstrumentPicker onSelectionChange={(ids) => setForm({...form, favouriteInstrumentsIds: ids})} />
+          </View>
+
+          <TouchableOpacity
+              className="bg-secondary p-5 rounded-xl mt-8 shadow-sm"
+              onPress={handleRegister}
+              disabled={isLoading}
+          >
+            {isLoading ? (
+                <ActivityIndicator color={COLORS.primary} />
+            ) : (
+                <Text className="text-primary text-center font-bold text-lg">CREAR CUENTA</Text>
+            )}
+          </TouchableOpacity>
         </ScrollView>
-    </AppLayout>
+      </AppLayout>
   );
 }
+
+// Átomo reutilizable para inputs de registro
+const RegisterInput = ({ icon, onChange, ...props }: any) => (
+    <View className="relative mb-4">
+      <TextInput
+          className="text-secondary border border-secondary/30 rounded-xl p-4 pr-12 bg-black/10"
+          placeholderTextColor={COLORS.placeholder}
+          onChangeText={onChange}
+          {...props}
+      />
+      <View className="absolute right-4 top-4">{icon}</View>
+    </View>
+);

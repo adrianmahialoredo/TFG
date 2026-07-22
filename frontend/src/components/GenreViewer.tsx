@@ -1,65 +1,38 @@
+import { View, Text, TouchableOpacity } from "react-native";
 import { CirclePlus } from "lucide-react-native";
-import { TouchableOpacity, View, Text } from "react-native";
 import { COLORS } from "../constants/Theme";
-import { UserDTO } from "../types";
-import { useEffect, useState } from "react";
-import { getStoredGenresByIdList } from "../local";
-import { GenreDTO } from "../types";
-import {getStoredUser} from "../local";
+import { useGenreEntitiesStore } from "../stores/entities";
 
-export default function GenreViewer() {
+type Props = {
+    ids: (string | number)[]; // Recibimos solo los IDs
+    label: string;
+};
 
-  const [user, setUser] = useState<UserDTO | null>(null);
-  const [genres, setGenres] = useState<GenreDTO[]>([]);
+export default function GenreViewer({ ids, label }: Props) {
+    // Accedemos a la RAM directamente (O(1) access)
+    const genresMap = useGenreEntitiesStore(state => state.genres);
 
-  /* Load user data from storage when the component mounts */
-  useEffect(() => {
-      const loadUser = async () => {
-        const data = await getStoredUser();
-        if (data) {
-          setUser(data.user);
-        }
-      };
-  
-      loadUser();
-    }, []);
+    // Mapeamos los IDs a los objetos reales que ya están en la Store
+    const genres = ids.map(id => genresMap[id]).filter(Boolean);
 
-  /* Load genres based on user's favourite genres when the user data changes */
-  useEffect(() => {
-    const loadGenres = async () => {
-      if (user?.favouriteGenresIds) {
-        const fetchedGenres = await getStoredGenresByIdList(user.favouriteGenresIds);
-        setGenres(fetchedGenres);
-      } else {
-        setGenres([]);
-      }
-    };
-    loadGenres();
-  }, [user]);
+    if (genres.length === 0) return null;
 
-  return (
-    <View className="mb-5">
-      <View className="flex-row flex-wrap justify-left gap-2 mb-4">
-        <Text className="text-lg text-secondary font-semibold">
-          Me gustan:
-        </Text>
-      </View>
-      <View className="flex-row flex-wrap justify-left gap-2">
-        {genres.map((genre) => {
-          return (
-            <TouchableOpacity
-              key={genre.id}
-              className= "px-3 py-1 bg-primary rounded-lg"
-              disabled= {true} // Disable interaction for viewing purposes
-            >
-              <Text className="text-secondary text-base">{genre.name}</Text>
-            </TouchableOpacity>
-          );
-        })}
-        <TouchableOpacity className="py-1">
-          <CirclePlus size={20} color={COLORS.primary} strokeWidth={1} />
-        </TouchableOpacity>
-      </View>
-    </View>
-  );
+    return (
+        <View className="mb-5">
+            <Text className="text-lg text-secondary font-semibold mb-4">
+                {label}
+            </Text>
+            <View className="flex-row flex-wrap gap-2">
+                {genres.map((genre) => (
+                    <View
+                        key={genre.id}
+                        className="px-3 py-1 bg-primary rounded-lg border border-secondary/20"
+                    >
+                        <Text className="text-secondary text-base">{genre.name}</Text>
+                    </View>
+                ))}
+                {/* Solo mostramos el Plus si es nuestro perfil (opcional) */}
+            </View>
+        </View>
+    );
 }

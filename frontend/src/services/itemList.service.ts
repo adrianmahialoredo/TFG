@@ -2,28 +2,28 @@ import axios from 'axios';
 import { API_ENDPOINTS } from '../config/apiConfig';
 import { ItemListDTO } from '../types';
 
-export const getAllItemLists = async (): Promise<ItemListDTO[]> => {
+export const getAll = async (): Promise<ItemListDTO[]> => {
   const response = await axios.get(API_ENDPOINTS.ITEM_LISTS.BASE);
   return response.data;
 };
 
-export const getItemListById = async (id: string): Promise<ItemListDTO> => {
+export const getById = async (id: string): Promise<ItemListDTO> => {
   const response = await axios.get(API_ENDPOINTS.ITEM_LISTS.BY_ID(id));
   return response.data;
 };
 
-export const getItemListsByUser = async (userId: string): Promise<ItemListDTO[]> => {
+export const getByUserId = async (userId: string): Promise<ItemListDTO[]> => {
   const response = await axios.get(API_ENDPOINTS.ITEM_LISTS.BY_USER(userId));
   return response.data;
 };
 
-export const getItemListIdsByUser = async (userId: string): Promise<string[]> => {
+export const getUserIds = async (userId: string): Promise<string[]> => {
   const response = await axios.get(API_ENDPOINTS.ITEM_LISTS.BY_USER(userId));
   // Convertir los IDs numéricos a strings si es necesario
   return response.data.map((id: number | string) => String(id));
 };
 
-export const getItemListsByIds = async (ids: string[]): Promise<ItemListDTO[]> => {
+export const getAllById = async (ids: string[]): Promise<ItemListDTO[]> => {
   const response = await axios.get(API_ENDPOINTS.ITEM_LISTS.BY_IDS, {
     params: { ids },
   });
@@ -42,5 +42,15 @@ export const updateItemList = async (id: string, itemList: ItemListDTO): Promise
 
 export const deleteItemList = async (id: string): Promise<void> => {
   await axios.delete(API_ENDPOINTS.ITEM_LISTS.BY_ID(id));
+};
+
+export const addItemToList = async (listId: string, itemId: string): Promise<ItemListDTO> => {
+  const response = await axios.put(API_ENDPOINTS.ITEM_LISTS.ADD_ITEM(listId, itemId));
+  return response.data;
+};
+
+export const removeItemFromList = async (listId: string, itemId: string): Promise<ItemListDTO> => {
+  const response = await axios.put(API_ENDPOINTS.ITEM_LISTS.REMOVE_ITEM(listId, itemId));
+  return response.data;
 };
 

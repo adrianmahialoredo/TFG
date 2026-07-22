@@ -36,7 +36,11 @@ public interface ChordRepository extends JpaRepository<Chord, Long> {
      * @param songLessonId The ID of the song lesson.
      * @return A list of Chord entities associated with the song lesson.
      */
-    @Query("SELECT c FROM Chord c JOIN SongLesson sl ON c MEMBER OF sl.chords WHERE sl.id = :songLessonId")
+    @Query(
+        "SELECT c " +
+        "FROM Chord c " +
+        "JOIN SongLesson sl ON c MEMBER OF sl.chords " +
+        "WHERE sl.id = :songLessonId"
+    )
     List<Chord> findAllBySongLessonId(@Param("songLessonId") Long songLessonId);
-
 }

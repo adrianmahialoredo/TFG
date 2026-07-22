@@ -29,7 +29,11 @@ public interface ItemListRepository extends JpaRepository<ItemList, Long> {
      * @param userId The ID of the user.
      * @return A list of item list IDs for the user.
      */
-    @Query("SELECT il.id FROM ItemList il WHERE il.user.id = :userId")
+    @Query(
+        "SELECT il.id " +
+        "FROM ItemList il " +
+        "WHERE il.user.id = :userId"
+    )
     List<Long> findIdsByUserId(@Param("userId") Long userId);
 
     /**
@@ -41,5 +45,3 @@ public interface ItemListRepository extends JpaRepository<ItemList, Long> {
     @NonNull
     List<ItemList> findAllById(@NonNull Iterable<Long> ids);
 }
-
-

@@ -1,27 +1,74 @@
 import { ChordDTO } from "../types";
-import { getData, storeData } from "./storage.local";
+import { storeData, getData } from "./storage.local";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
-const CHORDS_KEY = 'chords';
+const CHORD_CACHE_PREFIX = '@chord:';
+const INDEX_CACHE_PREFIX = '@chord_index:';
 
-/* Guarda todos los acordes */
-export const storeChords = async (chords: ChordDTO[]): Promise<void> => {
-  return storeData(CHORDS_KEY, chords);
+export const saveSingle = async (chord: ChordDTO): Promise<void> => {
+  const key = `${CHORD_CACHE_PREFIX}${chord.id}`;
+  return storeData(key, chord);
 };
 
-/* Obtiene todos los acordes */
-export const getStoredChords = async (): Promise<ChordDTO[] | null> => {
-  return getData<ChordDTO[]>(CHORDS_KEY);
+export const getById = async (id: string): Promise<ChordDTO | null> => {
+  const key = `${CHORD_CACHE_PREFIX}${id}`;
+  return getData<ChordDTO>(key);
 };
 
-/* Obtiene un acorde por su ID */
-export const getStoredChordById = async (id: string): Promise<ChordDTO | null> => {
-  const chords = await getStoredChords();
-  return chords?.find((chord) => chord.id === id) || null;
+export const saveBatch = async (chords: ChordDTO[]): Promise<void> => {
+  if (chords.length === 0) return;
+
+  const pairs: [string, string][] = chords.map(chord => [
+    `${CHORD_CACHE_PREFIX}${chord.id}`,
+    JSON.stringify(chord)
+  ]);
+
+  try {
+    await AsyncStorage.multiSet(pairs);
+  } catch (e) {
+    console.error("[ChordLocal] Error en saveBatch:", e);
+  }
 };
 
-/* Obtiene varios acordes a partir de una lista de IDs */
-export const getStoredChordsByIdList = async (ids: string[]): Promise<ChordDTO[]> => {
-  const chords = await getStoredChords();
-  return chords?.filter((chord) => ids.includes(chord.id)) || [];
+export const getAllById = async (ids: string[]): Promise<{ cached: ChordDTO[]; missing: string[] }> => {
+  if (ids.length === 0) return { cached: [], missing: [] };
+
+  const keys = ids.map(id => `${CHORD_CACHE_PREFIX}${id}`);
+  const pairs = await AsyncStorage.multiGet(keys);
+
+  const cached: ChordDTO[] = [];
+  const missing: string[] = [];
+
+  pairs.forEach(([key, value], index) => {
+    if (value) {
+      try {
+        cached.push(JSON.parse(value));
+      } catch (e) {
+        missing.push(ids[index]);
+      }
+    } else {
+      missing.push(ids[index]);
+    }
+  });
+
+  return { cached, missing };
+};
+
+export const saveQueryIndex = async (key: string, ids: string[]): Promise<void> => {
+  try {
+    await AsyncStorage.setItem(`${INDEX_CACHE_PREFIX}${key}`, JSON.stringify(ids));
+  } catch (e) {
+    console.error("[ChordLocal] Error guardando índice:", e);
+  }
+};
+
+export const getQueryIndex = async (key: string): Promise<string[] | null> => {
+  try {
+    const data = await AsyncStorage.getItem(`${INDEX_CACHE_PREFIX}${key}`);
+    return data ? JSON.parse(data) : null;
+  } catch (e) {
+    console.error("[ChordLocal] Error leyendo índice:", e);
+    return null;
+  }
 };
 

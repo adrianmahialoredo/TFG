@@ -1,113 +1,74 @@
-
 import AppLayout from "../components/AppLayout";
-import { TouchableOpacity, Image, ScrollView, View, Text } from "react-native";
+import ProfileHeader from "../components/ProfileHeader";
+import { ScrollView, View, Text, ActivityIndicator } from "react-native";
+import { useRoute, RouteProp } from "@react-navigation/native";
 import SearchBar from "../components/SearchBar";
-import { useState } from "react";
 import AddListItem from "../components/AddListItem";
+import { RootStackParamList } from "../types";
+import { useAddItemScreen } from "../hooks/useAddItemScreen";
+import { itemToAddListItem } from "../utils/mappers.utils";
 
-type List = {
-  id: string;
-    title: string;
-    items: Item[];
-    imageUrl: string; // Added imageUrl property
-};
-
-type Item = {
-  id: string;
-    title: string;
-    description: string;
-    imageUrl: string;
-    info: string; // Additional information to display
-};
-
-const list: List = {
-  id: '1',
-    title: 'Lista de Ejemplo',
-    items: [
-        {
-        id: '1',
-        title: 'Lección de guitarra',
-        description: 'Aprende los acordes básicos de guitarra.',
-        imageUrl: 'https://upload.wikimedia.org/wikipedia/en/thumb/e/e8/Taylor_Swift_-_Red.png/250px-Taylor_Swift_-_Red.png',
-        info: `American Idiot
-        Cancion - Green Day`,
-        },
-        {
-        id: '2',
-        title: 'Canción favorita',
-        description: 'Disfruta de tu canción favorita.',
-        imageUrl: 'https://upload.wikimedia.org/wikipedia/en/thumb/e/e8/Taylor_Swift_-_Red.png/250px-Taylor_Swift_-_Red.png',
-        info: `Shape of You
-        Cancion - Ed Sheeran`,
-        },
-        {
-        id: '3',
-        title: 'Última práctica',
-        description: 'Revisa tu última práctica de guitarra.',
-        imageUrl: 'https://upload.wikimedia.org/wikipedia/en/thumb/e/e8/Taylor_Swift_-_Red.png/250px-Taylor_Swift_-_Red.png',
-        info: `Stairway to Heaven
-        Cancion - Led Zeppelin`,
-        },
-        {
-        id: '4',
-        title: 'Nuevo acorde aprendido',
-        description: 'Descubre un nuevo acorde de guitarra.',
-        imageUrl: 'https://upload.wikimedia.org/wikipedia/en/thumb/e/e8/Taylor_Swift_-_Red.png/250px-Taylor_Swift_-_Red.png',
-        info: `Wonderwall
-        Cancion - Oasis`,
-        },
-        {
-        id: '5',
-        title: 'Técnica de pua',
-        description: 'Mejora tu técnica de pua.',
-        imageUrl: 'https://upload.wikimedia.org/wikipedia/en/thumb/e/e8/Taylor_Swift_-_Red.png/250px-Taylor_Swift_-_Red.png',
-        info: `Smoke on the Water
-        Cancion - Deep Purple`,
-        },
-    ],
-    imageUrl: 'https://upload.wikimedia.org/wikipedia/en/thumb/e/e8/Taylor_Swift_-_Red.png/250px-Taylor_Swift_-_Red.png',
-}
+type AddItemScreenRouteProp = RouteProp<RootStackParamList, 'AddItemScreen'>;
 
 export default function AddItemScreen() {
+  const route = useRoute<AddItemScreenRouteProp>();
+  const { itemListId } = route.params;
 
-  const [query, setQuery] = useState('');
+  // Nivel 6: Hook que orquesta recomendaciones, búsqueda y la acción de añadir
+  const { items, query, setQuery, loading, searching, error, addItem, isAdded } =
+    useAddItemScreen(itemListId);
+
+  const sectionTitle = query.trim() ? 'Resultados' : 'Para ti';
+  const isBusy = loading || searching;
 
   return (
     <AppLayout>
-      <View className ="bg-background flex-1 pt-2">
-          {/* Icono de perfil y titulo */}
-          <View className="flex-row justify-left items-center mt-6 mb-7">
-            <TouchableOpacity>
-              <Image
-                source={{ uri: 'https://i.pravatar.cc/100' }}
-                className="w-14 h-14 rounded-full border"
-              />
-            </TouchableOpacity>
-            <Text className="text-[24px] font-roboto font-bold text-primary text-center ml-3">Añadir a lista</Text>
-          </View>
-          <ScrollView
-                      showsVerticalScrollIndicator={false}
-                      contentContainerStyle={{ paddingBottom: 120 }}
-                  >
+      <View className="bg-background flex-1 pt-2">
+        {/* Icono de perfil y titulo */}
+        <ProfileHeader title="Añadir a lista" />
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ paddingBottom: 120 }}
+        >
           {/* Barra de búsqueda */}
           <View className="bg-background mt-3 mb-10">
-            <SearchBar
-              value={query}
-              onChangeText={setQuery}
-            />
-            {/* Aquí puedes mostrar resultados filtrados */}
+            <SearchBar value={query} onChangeText={setQuery} />
           </View>
-          <Text className="text-lg font-semibold text-secondary justify-center text-center mb-10">Para ti</Text>
-          <View className="flex-column gap-3 mb-7">
-            {list.items.map((item) => (
-              <AddListItem
-                key={item.id}
-                item={item} 
-                onPress={() => console.log(`Selected item: ${item.title}`)}/>
-            ))}
-          </View>
-          </ScrollView>
-        </View>
+
+          <Text className="text-lg font-semibold text-secondary justify-center text-center mb-10">
+            {sectionTitle}
+          </Text>
+
+          {isBusy ? (
+            <View className="flex-1 justify-center items-center py-12">
+              <ActivityIndicator size="large" color="#ffffff" />
+            </View>
+          ) : error ? (
+            <View className="flex-1 justify-center items-center px-4 py-12">
+              <Text className="text-red-500 text-center">{error}</Text>
+            </View>
+          ) : items.length > 0 ? (
+            <View className="flex-column gap-3 mb-7">
+              {items.map((item) => (
+                <AddListItem
+                  key={item.id}
+                  item={itemToAddListItem(item)}
+                  added={isAdded(item.id)}
+                  onPress={() => addItem(item.id)}
+                />
+              ))}
+            </View>
+          ) : (
+            <View className="items-center py-12">
+              <Text className="text-secondary opacity-50 text-base text-center">
+                {query.trim()
+                  ? 'No se encontraron items para tu búsqueda'
+                  : 'No hay recomendaciones disponibles'}
+              </Text>
+            </View>
+          )}
+        </ScrollView>
+      </View>
     </AppLayout>
   );
 }

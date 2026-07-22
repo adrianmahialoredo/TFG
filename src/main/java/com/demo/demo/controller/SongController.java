@@ -146,6 +146,42 @@ public class SongController {
     }
 
     /**
+     * Fetches all songs by a specific genre that have the popular flag set to true.
+     * Uses optimized database query instead of filtering in memory.
+     * 
+     * @param genreId The ID of the genre to filter popular songs by.
+     * @return List of SongDTOs representing all popular songs from the specified genre.
+     */
+    @GetMapping("/popular-by-genre/{genreId}")
+    public List<SongDTO> getPopularByGenreId(@PathVariable Long genreId) {
+        return songService.getPopularByGenreId(genreId);
+    }
+
+    /**
+     * Fetches all classic songs by a specific genre and returns them as a list of SongDTOs.
+     * @TODO: Verify genre_classic flag exists in database.
+     * 
+     * @param genreId The ID of the genre to filter classic songs by.
+     * @return List of SongDTOs representing all classic songs from the specified genre.
+     */
+    @GetMapping("/classic-by-genre/{genreId}")
+    public List<SongDTO> getClassicByGenreId(@PathVariable Long genreId) {
+        return songService.getClassicByGenreId(genreId);
+    }
+
+    /**
+     * Fetches all new songs by a specific genre and returns them as a list of SongDTOs.
+     * @TODO: Verify genre_new flag exists in database.
+     * 
+     * @param genreId The ID of the genre to filter new songs by.
+     * @return List of SongDTOs representing all new songs from the specified genre.
+     */
+    @GetMapping("/new-by-genre/{genreId}")
+    public List<SongDTO> getNewByGenreId(@PathVariable Long genreId) {
+        return songService.getNewByGenreId(genreId);
+    }
+
+    /**
      * Fetches all new songs by a specific genre and returns them as a list of SongDTOs.
      * 
      * @param id The genre to filter new songs by.
@@ -176,5 +212,49 @@ public class SongController {
     @GetMapping("/ids")
     public List<SongDTO> getSongsByIds(@RequestBody List<Long> ids) {
         return songService.getSongsByIds(ids);
+    }
+
+    /**
+     * Fetches all popular songs globally and returns them as a list of SongDTOs.
+     * @todo Implementar en el backend
+     * 
+     * @return List of SongDTOs representing all popular songs globally.
+     */
+    @GetMapping("/home/popular")
+    public List<SongDTO> getHomeSongsPopular() {
+        return songService.getHomeSongsPopular();
+    }
+
+    /**
+     * Fetches all new songs globally and returns them as a list of SongDTOs.
+     * @todo Implementar en el backend
+     * 
+     * @return List of SongDTOs representing all new songs globally.
+     */
+    @GetMapping("/home/new")
+    public List<SongDTO> getHomeSongsNew() {
+        return songService.getHomeSongsNew();
+    }
+
+    /**
+     * Fetches all recommended songs for the user and returns them as a list of SongDTOs.
+     * @todo Implementar en el backend
+     * 
+     * @return List of SongDTOs representing recommended songs.
+     */
+    @GetMapping("/home/recommended")
+    public List<SongDTO> getHomeSongsRecommended() {
+        return songService.getHomeSongsRecommended();
+    }
+
+    /**
+     * Fetches all songs from Spotify for the user and returns them as a list of SongDTOs.
+     * @todo Implementar en el backend
+     * 
+     * @return List of SongDTOs representing songs from Spotify.
+     */
+    @GetMapping("/home/spotify")
+    public List<SongDTO> getHomeSongsFromSpotify() {
+        return songService.getHomeSongsFromSpotify();
     }
 }

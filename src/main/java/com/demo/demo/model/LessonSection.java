@@ -1,5 +1,6 @@
 package com.demo.demo.model;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -60,6 +61,7 @@ public class LessonSection {
     @NotNull(message = "Lesson cannot be null")
     @ManyToOne
     @JoinColumn(name = "lesson_id")
+    @JsonBackReference
     private Lesson lesson;
 
     /**

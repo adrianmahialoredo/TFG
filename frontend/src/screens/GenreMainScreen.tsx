@@ -1,85 +1,80 @@
-import { View } from "react-native";
+import { View, Text, ActivityIndicator } from "react-native";
 import AppLayout from "../components/AppLayout";
-import { Image, Text, TouchableOpacity } from "react-native";
 import TopButton from "../components/buttons/TopButton";
-import { useEffect, useState } from "react";
-import GenreInstruments from "../components/GenreInstruments";
-import GenreSongs from "../components/GenreSongs";
-import GenreDescription from "../components/GenreDescription";
-import { GenreDTO } from "../types";
-import * as genreRepository from "../repositories/genre.repository";
-import { useNavigation, useRoute } from "@react-navigation/native";
-import { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { RootStackParamList } from "../types";
+import ProfileHeader from "../components/ProfileHeader";
+import GenreInstrumentsScreen from "./GenreInstrumentsScreen";
+import GenreSongsScreen from "./GenreSongsScreen";
+import GenreDescriptionScreen from "./GenreDescriptionScreen";
+import { useRoute } from "@react-navigation/native";
+import { useGenreMain } from "../hooks/useGenreMain";
 
 export default function GenreMainScreen() {
-
-  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-
   const route = useRoute();
   const { genreId } = route.params as { genreId: string };
 
-  const [selectedTab, setSelectedTab] = useState<'Instrumentos' | 'Canciones' | 'Género'>('Género');
-  const [genre, setGenre] = useState<GenreDTO>();
-
-  useEffect(() => {
-    const fetchGenre = async () => {
-      try {
-        // Obtener del repositorio (cache first, backend fallback)
-        const data = await genreRepository.getGenreById(genreId);
-        setGenre(data);
-      } catch (error) {
-        console.error('Error al cargar el género:', error);
-      }
-    };
-
-    fetchGenre();
-  }, [genreId]);
+  const {
+    genre,
+    loading,
+    error,
+    selectedTab,
+    changeTab,
+  } = useGenreMain(genreId);
 
   return (
-    <AppLayout>
-      <View className="bg-background flex-1 pt-2">
+      <AppLayout>
+        {/* 1. ESTADO DE CARGA */}
+        {loading && !genre && (
+            <View className="flex-1 justify-center items-center bg-background">
+              <ActivityIndicator size="large" color="#ffffff" />
+            </View>
+        )}
 
-        {/* Icono de perfil y botones */}
-        <View className="flex-row justify-left items-center mt-6 mb-11 gap-2.5">
+        {/* 2. ESTADO DE ERROR */}
+        {error && !genre && (
+            <View className="flex-1 justify-center items-center bg-background p-4">
+              <Text className="text-red-500 text-center">{error}</Text>
+            </View>
+        )}
 
-          <TouchableOpacity
-            onPress={() => navigation.navigate('ProfileScreen')}
-          >
-            <Image
-              source={{ uri: 'https://i.pravatar.cc/100' }}
-              className="w-14 h-14 rounded-full border"
-            />
-          </TouchableOpacity>
+        {/* 3. CONTENIDO PRINCIPAL */}
+        {genre && (
+            <View className="flex-1 bg-background pt-2">
 
-          {['Instrumentos', 'Canciones', 'Género'].map((tab) => (
-            <TopButton
-              key={tab}
-              name={tab}
-              isSelected={selectedTab === tab}
-              onPress={() => setSelectedTab(tab as any)}
-            />
-          ))}
-          
-        </View>
+              <View className="flex-row gap-2 px-4 mb-4 mt-6">
+                <ProfileHeader title="" />
 
-        <View className="">
-            <Text className="text-[24px] font-roboto font-semibold text-primary text-center mb-2">
-                {genre?.name}
-            </Text>
-        </View>
+                {['Instrumentos', 'Canciones', 'Género'].map((tab) => (
+                    <TopButton
+                        key={tab}
+                        name={tab}
+                        isSelected={selectedTab === tab}
+                        onPress={() => changeTab(tab as any)}
+                    />
+                ))}
+              </View>
 
-        {selectedTab === 'Instrumentos' && <GenreInstruments description="instrumentos" />}
-        {selectedTab === 'Canciones' && <GenreSongs description="songds" />}
-        {selectedTab === 'Género' && 
-          <GenreDescription 
-            description={genre?.description ?? ""}
-            bannerUrl={genre?.bannerUrl ?? ""} 
-            welcomeVideoId={genre?.welcomeIntroVideoId ?? ""} 
-            welcomeSongId={genre?.welcomeSongVideoId ?? ""} 
-          />}
+              <View className="mb-6">
+                <Text className="text-[24px] font-semibold text-primary text-center">
+                  {genre.title}
+                </Text>
+              </View>
 
-      </View>
-    </AppLayout>
+              {/* Vistas Dinámicas pasándole solo el ID */}
+              <View className="flex-1">
+                {selectedTab === 'Instrumentos' && (
+                    <GenreInstrumentsScreen genreId={genreId} />
+                )}
+
+                {selectedTab === 'Canciones' && (
+                    <GenreSongsScreen genreId={genreId} />
+                )}
+
+                {selectedTab === 'Género' && (
+                    <GenreDescriptionScreen genreId={genreId} />
+                )}
+              </View>
+            </View>
+        )}
+      </AppLayout>
   );
 }

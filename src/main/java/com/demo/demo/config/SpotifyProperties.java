@@ -43,5 +43,4 @@ public class SpotifyProperties {
     @NotBlank(message = "Spotify redirect URI cannot be blank")
     @Pattern(regexp = "^https?://.+", message = "Redirect URI must be a valid HTTP/HTTPS URL")
     private final String redirectUri;
-
 }

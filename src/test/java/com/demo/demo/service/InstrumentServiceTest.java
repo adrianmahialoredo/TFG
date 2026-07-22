@@ -34,7 +34,7 @@ class InstrumentServiceTest {
     private SongRepository songRepository;
 
     @InjectMocks
-    private InstrumentService instrumentService;
+    private InstrumentServiceImpl instrumentService;
 
     private Instrument testInstrument;
     private InstrumentDTO testInstrumentDTO;

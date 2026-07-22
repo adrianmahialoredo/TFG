@@ -26,11 +26,11 @@ class GenreValidationTest {
         validator = factory.getValidator();
 
         genre = new Genre();
-        genre.setName("Rock");
+        genre.setTitle("Rock");
         genre.setDescription("Rock music genre");
         genre.setBannerUrl("https://example.com/rock-banner.png");
-        genre.setWelcomeIntroVideo("https://example.com/rock-intro.mp4");
-        genre.setWelcomeSongVideo("https://example.com/rock-song.mp4");
+        genre.setWelcomeIntroVideoId("https://example.com/rock-intro.mp4");
+        genre.setWelcomeSongVideoId("https://example.com/rock-song.mp4");
     }
 
     @Test
@@ -81,7 +81,7 @@ class GenreValidationTest {
     @Test
     void testWelcomeIntroVideoValidation_InvalidUrl() {
         // Arrange
-        genre.setWelcomeIntroVideo("invalid-url");
+        genre.setWelcomeIntroVideoId("invalid-url");
 
         // Act
         Set<ConstraintViolation<Genre>> violations = validator.validate(genre);
@@ -93,7 +93,7 @@ class GenreValidationTest {
     @Test
     void testWelcomeSongVideoValidation_InvalidUrl() {
         // Arrange
-        genre.setWelcomeSongVideo("invalid-url");
+        genre.setWelcomeSongVideoId("invalid-url");
 
         // Act
         Set<ConstraintViolation<Genre>> violations = validator.validate(genre);
@@ -106,8 +106,8 @@ class GenreValidationTest {
     void testGenreWithValidHttpUrls() {
         // Arrange
         genre.setBannerUrl("http://example.com/banner.png");
-        genre.setWelcomeIntroVideo("http://example.com/intro.mp4");
-        genre.setWelcomeSongVideo("http://example.com/song.mp4");
+        genre.setWelcomeIntroVideoId("http://example.com/intro.mp4");
+        genre.setWelcomeSongVideoId("http://example.com/song.mp4");
 
         // Act
         Set<ConstraintViolation<Genre>> violations = validator.validate(genre);
@@ -120,8 +120,8 @@ class GenreValidationTest {
     void testGenreWithValidHttpsUrls() {
         // Arrange
         genre.setBannerUrl("https://example.com/banner.png");
-        genre.setWelcomeIntroVideo("https://example.com/intro.mp4");
-        genre.setWelcomeSongVideo("https://example.com/song.mp4");
+        genre.setWelcomeIntroVideoId("https://example.com/intro.mp4");
+        genre.setWelcomeSongVideoId("https://example.com/song.mp4");
 
         // Act
         Set<ConstraintViolation<Genre>> violations = validator.validate(genre);

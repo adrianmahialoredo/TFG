@@ -323,7 +323,7 @@ spotify.client-secret=your-client-secret
 - **Genre** → **Song** (N a N)
 - **Song** → **SongLesson** (1 a N)
 - **SongLesson** → **TabSection** (1 a N)
-- **Instrument** → **Genre** (N a N via InstrumentGenre)
+- **Instrument** → **Genre** (N a N via InstrumentGenreScreen)
 
 ---
 

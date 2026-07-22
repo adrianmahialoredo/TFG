@@ -1,11 +1,10 @@
-export interface GenreDTO {
-    id: string;
-    name: string
+import {ItemDTO, ItemType} from "./ItemDTO";
+
+export interface GenreDTO extends ItemDTO {
+    type: ItemType.GENRE;
     description: string;
     bannerUrl: string;
-    imageUrl: string;
     welcomeIntroVideoId: string;
     welcomeSongVideoId: string;
-    songIds: string[];
     lessonIds: string[];
 }

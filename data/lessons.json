@@ -1,0 +1,90 @@
+[
+  {
+    "id": 101,
+    "level": 3,
+    "title": "Power Chords: La base del Pop Punk",
+    "belongsToGenre": true,
+    "genreId": 1,
+    "popular": true,
+    "sections": [
+      {
+        "title": "El acorde de quinta",
+        "htmlContent": "<h3>El acorde de quinta</h3><p>Para tocar Pop Punk necesitas dominar los <b>Power Chords</b>. Coloca tu dedo índice en la sexta cuerda y el anular en la quinta cuerda, dos trastes más adelante.</p>",
+        "orderIndex": 1
+      },
+      {
+        "title": "Palm Mute rítmico",
+        "htmlContent": "<h3>Técnica de Palm Mute</h3><p>Apoya el lateral de tu mano derecha sobre las cuerdas cerca del puente para obtener ese sonido 'ahogado' tan característico.</p>",
+        "orderIndex": 2
+      }
+    ]
+  },
+  {
+    "id": 102,
+    "level": 3,
+    "title": "Fundamentos del Rock",
+    "belongsToGenre": true,
+    "genreId": 2,
+    "popular": true,
+    "sections": [
+      {
+        "title": "Escala Pentatónica Menor",
+        "htmlContent": "<h3>Estructura de la escala</h3><p>La pentatónica es la reina del Rock. En tonalidad de La (A), empieza en el traste 5 de la sexta cuerda.</p>",
+        "orderIndex": 1
+      },
+      {
+        "title": "Bending y Vibrato",
+        "htmlContent": "<h3>Expresividad</h3><p>El bending consiste en estirar la cuerda hacia arriba para alcanzar una nota superior, esencial en los solos de Rock.</p>",
+        "orderIndex": 2
+      }
+    ]
+  },
+  {
+    "id": 103,
+    "level": 3,
+    "title": "Groove y Rítmica Funk",
+    "belongsToGenre": true,
+    "genreId": 4,
+    "popular": true,
+    "sections": [
+      {
+        "title": "El Rasgueo de 16 notas",
+        "htmlContent": "<h3>Mano derecha constante</h3><p>En el Funk, la mano derecha nunca para de moverse en semicorcheas, incluso cuando no tocas notas (ghost notes).</p>",
+        "orderIndex": 1
+      },
+      {
+        "title": "Acordes de Novena",
+        "htmlContent": "<h3>El sonido Funk</h3><p>Usa posiciones de acordes con la 9ª añadida para obtener ese brillo característico del estilo James Brown.</p>",
+        "orderIndex": 2
+      }
+    ]
+  },
+  {
+    "id": 104,
+    "level": 3,
+    "title": "Texturas Pop Rock",
+    "belongsToGenre": true,
+    "genreId": 3,
+    "sections": [
+      {
+        "title": "Arpegios Abiertos",
+        "htmlContent": "<h3>Claridad melódica</h3><p>Tocar las notas de los acordes una a una permite que las canciones de Pop Rock respiren y tengan una textura cristalina.</p>",
+        "orderIndex": 1
+      }
+    ]
+  },
+  {
+    "id": 105,
+    "level": 3,
+    "title": "Técnicas de Country",
+    "belongsToGenre": true,
+    "genreId": 5,
+    "sections": [
+      {
+        "title": "Hybrid Picking",
+        "htmlContent": "<h3>Púa y Dedos</h3><p>Esta técnica permite tocar cuerdas alejadas simultáneamente, usando la púa para los bajos y los dedos medio/anular para las agudas.</p>",
+        "orderIndex": 1
+      }
+    ]
+  }
+]

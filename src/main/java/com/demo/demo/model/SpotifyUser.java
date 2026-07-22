@@ -1,6 +1,8 @@
 package com.demo.demo.model;
 
 import java.time.Instant;
+
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
 import lombok.*;
@@ -35,7 +37,7 @@ public class SpotifyUser {
      * Unique identifier for the Spotify user record in the database.
      */
     @Id
-    @Column(name = "spotify_user_id")
+    @Column(name = "id")
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
@@ -43,6 +45,7 @@ public class SpotifyUser {
      * The unique identifier of the user account in the Spotify service.
      */
     @NotBlank(message = "Spotify user ID cannot be blank")
+    @Column(nullable = false, unique = true)
     private String spotifyUserId;
 
     /**
@@ -67,7 +70,6 @@ public class SpotifyUser {
      * The user associated with this Spotify account.
      */
     @OneToOne(mappedBy = "spotifyUser")
-    @com.fasterxml.jackson.annotation.JsonIgnore
+    @JsonIgnore
     private User user;
-    
 }

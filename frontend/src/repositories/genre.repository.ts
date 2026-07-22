@@ -1,5 +1,6 @@
 import * as genreService from '../services/genre.service';
-import * as genreStorage from '../local/genre.local';
+import * as genreLocal from '../local/genre.local';
+import { useGenreEntitiesStore } from "../stores/entities";
 import { GenreDTO } from '../types';
 
 /**
@@ -13,61 +14,93 @@ import { GenreDTO } from '../types';
  * @param genreId El ID del género
  * @returns GenreDTO o undefined si no se encuentra
  */
-export const getGenreById = async (genreId: string): Promise<GenreDTO | undefined> => {
-  try {
-    // 1. Intentar obtener del storage
-    let genre = await genreStorage.getStoredGenresById(genreId);
+export const getById = async (id: string): Promise<GenreDTO | null> => {
+    let genre: GenreDTO|null = await genreLocal.getById(id);
 
-    if (genre) {
-      console.log(`[Genre Cache] Obtenido género ${genreId} del storage`);
-      return genre;
+    if (!genre) {
+        try {
+            genre = await genreService.getById(id);
+            if (genre) {
+                await genreLocal.saveBatch([genre]).catch(e => console.error("Local save failed", e));
+            }
+        } catch (error) {
+            console.error(`Error fetching genre with ID ${id}:`, error);
+            return null;
+        }
     }
 
-    // 2. Si no está en storage, obtener del backend
-    genre = await genreService.getGenreById(genreId);
-
     if (genre) {
-      // 3. Guardar en storage para futuras consultas
-      await genreStorage.storeGenres([genre]);
-      console.log(`[Genre Backend] Obtenido género ${genreId} del backend`);
+        useGenreEntitiesStore.getState().setGenres([genre]);
     }
 
     return genre;
-  } catch (error) {
-    console.error('Error obteniendo género:', error);
-    return undefined;
-  }
-};
+}
 
 /**
  * Obtiene todos los géneros
  * Cache first, backend fallback
  * @returns Array de GenreDTO
  */
-export const getAllGenres = async (): Promise<GenreDTO[]> => {
-  try {
-    // 1. Intentar obtener del storage
-    let genres = await genreStorage.getStoredGenres();
+export const getAllById = async (ids: string[]): Promise<GenreDTO[]> => {
+    const { cached, missing } = await genreLocal.getAllById(ids);
 
-    if (genres && genres.length > 0) {
-      console.log(`[Genre Cache] Obtenidos ${genres.length} géneros del storage`);
-      return genres;
+    let remoteGenres: GenreDTO[] = [];
+
+    if (missing.length > 0) {
+        try {
+            remoteGenres = await genreService.getAllById(missing);
+            if (remoteGenres.length > 0) {
+                genreLocal.saveBatch(remoteGenres).catch(console.error);
+            }
+        } catch (error) {
+            console.error("[GenreRepo] API Error", error);
+        }
     }
 
-    // 2. Si no están en storage, obtener del backend
-    genres = await genreService.getAllGenres();
+    const all = [...cached, ...remoteGenres];
+    useGenreEntitiesStore.getState().setGenres(all);
 
-    if (genres && genres.length > 0) {
-      // 3. Guardar en storage para futuras consultas
-      await genreStorage.storeGenres(genres);
-      console.log(`[Genre Backend] Obtenidos ${genres.length} géneros del backend`);
+    const map = new Map(all.map(g => [g.id.toString(), g]));
+    return ids.map(id => map.get(id)).filter((g): g is GenreDTO => !!g);
+}
+
+export const getAll = async (): Promise<GenreDTO[]> => {
+    try {
+        // 1. INTENTAR LOCAL
+        // Usamos || [] para convertir el null en un array vacío y poder preguntar .length
+        const localGenres: GenreDTO[] = (await genreLocal.getAll()) || [];
+
+        // 2. SI HAY DATOS EN LOCAL, LOS POSICIONAMOS EN RAM Y RETORNAMOS
+        if (localGenres.length > 0) {
+            useGenreEntitiesStore.getState().setGenres(localGenres);
+
+            // OPCIONAL: Lanzar actualización en segundo plano (Background Sync)
+            // Esto actualiza la RAM silenciosamente si hay cambios en el servidor
+            genreService.getAll().then(fresh => {
+                if (fresh.length > 0) {
+                    genreLocal.saveBatch(fresh);
+                    useGenreEntitiesStore.getState().setGenres(fresh);
+                }
+            }).catch(() => {});
+
+            return localGenres;
+        }
+
+        // 3. SI LOCAL ESTÁ VACÍO (NULL O []), IR A LA API
+        const remoteGenres = await genreService.getAll();
+
+        if (remoteGenres.length > 0) {
+            // Guardar en RAM
+            useGenreEntitiesStore.getState().setGenres(remoteGenres);
+            // Guardar en Disco (sin await para no bloquear)
+            genreLocal.saveBatch(remoteGenres).catch(console.error);
+        }
+
+        return remoteGenres;
+
+    } catch (error) {
+        console.error("[GenreRepo] Error crítico en getAll:", error);
+        // Fallback: devolver lo que haya en RAM si existe, o array vacío
+        return Object.values(useGenreEntitiesStore.getState().genres) || [];
     }
-
-    return genres || [];
-  } catch (error) {
-    console.error('Error obteniendo géneros:', error);
-    return [];
-  }
-};
-
-
+}

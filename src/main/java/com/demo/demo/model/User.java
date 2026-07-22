@@ -93,13 +93,11 @@ public class User implements UserDetails {
     private SpotifyUser spotifyUser;
 
     // Timestamps
-
     @CreationTimestamp
     private LocalDateTime createdAt;
 
     @UpdateTimestamp
     private LocalDateTime updatedAt;
-
 
     // UserDetails methods
     @Override
@@ -116,5 +114,4 @@ public class User implements UserDetails {
     public String getUsername() {
         return username;
     }
-
 }

@@ -1,50 +1,62 @@
 [
   {
-    "name": "Pop Punk",
+    "id": 1,
+    "title": "Pop Punk",
+    "level": 2,
     "bannerUrl": "https://res.cloudinary.com/dvm8qkmuo/image/upload/v1750596703/poppunk_gqizto.png",
     "imageUrl": "https://res.cloudinary.com/dvm8qkmuo/image/upload/v1750595587/poppunk_kc5pyt.jpg",
     "welcomeIntroVideoId": "NstT7n8KzZQ",
     "welcomeSongVideoId": "hTWKbfoikeg",
-    "description": "El pop punk es un género musical que combina la velocidad y la energía del punk con melodías pegajosas y estructuras accesibles del pop. Nacido en los años 90 como evolución del punk rock, el pop punk ganó gran popularidad con bandas como Green Day, Blink-182, Sum 41 y The Offspring. Estos grupos lograron conectar con audiencias jóvenes gracias a sus letras sobre adolescencia, amor, rebeldía y humor.\n\nCon guitarras rápidas, baterías enérgicas y estribillos coreables, el pop punk se ha convertido en un referente generacional. Hoy en día vive un resurgimiento con artistas que fusionan sonidos modernos con la estética clásica del género, como Machine Gun Kelly, YUNGBLUD o grupos españoles como Carolina Durante. Aprender pop punk es adentrarse en un universo directo, emocional y perfecto para canalizar energía desde el primer acorde."
+    "description": "El pop punk es un género musical que combina la velocidad y la energía del punk con melodías pegajosas y estructuras accesibles del pop..."
   },
   {
-    "name": "Rock & Roll",
+    "id": 2,
+    "title": "Rock & Roll",
+    "level": 4,
     "bannerUrl": "https://res.cloudinary.com/dvm8qkmuo/image/upload/v1750596623/rock_owvfk6.jpg",
     "imageUrl": "https://res.cloudinary.com/dvm8qkmuo/image/upload/v1750595587/rock2_oualas.jpg",
     "welcomeIntroVideoId": "zDdiF1fl5Vg",
     "welcomeSongVideoId": "gj0Rz-uP4Mk",
-    "description": "El Rock and Roll es uno de los géneros más influyentes y revolucionarios en la historia de la música moderna. Surgido en Estados Unidos a finales de los años 40 y popularizado en los años 50, este estilo musical fusionó elementos del rhythm and blues, el country, el gospel y el jazz para crear una nueva forma de expresión energética y juvenil.\n\nFiguras icónicas como Elvis Presley, Chuck Berry, Little Richard, Jerry Lee Lewis y Buddy Holly llevaron el género a la cima del éxito. Las guitarras eléctricas distorsionadas, los ritmos acelerados y las letras directas se convirtieron en la base de un fenómeno que cambió para siempre la industria musical. Hoy en día, el espíritu del rock and roll sigue presente: libertad, pasión y energía."
+    "description": "El Rock and Roll es uno de los géneros más influyentes y revolucionarios en la historia de la música moderna..."
   },
   {
-    "name": "Pop Rock",
+    "id": 3,
+    "title": "Pop Rock",
+    "level": 1,
     "bannerUrl": "https://res.cloudinary.com/dvm8qkmuo/image/upload/v1750596625/poprock_gscnkm.png",
     "imageUrl": "https://res.cloudinary.com/dvm8qkmuo/image/upload/v1750595587/poprock_jnkyot.jpg",
     "welcomeIntroVideoId": "kEl3WnM4F9I",
     "welcomeSongVideoId": "fJ9rUzIMcZQ",
-    "description": "El pop rock es un género híbrido que combina la accesibilidad melódica del pop con la energía e instrumentos del rock. Surgido a mediados del siglo XX, este estilo ha sido una puerta de entrada a la música para millones de personas alrededor del mundo. Ha dado lugar a artistas legendarios como The Beatles, Queen, U2 y Coldplay.\n\nEn el ámbito hispano, bandas como Hombres G o La Oreja de Van Gogh han marcado generaciones. Hoy, el pop rock continúa evolucionando, conectando con nuevas audiencias gracias a su frescura, emoción y cercanía. Es un género ideal para aprender a tocar y cantar."
+    "description": "El pop rock es un género híbrido que combina la accesibilidad melódica del pop con la energía e instrumentos del rock..."
   },
   {
-    "name": "Funk",
+    "id": 4,
+    "title": "Funk",
+    "level": 3,
     "bannerUrl": "https://res.cloudinary.com/dvm8qkmuo/image/upload/v1750596624/funk_ratm8i.jpg",
     "imageUrl": "https://res.cloudinary.com/dvm8qkmuo/image/upload/v1750595587/funk_pljjno.jpg",
     "welcomeIntroVideoId": "w2WBJbFg04s",
     "welcomeSongVideoId": "3XsuI3FZx9E",
-    "description": "El funk es un estilo musical vibrante, rítmico y lleno de groove que surgió en los años 60 como evolución del soul y el rhythm and blues. Su esencia se encuentra en líneas de bajo potentes, guitarras sincopadas y secciones de viento animadas. Pioneros como James Brown, Sly & The Family Stone y Prince llevaron el funk a nuevas alturas con su energía escénica y ritmos irresistibles.\n\nEste género ha influido profundamente en estilos como el hip hop, el disco y la música electrónica. Aprender funk es aprender a sentir el ritmo con el cuerpo, desarrollar precisión rítmica y trabajar dinámicas con estilo. Es ideal para bajistas, guitarristas y baterías que quieran dominar el arte del groove."
+    "description": "El funk es un estilo musical vibrante, rítmico y lleno de groove..."
   },
   {
-    "name": "Country",
+    "id": 5,
+    "title": "Country",
+    "level": 2,
     "bannerUrl": "https://res.cloudinary.com/dvm8qkmuo/image/upload/v1750596624/country_ggjkkl.png",
     "imageUrl": "https://res.cloudinary.com/dvm8qkmuo/image/upload/v1750595587/country_rqgxp3.jpg",
     "welcomeIntroVideoId": "XIR16j4GxxU",
     "welcomeSongVideoId": "4zLfCnGVeL4",
-    "description": "El country es un género musical originario del sur de Estados Unidos que combina elementos del folk, el bluegrass y el blues. Con raíces en la música tradicional de los inmigrantes europeos, el country ha evolucionado desde los sonidos acústicos de la guitarra, el banjo y el violín, hasta incorporar influencias modernas del pop y el rock.\n\nArtistas como Johnny Cash, Dolly Parton, Willie Nelson, y más recientemente Taylor Swift o Kacey Musgraves, han llevado el country a públicos de todo el mundo. Sus letras suelen hablar de la vida rural, el amor, la nostalgia y la honestidad emocional. Tocar country es conectar con la narrativa musical y la técnica acústica, perfecta para contar historias con tu instrumento."
+    "description": "El country es un género musical originario del sur de Estados Unidos..."
   },
   {
-    "name": "Nueva Ola",
+    "id": 6,
+    "title": "Nueva Ola",
+    "level": 1,
     "bannerUrl": "https://res.cloudinary.com/dvm8qkmuo/image/upload/v1750596623/nuevaola_jlvor7.png",
     "imageUrl": "https://res.cloudinary.com/dvm8qkmuo/image/upload/v1750595587/nuevaola_uktho3.jpg",
     "welcomeIntroVideoId": "xWIwOufhT-4",
     "welcomeSongVideoId": "iipcx-L6yJQ",
-    "description": "La nueva ola del pop español representa una revolución fresca y emocional en la música urbana y alternativa del país. Artistas como Walls, Hens, Funzo & Baby Loud, Koopa y Pole han dado forma a un sonido íntimo, nostálgico y melódico que conecta profundamente con las emociones y experiencias de la juventud actual.\n\nEste movimiento mezcla bases electrónicas, influencias del pop, el trap, el indie y letras que hablan de amor, desamor, amistad y crecimiento personal. Aprender música dentro de este estilo es abrir la puerta a la autoexpresión, la innovación melódica y la creación de atmósferas modernas que resuenan con las nuevas generaciones."
+    "description": "La nueva ola del pop español representa una revolución fresca y emocional..."
   }
 ]

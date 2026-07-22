@@ -3,7 +3,7 @@ import { View, Text, TouchableOpacity, FlatList, Image, StyleSheet } from 'react
 
 type GenreButton = {
   id: string;
-  imageUrl: string; // Puedes usar una URL o nombre de icono si usas vector icons
+  imageUrl: string;
   onPress: () => void;
 };
 

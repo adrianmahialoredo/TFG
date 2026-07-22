@@ -1,16 +1,25 @@
 package com.demo.demo.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 import jakarta.persistence.*;
-import jakarta.validation.constraints.*;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import lombok.*;
 
+import java.util.HashSet;
+import java.util.Set;
+
 /**
- * Represents user musical preferences.
+ * Represents the musical preferences owned by a {@link User}.
  *
- * This entity stores information about a user's musical preferences,
- * including their preferred instrument and favorite musical genre.
- * These preferences can be used to personalize the learning experience
- * and provide relevant recommendations.
+ * This entity groups the musical preferences that previously lived directly
+ * inside {@link User}: the favourite genres, favourite instruments and the
+ * desired difficulty level. It shares its primary key with the owning
+ * {@code User} through {@link MapsId}, so {@code preferences.id == user.id}.
+ * Thanks to that, the existing {@code user_favorite_genres} and
+ * {@code user_favorite_instruments} join tables keep using the {@code user_id}
+ * column and their stored data remains valid.
  *
  * This class is annotated with JPA annotations to map it to a database table,
  * and it uses Lombok annotations to reduce boilerplate code for getters, setters,
@@ -28,25 +37,51 @@ import lombok.*;
 public class Preferences {
 
     /**
-     * Unique identifier for the user preferences.
+     * Unique identifier for the preferences, shared with the owning
+     * {@link User} via {@link MapsId}.
      */
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     /**
-     * The user's preferred musical instrument.
+     * The {@link User} that owns these preferences. The preferences entity
+     * shares the user's primary key.
      */
-    @NotBlank(message = "Preferred instrument cannot be blank")
-    @Size(min = 2, max = 100, message = "Instrument name must be between 2 and 100 characters")
-    private String preferredInstrument;
+    @OneToOne(fetch = FetchType.LAZY)
+    @MapsId
+    @JoinColumn(name = "user_id")
+    @JsonIgnore
+    private User user;
 
     /**
-     * The user's preferred musical genre.
+     * The user's desired difficulty level.
      */
-    @NotBlank(message = "Musical genre cannot be blank")
-    @Size(min = 2, max = 100, message = "Genre name must be between 2 and 100 characters")
-    private String musicalGenre;
+    @Column(name = "difficulty_level", nullable = false)
+    @Min(value = 0, message = "Difficulty level must be at least 0")
+    @Max(value = 100, message = "Difficulty level must be at most 100")
+    private int difficultyLevel = 0;    // Between 0 and 100
+
+    /**
+     * The user's favourite musical genres.
+     */
+    @ManyToMany
+    @JoinTable(
+        name = "user_favorite_genres",
+        joinColumns = @JoinColumn(name = "user_id"),
+        inverseJoinColumns = @JoinColumn(name = "genre_id")
+    )
+    private Set<Genre> favoriteGenres = new HashSet<>();
+
+    /**
+     * The user's favourite musical instruments.
+     */
+    @ManyToMany
+    @JoinTable(
+        name = "user_favorite_instruments",
+        joinColumns = @JoinColumn(name = "user_id"),
+        inverseJoinColumns = @JoinColumn(name = "instrument_id")
+    )
+    private Set<Instrument> favoriteInstruments = new HashSet<>();
 
 }
 

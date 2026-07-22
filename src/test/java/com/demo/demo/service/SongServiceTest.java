@@ -42,7 +42,7 @@ class SongServiceTest {
     private SongLessonRepository songLessonRepository;
 
     @InjectMocks
-    private SongService songService;
+    private SongServiceImpl songService;
 
     private Song testSong;
     private SongDTO testSongDTO;
@@ -51,7 +51,6 @@ class SongServiceTest {
     void setUp() {
         testSong = new Song();
         testSong.setId(1L);
-        testSong.setName("Bohemian Rhapsody");
         testSong.setTitle("Bohemian Rhapsody");
         testSong.setArtist("Queen");
         testSong.setImageUrl("https://example.com/bohemian.png");

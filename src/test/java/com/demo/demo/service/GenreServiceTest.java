@@ -38,7 +38,7 @@ class GenreServiceTest {
     private LessonRepository lessonRepository;
 
     @InjectMocks
-    private GenreService genreService;
+    private GenreServiceImpl genreService;
 
     private Genre testGenre;
     private GenreDTO testGenreDTO;
@@ -47,14 +47,14 @@ class GenreServiceTest {
     void setUp() {
         testGenre = new Genre();
         testGenre.setId(1L);
-        testGenre.setName("Rock");
+        testGenre.setTitle("Rock");
         testGenre.setDescription("Rock music genre");
         testGenre.setBannerUrl("https://example.com/rock-banner.png");
-        testGenre.setWelcomeIntroVideo("https://example.com/rock-intro.mp4");
-        testGenre.setWelcomeSongVideo("https://example.com/rock-song.mp4");
+        testGenre.setWelcomeIntroVideoId("https://example.com/rock-intro.mp4");
+        testGenre.setWelcomeSongVideoId("https://example.com/rock-song.mp4");
 
         testGenreDTO = new GenreDTO();
-        testGenreDTO.setName("Rock");
+        testGenreDTO.setTitle("Rock");
         testGenreDTO.setDescription("Rock music genre");
         testGenreDTO.setBannerUrl("https://example.com/rock-banner.png");
     }
@@ -85,7 +85,7 @@ class GenreServiceTest {
 
         // Assert
         assertTrue(result.isPresent());
-        assertEquals("Rock", result.get().getName());
+        assertEquals("Rock", result.get().getTitle());
         verify(genreRepository, times(1)).findById(1L);
     }
 
@@ -112,7 +112,7 @@ class GenreServiceTest {
 
         // Assert
         assertNotNull(result);
-        assertEquals("Rock", result.getName());
+        assertEquals("Rock", result.getTitle());
         verify(genreRepository, times(1)).save(any(Genre.class));
     }
 
@@ -123,7 +123,7 @@ class GenreServiceTest {
         when(genreRepository.save(any(Genre.class))).thenReturn(testGenre);
 
         GenreDTO updateDto = new GenreDTO();
-        updateDto.setName("Rock Updated");
+        updateDto.setTitle("Rock Updated");
 
         // Act
         Optional<GenreDTO> result = genreService.updateGenre(1L, updateDto);

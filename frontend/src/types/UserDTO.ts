@@ -1,9 +1,10 @@
 export interface UserDTO {
-  id: string;
+  id: string | number;
   email: string;
   name: string;
   username: string;
-  password: string;
+  password?: string; // Opcional, no se devuelve desde el backend
   profileImageUrl?: string;
-  favouriteGenresIds: string[];
+  favouriteGenresIds?: Array<string | number>;
+  favouriteInstrumentsIds?: Array<string | number>;
 }

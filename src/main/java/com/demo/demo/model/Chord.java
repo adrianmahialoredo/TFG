@@ -41,7 +41,6 @@ public class Chord {
      * This is the primary key of the Chord entity.
      */
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     
     /**

@@ -27,5 +27,4 @@ public interface SpotifyUserRepository extends JpaRepository<SpotifyUser, Long> 
      * @return an Optional containing the SpotifyUser if found, or empty if not found
      */
     Optional<SpotifyUser> findBySpotifyUserId(String spotifyUserId);
-
 }

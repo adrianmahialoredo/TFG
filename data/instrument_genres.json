@@ -1,2 +1,92 @@
-[]
-
+[
+  {
+    "id": 301,
+    "title": "Guitarra PopPunk",
+    "imageUrl": "https://res.cloudinary.com/dvm8qkmuo/image/upload/v1750595587/instr_genre_1.jpg",
+    "level": 1,
+    "instrumentId": 1,
+    "genreId": 1,
+    "lessonIds": [101]
+  },
+  {
+    "id": 302,
+    "title": "Guitarra Rock",
+    "imageUrl": "https://res.cloudinary.com/dvm8qkmuo/image/upload/v1750595587/instr_genre_2.jpg",
+    "level": 3,
+    "instrumentId": 1,
+    "genreId": 2,
+    "lessonIds": [102]
+  },
+  {
+    "id": 303,
+    "title": "Guitarra Pop-Rock",
+    "imageUrl": "https://res.cloudinary.com/dvm8qkmuo/image/upload/v1750595587/instr_genre_3.jpg",
+    "level": 2,
+    "instrumentId": 1,
+    "genreId": 3,
+    "lessonIds": [104]
+  },
+  {
+    "id": 304,
+    "title": "Guitarra Funk",
+    "imageUrl": "https://res.cloudinary.com/dvm8qkmuo/image/upload/v1750595587/instr_genre_4.jpg",
+    "level": 4,
+    "instrumentId": 1,
+    "genreId": 4,
+    "lessonIds": [106]
+  },
+  {
+    "id": 305,
+    "title": "Guitarra Country",
+    "imageUrl": "https://res.cloudinary.com/dvm8qkmuo/image/upload/v1750595587/instr_genre_5.jpg",
+    "level": 3,
+    "instrumentId": 1,
+    "genreId": 5,
+    "lessonIds": [105]
+  },
+  {
+    "id": 306,
+    "title": "Guitarra Nueva Ola",
+    "imageUrl": "https://res.cloudinary.com/dvm8qkmuo/image/upload/v1750595587/instr_genre_6.jpg",
+    "level": 2,
+    "instrumentId": 1,
+    "genreId": 6,
+    "lessonIds": []
+  },
+  {
+    "id": 307,
+    "title": "Ukelele Pop-Rock",
+    "imageUrl": "https://res.cloudinary.com/dvm8qkmuo/image/upload/v1750595587/instr_genre_7.jpg",
+    "level": 1,
+    "instrumentId": 2,
+    "genreId": 3,
+    "lessonIds": []
+  },
+  {
+    "id": 308,
+    "title": "Bajo Funk",
+    "imageUrl": "https://res.cloudinary.com/dvm8qkmuo/image/upload/v1750595587/instr_genre_8.jpg",
+    "level": 5,
+    "instrumentId": 3,
+    "genreId": 4,
+    "lessonIds": []
+  },
+  {
+    "id": 309,
+    "title": "Batería Rock",
+    "imageUrl": "https://res.cloudinary.com/dvm8qkmuo/image/upload/v1750595587/instr_genre_9.jpg",
+    "level": 4,
+    "instrumentId": 4,
+    "genreId": 2,
+    "lessonIds": []
+  },
+  {
+    "id": 310,
+    "title": "Piano Pop",
+    "imageUrl": "https://res.cloudinary.com/dvm8qkmuo/image/upload/v1750595587/instr_genre_10.jpg",
+    "level": 2,
+    "instrumentId": 5,
+    "genreId": 1,
+    "lessonIds": []
+  }
+]

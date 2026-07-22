@@ -1,57 +1,54 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
-import { GenreDTO } from '../types';
+import React, { useState, useEffect } from 'react';
+import { View, Text, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { CirclePlus } from 'lucide-react-native';
-import { getStoredGenres } from '../storage';
+import { useGenres } from '../hooks/useGenres';
+import { COLORS } from '../constants/Theme';
 
 type Props = {
-  onSelectionChange?: (selected: string[]) => void;
+  onSelectionChange?: (selectedIds: string[]) => void;
+  initialSelection?: string[]; // Por si queremos editar perfil luego
 };
 
-export default function GenrePicker({ onSelectionChange }: Props) {
-  const [genres, setGenres] = useState<GenreDTO[]>([]);
-  const [selectedGenres, setSelectedGenres] = useState<string[]>([]);
+export default function GenrePicker({ onSelectionChange, initialSelection = [] }: Props) {
+  const { genres, loading } = useGenres();
+  const [selectedIds, setSelectedIds] = useState<string[]>(initialSelection);
 
+  // Avisar al padre (RegisterScreen) cuando cambie la selección
   useEffect(() => {
-    const loadGenres = async () => {
-      const stored = await getStoredGenres();
-      if (stored) setGenres(stored);
-    };
-    loadGenres();
-  }, []);
-
-  useEffect(() => {
-    onSelectionChange?.(selectedGenres);
-  }, [selectedGenres]);
+    onSelectionChange?.(selectedIds);
+  }, [selectedIds]);
 
   const toggleGenre = (id: string) => {
-    setSelectedGenres((prev) =>
-      prev.includes(id) ? prev.filter((g) => g !== id) : [...prev, id]
+    setSelectedIds(prev =>
+        prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
     );
   };
 
+  if (loading) return <ActivityIndicator color={COLORS.secondary} />;
+
   return (
-    <View className="mb-5">
-      <Text className="text-base text-secondary font-semibold mb-4">
-        Escoge al menos un género
-      </Text>
-      <View className="flex-row flex-wrap justify-left gap-2">
-        {genres.map((genre) => {
-          const isSelected = selectedGenres.includes(genre.id);
-          return (
-            <TouchableOpacity
-              key={genre.id}
-              className={`px-3 py-1 bg-secondary rounded-lg ${isSelected ? "opacity-60" : ""}`}
-              onPress={() => toggleGenre(genre.id)}
-            >
-              <Text className="text-primary text-base">{genre.name}</Text>
-            </TouchableOpacity>
-          );
-        })}
-        <TouchableOpacity className="py-1">
-          <CirclePlus size={20} color="white" strokeWidth={1} />
-        </TouchableOpacity>
+      <View className="mb-5">
+        <Text className="text-base text-secondary font-semibold mb-4">
+          ¿Cuáles son tus géneros favoritos?
+        </Text>
+        <View className="flex-row flex-wrap gap-2">
+          {genres.map((genre) => {
+            const isSelected = selectedIds.includes(genre.id.toString());
+            return (
+                <TouchableOpacity
+                    key={genre.id}
+                    onPress={() => toggleGenre(genre.id.toString())}
+                    className={`px-4 py-2 rounded-full border ${
+                        isSelected ? "bg-secondary border-secondary" : "bg-transparent border-gray-500"
+                    }`}
+                >
+                  <Text className={`text-sm font-medium ${isSelected ? "text-primary" : "text-gray-400"}`}>
+                    {genre.title}
+                  </Text>
+                </TouchableOpacity>
+            );
+          })}
+        </View>
       </View>
-    </View>
   );
 }

@@ -11,7 +11,7 @@ type SearchBarProps = {
 
 export default function SearchBar({ placeholder = '¿Que quieres tocar?', value, onChangeText }: SearchBarProps) {
   return (
-    <View className="flex-row items-center bg-primary rounded-lg px-4 py-1">
+    <View className="flex-row items-center bg-primary rounded-lg px-4 py-1 mb-8">
       <Search size={30} color={COLORS.secondary} />
       <TextInput
         className="ml-2 flex-1 text-secondary text-base font-semibold"

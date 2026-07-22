@@ -4,7 +4,8 @@ import { Video, ResizeMode } from 'expo-av';
 import { Ionicons } from '@expo/vector-icons';
 import { useRoute, RouteProp } from '@react-navigation/native';
 import AppLayout from '../components/AppLayout';
-import { RootStackParamList } from '../types';
+import ProfileHeader from '../components/ProfileHeader';
+import {ChordDTO, RootStackParamList, TabSectionDTO} from '../types';
 import { useSong } from '../hooks/useSong';
 import { DifficultyLevel } from '../types';
 
@@ -59,15 +60,7 @@ export default function SongScreen() {
     <AppLayout>
       <View className="bg-background flex-1 pt-2">
         {/* Icono de perfil y titulo */}
-        <View className="flex-row justify-left items-center mt-6 mb-7">
-          <TouchableOpacity>
-            <Image
-              source={{ uri: 'https://i.pravatar.cc/100' }}
-              className="w-14 h-14 rounded-full border"
-            />
-          </TouchableOpacity>
-          <Text className="text-[24px] font-roboto font-bold text-primary text-center ml-3">Canciones</Text>
-        </View>
+        <ProfileHeader title="Canciones" />
         
         <ScrollView className="bg-background p-4 flex-1">
           {/* Información de la canción */}
@@ -105,7 +98,7 @@ export default function SongScreen() {
 
           {/* Selector de dificultad */}
           <View className="flex-row justify-center space-x-2 mb-4 mt-2 flex-wrap">
-            {availableDifficulties.map((difficulty) => (
+            {availableDifficulties.map((difficulty: DifficultyLevel) => (
               <TouchableOpacity
                 key={difficulty}
                 onPress={() => changeDifficulty(difficulty)}
@@ -131,7 +124,7 @@ export default function SongScreen() {
             <View className="mb-6">
               <Text className="text-primary text-lg font-bold mb-3 text-center">Acordes</Text>
               <View className="flex-row flex-wrap gap-1 justify-center">
-                {chords.map((chord) => (
+                {chords.map((chord: ChordDTO) => (
                   <View key={chord.id} className="items-center mb-3">
                     <Image
                       source={{ uri: chord.imageUrl }}
@@ -166,7 +159,7 @@ export default function SongScreen() {
           {tabSections.length > 0 && (
             <View className="mb-10">
               <Text className="text-primary text-lg font-bold mb-3 text-center">Tabs</Text>
-              {tabSections.map((section) => (
+              {tabSections.map((section: TabSectionDTO) => (
                 <View key={section.id} className="mb-4 bg-gray-800 p-4 rounded-lg">
                   <Text className="text-primary font-bold mb-2">{section.identifier.toUpperCase()}</Text>
                   <Text className="text-secondary font-mono text-xs">{section.content}</Text>

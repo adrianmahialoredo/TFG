@@ -1,80 +1,81 @@
 import { SongDTO } from '../types';
 import { storeData, getData } from './storage.local';
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
-const POPULAR_SONGS_KEY = 'popularSongs';
-const NEW_SONGS_KEY = 'newSongs';
-const RECOMMENDED_SONGS_KEY = 'recommendedSongs';
-const SONG_CACHE_PREFIX = 'song_';
+const SONG_CACHE_PREFIX = '@song:';
+const INDEX_CACHE_PREFIX = '@song_index:'; // Prefijo para las "fotos"
 
-export const storePopularSongs = async (songs: SongDTO[]): Promise<void> => {
-  return storeData(POPULAR_SONGS_KEY, songs);
-};
-export const getPopularSongs = async (): Promise<SongDTO[] | null> => {
-  return getData<SongDTO[]>(POPULAR_SONGS_KEY);
-};
-
-export const storeNewSongs = async (songs: SongDTO[]): Promise<void> => {
-  return storeData(NEW_SONGS_KEY, songs);
-};
-export const getNewSongs = async (): Promise<SongDTO[] | null> => {
-  return getData<SongDTO[]>(NEW_SONGS_KEY);
-};
-
-export const storeRecommendedSongs = async (songs: SongDTO[]): Promise<void> => {
-  return storeData(RECOMMENDED_SONGS_KEY, songs);
-};
-export const getRecommendedSongs = async (): Promise<SongDTO[] | null> => {
-  return getData<SongDTO[]>(RECOMMENDED_SONGS_KEY);
-};
-
-/**
- * Almacena una canción individual en la cache
- * @param song La canción a guardar
- */
-export const cacheSong = async (song: SongDTO): Promise<void> => {
+export const saveSingle = async (song: SongDTO): Promise<void> => {
   const key = `${SONG_CACHE_PREFIX}${song.id}`;
   return storeData(key, song);
 };
 
-/**
- * Obtiene una canción individual de la cache
- * @param songId El ID de la canción
- */
-export const getCachedSong = async (songId: number): Promise<SongDTO | null> => {
+export const getById = async (songId: string): Promise<SongDTO | null> => {
   const key = `${SONG_CACHE_PREFIX}${songId}`;
   return getData<SongDTO>(key);
 };
 
 /**
- * Almacena múltiples canciones en la cache
- * @param songs Las canciones a guardar
+ * MEJORADO: Uso de multiSet para guardar todo de un golpe.
+ * Mucho más eficiente que un bucle for.
  */
-export const cacheSongs = async (songs: SongDTO[]): Promise<void> => {
-  for (const song of songs) {
-    await cacheSong(song);
+export const saveBatch = async (songs: SongDTO[]): Promise<void> => {
+  if (songs.length === 0) return;
+
+  const pairs: [string, string][] = songs.map(song => [
+    `${SONG_CACHE_PREFIX}${song.id}`,
+    JSON.stringify(song)
+  ]);
+
+  try {
+    await AsyncStorage.multiSet(pairs);
+  } catch (e) {
+    console.error("[SongLocal] Error en saveBatch:", e);
   }
 };
 
-/**
- * Obtiene múltiples canciones de la cache
- * @param songIds Los IDs de las canciones
- */
-export const getCachedSongs = async (songIds: number[]): Promise<{
-  cached: SongDTO[];
-  missing: number[];
-}> => {
-  const cached: SongDTO[] = [];
-  const missing: number[] = [];
+export const getAllById = async (ids: string[]): Promise<{ cached: SongDTO[]; missing: string[] }> => {
+  if (ids.length === 0) return { cached: [], missing: [] };
 
-  for (const id of songIds) {
-    const song = await getCachedSong(id);
-    if (song) {
-      cached.push(song);
+  const keys = ids.map(id => `${SONG_CACHE_PREFIX}${id}`);
+  const pairs = await AsyncStorage.multiGet(keys);
+
+  const cached: SongDTO[] = [];
+  const missing: string[] = [];
+
+  pairs.forEach(([key, value], index) => {
+    if (value) {
+      try {
+        cached.push(JSON.parse(value));
+      } catch (e) {
+        missing.push(ids[index]);
+      }
     } else {
-      missing.push(id);
+      missing.push(ids[index]);
     }
-  }
+  });
 
   return { cached, missing };
+};
+
+/**
+ * MEJORADO: Métodos de índice con prefijo consistente
+ */
+export const saveQueryIndex = async (key: string, ids: string[]): Promise<void> => {
+  try {
+    await AsyncStorage.setItem(`${INDEX_CACHE_PREFIX}${key}`, JSON.stringify(ids));
+  } catch (e) {
+    console.error("[SongLocal] Error guardando índice:", e);
+  }
+};
+
+export const getQueryIndex = async (key: string): Promise<string[] | null> => {
+  try {
+    const data = await AsyncStorage.getItem(`${INDEX_CACHE_PREFIX}${key}`);
+    return data ? JSON.parse(data) : null;
+  } catch (e) {
+    console.error("[SongLocal] Error leyendo índice:", e);
+    return null;
+  }
 };
 

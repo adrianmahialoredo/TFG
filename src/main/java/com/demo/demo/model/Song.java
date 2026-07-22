@@ -35,14 +35,6 @@ import java.util.*;
 public class Song extends Item {
 
     /**
-     * Title of the song.
-     * This field is required and cannot be blank.
-     */
-    @Column(nullable = false)
-    @NotBlank
-    private String title;
-
-    /**
      * Artist of the song.
      * This field is required and cannot be blank.
      */
@@ -68,7 +60,7 @@ public class Song extends Item {
      * This is a many-to-many relationship, meaning that many songs can feature many instruments.
      * A song can be associated with multiple instruments, and an instrument can be featured in multiple songs.
      */
-    @ManyToMany(mappedBy = "songs")
+    @ManyToMany
     @JsonIgnore
     private Set<Instrument> instruments = new HashSet<>();
 
@@ -100,6 +92,5 @@ public class Song extends Item {
                 //", description='" + description + '\'' +
                 '}';
     }
-
 }
 

@@ -1,5 +1,6 @@
 import * as chordService from '../services/chord.service';
-import * as chordStorage from '../local/chord.local';
+import * as chordLocal from '../local/chord.local';
+import { useChordEntitiesStore } from "../stores/entities";
 import { ChordDTO } from '../types';
 
 /**
@@ -13,41 +14,28 @@ import { ChordDTO } from '../types';
  * @param chordIds Array de IDs de acordes (pueden ser strings o números)
  * @returns Array de ChordDTO
  */
-export const getChordsByIds = async (chordIds: (string | number)[]): Promise<ChordDTO[]> => {
-  if (!chordIds || chordIds.length === 0) {
-    return [];
-  }
+export const getAllById = async (ids: string[]): Promise<ChordDTO[]> => {
+    const { cached, missing } = await chordLocal.getAllById(ids);
 
-  // Convertir todos los IDs a strings
-  const normalizedIds = chordIds.map(id => String(id));
+    let remoteChords: ChordDTO[] = [];
 
-  try {
-    // Intentar obtener del storage
-    const cachedChords = await chordStorage.getStoredChordsByIdList(normalizedIds);
-    
-    // Identificar cuáles faltan en el storage
-    const cachedIds = cachedChords.map(c => c.id);
-    const missingIds = normalizedIds.filter(id => !cachedIds.includes(id));
-
-    // Si faltan acordes, obtener del backend
-    if (missingIds.length > 0) {
-      const backendChords = await chordService.getChordsByIds(missingIds);
-      
-      // Guardar en storage para futuras consultas
-      if (backendChords && backendChords.length > 0) {
-        await chordStorage.storeChords([...cachedChords, ...backendChords]);
-        console.log(`[Chord] Obtenidos ${missingIds.length} acordes del backend`);
-        return [...cachedChords, ...backendChords];
-      }
+    if (missing.length > 0) {
+        try {
+            remoteChords = await chordService.getAllById(missing);
+            if (remoteChords.length > 0) {
+                chordLocal.saveBatch(remoteChords).catch(console.error);
+            }
+        } catch (error) {
+            console.error("[ChordRepo] API Error", error);
+        }
     }
 
-    console.log(`[Chord Cache] Obtenidos ${cachedChords.length} acordes del storage`);
-    return cachedChords;
-  } catch (error) {
-    console.error('Error obteniendo chords:', error);
-    return [];
-  }
-};
+    const all = [...cached, ...remoteChords];
+    useChordEntitiesStore.getState().setChords(all);
+
+    const map = new Map(all.map(c => [c.id.toString(), c]));
+    return ids.map(id => map.get(id)).filter((c): c is ChordDTO => !!c);
+}
 
 /**
  * Obtiene un acorde por su ID
@@ -55,29 +43,24 @@ export const getChordsByIds = async (chordIds: (string | number)[]): Promise<Cho
  * @param chordId El ID del acorde
  * @returns ChordDTO o null
  */
-export const getChordById = async (chordId: string): Promise<ChordDTO | null> => {
-  try {
-    // Intentar obtener del storage
-    const cachedChord = await chordStorage.getStoredChordById(chordId);
-    
-    if (cachedChord) {
-      console.log(`[Chord Cache] Obtenido acorde ${chordId} del storage`);
-      return cachedChord;
+export const getById = async (id: string): Promise<ChordDTO | null> => {
+    let chord: ChordDTO|null = await chordLocal.getById(id);
+
+    if (!chord) {
+        try {
+            chord = await chordService.getById(id);
+            if (chord) {
+                await chordLocal.saveBatch([chord]).catch(e => console.error("Local save failed", e));
+            }
+        } catch (error) {
+            console.error(`Error fetching chord with ID ${id}:`, error);
+            return null;
+        }
     }
 
-    // Si no está en storage, obtener del backend
-    const chord = await chordService.getChordById(chordId);
-    
     if (chord) {
-      // Guardar en storage
-      await chordStorage.storeChords([chord]);
-      console.log(`[Chord Backend] Obtenido acorde ${chordId} del backend`);
+        useChordEntitiesStore.getState().setChords([chord]);
     }
 
-    return chord || null;
-  } catch (error) {
-    console.error('Error obteniendo chord:', error);
-    return null;
-  }
-};
-
+    return chord;
+}

@@ -7,6 +7,7 @@ export interface ItemListDTO {
   userId: string;
   name: string;
   imageUrl?: string;
+  description: string;
   itemIds: string[];
 }
 

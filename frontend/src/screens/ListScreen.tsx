@@ -1,254 +1,160 @@
-import React, { useState, useEffect } from 'react';
-import { ScrollView, TouchableOpacity, View, Text, Image, ActivityIndicator } from "react-native";
-import { useRoute, RouteProp } from '@react-navigation/native';
-import AppLayout from "../components/AppLayout";
-import ListItem from "../components/ListItem";
+import React from 'react';
+import { ScrollView, TouchableOpacity, View, Text, Image, ActivityIndicator} from "react-native";
+import {useRoute, RouteProp, useNavigation, NavigationProp, useFocusEffect} from '@react-navigation/native';
 import { CirclePlus } from "lucide-react-native";
+import AppLayout from "../components/AppLayout";
+import ProfileHeader from "../components/ProfileHeader";
+import ListItem from "../components/ListItem";
 import { COLORS } from "../constants/Theme";
-import { RootStackParamList, ItemListDTO, ItemDTO } from '../types';
-import * as itemListRepository from '../repositories/itemList.repository';
+import { RootStackParamList, AnyItemDTO, ItemType, SongDTO } from '../types';
+import { useItemListDetail } from '../hooks/useItemListDetail';
+import { navigateToItem } from '../utils/navigation.utils';
 
 type ListScreenRouteProp = RouteProp<RootStackParamList, 'ListScreen'>;
 
-interface ListScreenState {
-  list: ItemListDTO | null;
-  items: ItemDTO[];
-  loading: boolean;
-  error: string | null;
-}
-
 export default function ListScreen() {
+  const navigation = useNavigation<NavigationProp<RootStackParamList>>();
   const route = useRoute<ListScreenRouteProp>();
   const { itemListId } = route.params;
 
-  const [screenState, setScreenState] = useState<ListScreenState>({
-    list: null,
-    items: [],
-    loading: true,
-    error: null,
-  });
+  const { list, items, loading, error, refresh } = useItemListDetail(itemListId);
 
-  useEffect(() => {
-    loadListData();
-  }, [itemListId]);
-
-  const loadListData = async () => {
-    try {
-      setScreenState(prev => ({ ...prev, loading: true, error: null }));
-
-      // Obtener la lista con sus items (con cache/backend fallback)
-      const { list, items } = await itemListRepository.getItemListWithItems(itemListId);
-
-      if (!list) {
-        setScreenState(prev => ({
-          ...prev,
-          loading: false,
-          error: 'No se encontró la lista',
-        }));
+  // Refresca la lista al volver a esta pantalla (p. ej. tras añadir un item),
+  // omitiendo el primer foco porque el hook ya carga en el montaje.
+  const didMountRef = React.useRef(false);
+  useFocusEffect(
+    React.useCallback(() => {
+      if (!didMountRef.current) {
+        didMountRef.current = true;
         return;
       }
-
-      setScreenState({
-        list,
-        items,
-        loading: false,
-        error: null,
-      });
-    } catch (error) {
-      console.error('Error loading list screen data:', error);
-      setScreenState(prev => ({
-        ...prev,
-        loading: false,
-        error: 'Error al cargar la lista',
-      }));
-    }
-  };
-
-  if (screenState.loading) {
-    return (
-      <AppLayout>
-        <View className="bg-background flex-1 justify-center items-center">
-          <ActivityIndicator size="large" color="#ffffff" />
-        </View>
-      </AppLayout>
-    );
-  }
-
-  if (screenState.error || !screenState.list) {
-    return (
-      <AppLayout>
-        <View className="bg-background flex-1 justify-center items-center">
-          <Text className="text-secondary text-lg">{screenState.error || 'Lista no encontrada'}</Text>
-        </View>
-      </AppLayout>
-    );
-  }
-
-  return (
-    <AppLayout>
-      <View className="bg-background flex-1 pt-2">
-        <View className="flex-row justify-left items-center mt-6 mb-7">
-          <TouchableOpacity>
-            <Image
-              source={{ uri: 'https://i.pravatar.cc/100' }}
-              className="w-14 h-14 rounded-full border"
-            />
-          </TouchableOpacity>
-          <Text className="text-[24px] font-roboto font-bold text-primary text-center ml-3">Listas</Text>
-        </View>
-        <ScrollView
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ paddingBottom: 120 }}
-        >
-          {/* Información de la lista */}
-          <View className="items-center mt-5 mb-10">
-            {screenState.list.imageUrl && (
-              <Image
-                source={{ uri: screenState.list.imageUrl }}
-                className="w-24 h-24 rounded-lg mb-2"
-                resizeMode="cover"
-              />
-            )}
-            <Text className="text-secondary text-base text-center">{screenState.list.name}</Text>
-          </View>
-
-          {/* Items de la lista */}
-          <View className="flex-column gap-3 mb-7">
-            {screenState.items.length > 0 ? (
-              screenState.items.map((item) => (
-                <ListItem
-                  key={item.id}
-                  item={{
-                    id: item.id,
-                    title: item.name || 'Sin nombre',
-                    description: '',
-                    imageUrl: item.imageUrl,
-                    info: `${item.type}${item.level ? ` - Nivel ${item.level}` : ''}`,
-                  }}
-                  onPress={() => console.log(`Selected item: ${item.name}`)}
-                />
-              ))
-            ) : (
-              <View className="items-center py-8">
-                <Text className="text-secondary text-center">No hay items en esta lista</Text>
-              </View>
-            )}
-
-            {/* Botón para añadir a la lista */}
-            <TouchableOpacity className="flex-row h-24 bg-secondary rounded-2xl shadow-md p-4 items-center justify-center gap-2">
-              <Text className="text-2xl font-semibold text-primary text-center">Añadir a la lista</Text>
-              <CirclePlus size={28} color={COLORS.primary} />
-            </TouchableOpacity>
-          </View>
-        </ScrollView>
-      </View>
-    </AppLayout>
+      refresh();
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [itemListId])
   );
-}
 
-      if (!list) {
-        setScreenState(prev => ({
-          ...prev,
-          loading: false,
-          error: 'No se encontró la lista',
-        }));
-        return;
-      }
-
-      setScreenState({
-        list,
-        items,
-        loading: false,
-        error: null,
-      });
-    } catch (error) {
-      console.error('Error loading list screen data:', error);
-      setScreenState(prev => ({
-        ...prev,
-        loading: false,
-        error: 'Error al cargar la lista',
-      }));
+  /**
+   * Determina qué texto mostrar como descripción según el tipo de item
+   */
+  const getItemDescription = (item: AnyItemDTO): string => {
+    switch (item.type) {
+      case ItemType.SONG:
+        return (item as SongDTO).artist || 'Artista desconocido';
+      case ItemType.LESSON:
+        return 'Lección práctica';
+      case ItemType.GENRE:
+        return 'Explorar género';
+      case ItemType.INSTRUMENT_GENRE:
+        return 'Técnica de instrumento';
+      default:
+        return '';
     }
   };
 
-  if (screenState.loading) {
+  /**
+   * Maneja la navegación según el tipo de item pulsado
+   */
+  const handlePress = (item: AnyItemDTO) => {
+    navigateToItem(navigation, item);
+  };
+
+  // Estado de Carga
+  if (loading) {
     return (
-      <AppLayout>
-        <View className="bg-background flex-1 justify-center items-center">
-          <ActivityIndicator size="large" color="#ffffff" />
-        </View>
-      </AppLayout>
+        <AppLayout>
+          <View className="bg-background flex-1 justify-center items-center">
+            <ActivityIndicator size="large" color={COLORS.primary} />
+          </View>
+        </AppLayout>
     );
   }
 
-  if (screenState.error || !screenState.list) {
+  // Estado de Error o Lista No Encontrada
+  if (error || !list) {
     return (
-      <AppLayout>
-        <View className="bg-background flex-1 justify-center items-center">
-          <Text className="text-secondary text-lg">{screenState.error || 'Lista no encontrada'}</Text>
-        </View>
-      </AppLayout>
+        <AppLayout>
+          <View className="bg-background flex-1 justify-center items-center px-4">
+            <Text className="text-secondary text-lg text-center">
+              {error || 'No se pudo encontrar la lista seleccionada'}
+            </Text>
+          </View>
+        </AppLayout>
     );
   }
 
   return (
-    <AppLayout>
-      <View className="bg-background flex-1 pt-2">
-        <View className="flex-row justify-left items-center mt-6 mb-7">
-          <TouchableOpacity>
-            <Image
-              source={{ uri: 'https://i.pravatar.cc/100' }}
-              className="w-14 h-14 rounded-full border"
-            />
-          </TouchableOpacity>
-          <Text className="text-[24px] font-roboto font-bold text-primary text-center ml-3">Listas</Text>
+      <AppLayout>
+        <View className="bg-background flex-1 pt-2">
+          {/* Header con botón de volver atrás */}
+          <ProfileHeader title="Listas" />
+
+          <ScrollView
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={{ paddingBottom: 120 }}
+          >
+            {/* Cabecera con Info de la Lista */}
+            <View className="items-center mt-6 mb-8 px-4">
+              {list.imageUrl ? (
+                  <Image
+                      source={{ uri: list.imageUrl }}
+                      className="w-40 h-40 rounded-3xl mb-4 shadow-lg"
+                      resizeMode="cover"
+                  />
+              ) : (
+                  <View className="w-40 h-40 bg-secondary rounded-3xl mb-4 items-center justify-center">
+                    <Text className="text-primary text-4xl font-bold">
+                      {list.name.charAt(0)}
+                    </Text>
+                  </View>
+              )}
+              <Text className="text-secondary text-2xl font-bold text-center">
+                {list.name}
+              </Text>
+              {list.description && (
+                  <Text className="text-secondary opacity-60 text-sm text-center mt-1">
+                    {list.description}
+                  </Text>
+              )}
+            </View>
+
+            {/* Listado de Items Polimórficos */}
+            <View className="flex-column gap-3 mb-7 px-4">
+              {items.length > 0 ? (
+                  items.map((item) => (
+                      <ListItem
+                          key={item.id}
+                          item={{
+                            id: item.id,
+                            title: item.title,
+                            description: getItemDescription(item),
+                            imageUrl: item.imageUrl,
+                            info: `${item.type}${item.level ? ` • Lvl ${item.level}` : ''}`,
+                          }}
+                          onPress={() => handlePress(item)}
+                      />
+                  ))
+              ) : (
+                  <View className="items-center py-12">
+                    <Text className="text-secondary opacity-50 text-base">
+                      Esta lista aún no tiene contenido
+                    </Text>
+                  </View>
+              )}
+
+              {/* Botón de Acción para añadir contenido */}
+              <TouchableOpacity
+                  className="flex-row h-20 bg-secondary rounded-2xl shadow-sm p-4 items-center justify-center gap-3 mt-4"
+                  activeOpacity={0.8}
+                  onPress={() => navigation.navigate('AddItemScreen', { itemListId })}
+              >
+                <Text className="text-xl font-semibold text-primary">
+                  Añadir a la lista
+                </Text>
+                <CirclePlus size={26} color={COLORS.primary} />
+              </TouchableOpacity>
+            </View>
+          </ScrollView>
         </View>
-        <ScrollView
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ paddingBottom: 120 }}
-        >
-          {/* Información de la lista */}
-          <View className="items-center mt-5 mb-10">
-            {screenState.list.imageUrl && (
-              <Image
-                source={{ uri: screenState.list.imageUrl }}
-                className="w-24 h-24 rounded-lg mb-2"
-                resizeMode="cover"
-              />
-            )}
-            <Text className="text-secondary text-base text-center">{screenState.list.name}</Text>
-          </View>
-
-          {/* Items de la lista */}
-          <View className="flex-column gap-3 mb-7">
-            {screenState.items.length > 0 ? (
-              screenState.items.map((item) => (
-                <ListItem
-                  key={item.id}
-                  item={{
-                    id: item.id,
-                    title: item.name || 'Sin nombre',
-                    description: '',
-                    imageUrl: item.imageUrl,
-                    info: `${item.type}${item.level ? ` - Nivel ${item.level}` : ''}`,
-                  }}
-                  onPress={() => console.log(`Selected item: ${item.name}`)}
-                />
-              ))
-            ) : (
-              <View className="items-center py-8">
-                <Text className="text-secondary text-center">No hay items en esta lista</Text>
-              </View>
-            )}
-
-            {/* Botón para añadir a la lista */}
-            <TouchableOpacity className="flex-row h-24 bg-secondary rounded-2xl shadow-md p-4 items-center justify-center gap-2">
-              <Text className="text-2xl font-semibold text-primary text-center">Añadir a la lista</Text>
-              <CirclePlus size={28} color={COLORS.primary} />
-            </TouchableOpacity>
-          </View>
-        </ScrollView>
-      </View>
-    </AppLayout>
+      </AppLayout>
   );
 }

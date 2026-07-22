@@ -24,13 +24,13 @@ def insert_genre(genre):
         response = requests.post(API_URL, json=genre, timeout=5)
         
         if response.status_code in [200, 201]:
-            print(f"✓ Genre '{genre['name']}' added successfully.")
+            print(f"✓ Genre '{genre['title']}' added successfully.")
             return True
         else:
-            print(f"✗ Error adding genre '{genre['name']}': {response.status_code} - {response.text}")
+            print(f"✗ Error adding genre '{genre['title']}': {response.status_code} - {response.text}")
             return False
     except requests.exceptions.RequestException as e:
-        print(f"✗ Request error for genre '{genre['name']}': {e}")
+        print(f"✗ Request error for genre '{genre['title']}': {e}")
         return False
 
 def main():

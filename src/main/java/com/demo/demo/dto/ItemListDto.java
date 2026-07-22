@@ -51,5 +51,4 @@ public class ItemListDTO {
      * List of IDs of items associated with this list.
      */
     private List<Long> itemIds;
-
 }

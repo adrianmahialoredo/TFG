@@ -9,7 +9,6 @@ This script orchestrates the insertion of all entities in the correct order:
 5. Songs
 6. SongLessons (should be loaded before tab sections)
 7. TabSections (references song lessons)
-8. ItemLists
 
 Run this script after ensuring the backend API is running on http://localhost:8080
 """
@@ -27,7 +26,6 @@ SCRIPTS_ORDER = [
     'insert_songs.py',
     'insert_song_lessons.py',
     'insert_tab_sections.py',
-    'insert_item_lists.py',
 ]
 
 def main():
