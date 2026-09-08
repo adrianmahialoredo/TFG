@@ -51,11 +51,11 @@ public class SpotifyAuthServiceImpl implements SpotifyAuthService {
         }
 
         // Validar que el usuario exista en la aplicación
-        User appUser = userRepository.findByUsername(username);
-        if (appUser == null) {
-            log.error("User not found for username: {}", username);
-            throw new IllegalArgumentException("User not found in application");
-        }
+        User appUser = userRepository.findByUsername(username)
+                .orElseThrow(() -> {
+                    log.error("User not found for username: {}", username);
+                    return new IllegalArgumentException("User not found in application");
+                });
 
         log.info("Processing Spotify authorization callback for user: {}", username);
 

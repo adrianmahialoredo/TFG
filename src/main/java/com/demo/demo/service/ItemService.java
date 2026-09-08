@@ -3,6 +3,7 @@ package com.demo.demo.service;
 import com.demo.demo.model.Item;
 
 import java.util.List;
+import java.util.Optional;
 
 /**
  * Service contract for managing generic items.
@@ -16,7 +17,7 @@ import java.util.List;
  */
 public interface ItemService {
 
-    Item getItemById(Long id);
+    Optional<Item> getItemById(Long id);
 
     List<Item> getItemsByIds(List<Long> ids);
 
@@ -28,5 +29,5 @@ public interface ItemService {
 
     List<Item> getRecommendations();
 
-    Item markAsAccessed(Long id);
+    Optional<Item> markAsAccessed(Long id);
 }

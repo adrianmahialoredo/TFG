@@ -79,9 +79,12 @@ public class SongServiceImpl implements SongService {
                 lesson.setVideoUrl(lDto.getVideoUrl());
 
                 // Instrumento de la lección
-                if (lDto.getInstrumentId() != null) {
-                    lesson.setInstrument(instrumentRepository.findById(lDto.getInstrumentId()).orElse(null));
-                }
+                lesson.setInstrument(Optional.ofNullable(lDto.getInstrumentId())
+                        .flatMap(instrumentRepository::findById)
+                        .orElseThrow(() -> new IllegalArgumentException(
+                                lDto.getInstrumentId() == null
+                                        ? "Instrument id is required"
+                                        : "Instrument not found: " + lDto.getInstrumentId())));
 
                 // Chords (ManyToMany)
                 if (lDto.getChordIds() != null) {

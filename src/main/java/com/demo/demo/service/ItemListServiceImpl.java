@@ -141,9 +141,10 @@ public class ItemListServiceImpl implements ItemListService {
     }
 
     private User resolveUser(Long userId) {
-        if (userId == null) return null;
-        return userRepository.findById(userId)
-                .orElseThrow(() -> new IllegalArgumentException("User not found: " + userId));
+        return Optional.ofNullable(userId)
+                .flatMap(userRepository::findById)
+                .orElseThrow(() -> new IllegalArgumentException(
+                        userId == null ? "User id is required" : "User not found: " + userId));
     }
 
 }

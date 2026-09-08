@@ -21,12 +21,7 @@ public class ItemController {
 
     @GetMapping("/{id}")
     public ResponseEntity<Item> getItemById(@PathVariable Long id) {
-        Item item = itemService.getItemById(id);
-        if (item != null) {
-            return ResponseEntity.ok(item);
-        } else {
-            return ResponseEntity.notFound().build();
-        }
+        return ResponseEntity.of(itemService.getItemById(id));
     }
 
     @PostMapping("/batch")
@@ -69,10 +64,6 @@ public class ItemController {
      */
     @PutMapping("/{id}/access")
     public ResponseEntity<Item> markItemAsAccessed(@PathVariable Long id) {
-        Item updated = itemService.markAsAccessed(id);
-        if (updated != null) {
-            return ResponseEntity.ok(updated);
-        }
-        return ResponseEntity.notFound().build();
+        return ResponseEntity.of(itemService.markAsAccessed(id));
     }
 }

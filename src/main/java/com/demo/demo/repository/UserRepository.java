@@ -3,6 +3,8 @@ package com.demo.demo.repository;
 import org.springframework.data.jpa.repository.JpaRepository;
 import com.demo.demo.model.User;
 
+import java.util.Optional;
+
 /**
  * Repository interface for managing User entities.
  * 
@@ -19,15 +21,15 @@ public interface UserRepository extends JpaRepository<User, Long> {
      * Finds a User entity by its email.
      * 
      * @param email the email of the user to search for
-     * @return the User entity associated with the given email, or null if not found
+     * @return the User entity associated with the given email, if present
      */
-    User findByEmail(String email);
+    Optional<User> findByEmail(String email);
 
     /**
      * Finds a User entity by its username.
      * 
      * @param username the username of the user to search for
-     * @return the User entity associated with the given username, or null if not found
+     * @return the User entity associated with the given username, if present
      */
-    User findByUsername(String username);
+    Optional<User> findByUsername(String username);
 }

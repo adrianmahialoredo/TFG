@@ -7,6 +7,7 @@ import org.slf4j.LoggerFactory;
 
 import java.security.Key;
 import java.util.Date;
+import java.util.Optional;
 import jakarta.annotation.PostConstruct;
 
 import io.jsonwebtoken.*;
@@ -78,22 +79,22 @@ public class JwtUtil {
      * Extracts the username from a JWT token.
      *
      * @param token The JWT token string
-     * @return The username encoded in the token, or null if token is invalid
+     * @return The username encoded in the token, or an empty Optional if token is invalid
      */
-    public String extractUsername(String token) {
+    public Optional<String> extractUsername(String token) {
         try {
-            return Jwts.parserBuilder()
+            return Optional.ofNullable(Jwts.parserBuilder()
                     .setSigningKey(key)
                     .build()
                     .parseClaimsJws(token)
                     .getBody()
-                    .getSubject();
+                    .getSubject());
         } catch (JwtException e) {
             logger.error("JWT exception while extracting username: {}", e.getMessage());
-            return null;
+            return Optional.empty();
         } catch (IllegalArgumentException e) {
             logger.error("Illegal argument while extracting username from JWT: {}", e.getMessage());
-            return null;
+            return Optional.empty();
         }
     }
 
@@ -109,11 +110,10 @@ public class JwtUtil {
      */
     public boolean validateToken(String token, String username) {
         try {
-            String extractedUsername = extractUsername(token);
-            if (extractedUsername == null) {
-                return false;
-            }
-            return username.equals(extractedUsername) && !isTokenExpired(token);
+            return extractUsername(token)
+                    .filter(username::equals)
+                    .filter(extractedUsername -> !isTokenExpired(token))
+                    .isPresent();
         } catch (Exception e) {
             logger.error("Error validating token: {}", e.getMessage());
             return false;

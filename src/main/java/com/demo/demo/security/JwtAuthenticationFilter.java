@@ -71,17 +71,17 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 String token = authorizationHeader.substring(7); // Extract token without "Bearer "
 
                 // Validate the token
-                String username = jwtUtil.extractUsername(token);
-
-                if (username != null && jwtUtil.validateToken(token, username)) {
-                    // Set up the authentication context for the authenticated user
-                    UsernamePasswordAuthenticationToken authentication = 
-                        new UsernamePasswordAuthenticationToken(username, null, new ArrayList<>());
-                    SecurityContextHolder.getContext().setAuthentication(authentication);
-                    logger.debug("JWT authentication successful for user: {}", username);
-                } else {
-                    logger.warn("JWT token validation failed for request: {}", request.getRequestURI());
-                }
+                jwtUtil.extractUsername(token).ifPresentOrElse(username -> {
+                    if (jwtUtil.validateToken(token, username)) {
+                        // Set up the authentication context for the authenticated user
+                        UsernamePasswordAuthenticationToken authentication =
+                            new UsernamePasswordAuthenticationToken(username, null, new ArrayList<>());
+                        SecurityContextHolder.getContext().setAuthentication(authentication);
+                        logger.debug("JWT authentication successful for user: {}", username);
+                    } else {
+                        logger.warn("JWT token validation failed for request: {}", request.getRequestURI());
+                    }
+                }, () -> logger.warn("JWT token validation failed for request: {}", request.getRequestURI()));
             }
         } catch (Exception e) {
             logger.error("Error in JWT authentication filter: {}", e.getMessage(), e);

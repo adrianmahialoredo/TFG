@@ -70,12 +70,11 @@ public class UserServiceImpl implements UserService {
     public LoginResponse loginUser(UserDto userDto) {
         log.debug("Login attempt for email: {}", userDto.getEmail());
         try {
-            User user = userRepository.findByEmail(userDto.getEmail());
-
-            if (user == null) {
-                log.warn("Login attempt with non-existent email: {}", userDto.getEmail());
-                throw new BadCredentialsException("User not found");
-            }
+            User user = userRepository.findByEmail(userDto.getEmail())
+                    .orElseThrow(() -> {
+                        log.warn("Login attempt with non-existent email: {}", userDto.getEmail());
+                        return new BadCredentialsException("User not found");
+                    });
             if (!passwordEncoder.matches(userDto.getPassword(), user.getPassword())) {
                 log.warn("Failed login attempt for user: {} - password mismatch", userDto.getEmail());
                 throw new BadCredentialsException("Password does not match");
@@ -124,13 +123,14 @@ public class UserServiceImpl implements UserService {
     @Override
     public Optional<UserDto> findByEmail(String email) {
         log.debug("Searching user by email: {}", email);
-        User user = userRepository.findByEmail(email);
-        if (user != null) {
+        Optional<UserDto> user = userRepository.findByEmail(email)
+                .map(this::toDto);
+        if (user.isPresent()) {
             log.debug("User found with email: {}", email);
-            return Optional.of(toDto(user));
+        } else {
+            log.debug("User not found with email: {}", email);
         }
-        log.debug("User not found with email: {}", email);
-        return Optional.empty();
+        return user;
     }
 
     @Override

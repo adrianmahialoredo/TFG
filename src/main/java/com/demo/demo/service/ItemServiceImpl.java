@@ -7,6 +7,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * Default implementation of {@link ItemService}.
@@ -32,8 +33,8 @@ public class ItemServiceImpl implements ItemService {
     }
 
     @Override
-    public Item getItemById(Long id) {
-        return itemRepository.findById(id).orElse(null);
+    public Optional<Item> getItemById(Long id) {
+        return itemRepository.findById(id);
     }
 
     @Override
@@ -62,13 +63,12 @@ public class ItemServiceImpl implements ItemService {
     }
 
     @Override
-    public Item markAsAccessed(Long id) {
-        Item item = itemRepository.findById(id).orElse(null);
-        if (item == null) {
-            return null;
-        }
-        item.setLastTimeAccessed(LocalDateTime.now());
-        return itemRepository.save(item);
+    public Optional<Item> markAsAccessed(Long id) {
+        return itemRepository.findById(id)
+                .map(item -> {
+                    item.setLastTimeAccessed(LocalDateTime.now());
+                    return itemRepository.save(item);
+                });
     }
 }
 
