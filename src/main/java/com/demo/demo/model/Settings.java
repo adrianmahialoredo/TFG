@@ -19,6 +19,7 @@ import lombok.*;
  * @since 2025-06-06
  */
 @Entity
+@Table(name = "settings")
 @Getter
 @Setter
 @NoArgsConstructor

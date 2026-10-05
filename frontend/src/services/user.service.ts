@@ -10,9 +10,7 @@ export const getById = async (id: string): Promise<UserDTO> => {
 export const getAllById = async (ids: string[]): Promise<UserDTO[]> => {
   if (ids.length === 0) return [];
   
-  const response = await axios.get(API_ENDPOINTS.USERS.BY_IDS, { 
-    params: { ids } 
-  });
+  const response = await axios.post(API_ENDPOINTS.USERS.BY_IDS, ids);
   return response.data;
 };
 

@@ -1,9 +1,14 @@
 package com.demo.demo.dto;
 
+import com.demo.demo.model.Item;
+
+import lombok.Data;
+import lombok.EqualsAndHashCode;
+import lombok.ToString;
+
 import java.util.List;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
-import lombok.Data;
 
 /**
  * Data Transfer Object for musical genre information.
@@ -17,6 +22,8 @@ import lombok.Data;
  * @since 2025-06-06
  */
 @Data
+@EqualsAndHashCode(callSuper = true)
+@ToString(callSuper = true)
 public class GenreDTO extends ItemDTO {
 
     /**
@@ -49,4 +56,9 @@ public class GenreDTO extends ItemDTO {
      * List of IDs of lessons associated with this genre.
      */
     private List<Long> lessonIds;
+
+    @Override
+    public Item.Type getType() {
+        return Item.Type.Genre;
+    }
 }

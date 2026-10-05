@@ -1,10 +1,13 @@
 import { create } from 'zustand';
-import { AnyItemDTO } from '../../types';
+import { ItemSummaryDTO } from '../../types';
 
+/**
+ * Store de los resúmenes de items (catálogo + feeds mezclados).
+ * Nunca guarda DTOs completos: esos viven en la Store de su entidad.
+ */
 interface ItemEntitiesState {
-    items: Record<string, AnyItemDTO>;
-    setItems: (newItems: AnyItemDTO[]) => void;
-    updateItem: (id: string, data: Partial<AnyItemDTO>) => void;
+    items: Record<string, ItemSummaryDTO>;
+    setItems: (newItems: ItemSummaryDTO[]) => void;
     clearItems: () => void;
 }
 
@@ -12,32 +15,12 @@ export const useItemEntitiesStore = create<ItemEntitiesState>((set) => ({
     items: {},
 
     setItems: (newItems) =>
-        set((state) => {
-            // Creamos el nuevo mapa de items
-            const newItemsMap = Object.fromEntries(
-                newItems.map((item) => [item.id.toString(), item])
-            );
-
-            return {
-                items: {
-                    ...state.items,
-                    ...newItemsMap,
-                } as Record<string, AnyItemDTO>, // <-- El "as" mágico para evitar el error TS2345
-            };
-        }),
-
-    updateItem: (id, data) =>
-        set((state) => {
-            const currentItem = state.items[id];
-            if (!currentItem) return state;
-
-            return {
-                items: {
-                    ...state.items,
-                    [id]: { ...currentItem, ...data } as AnyItemDTO, // <-- Otro casteo necesario aquí
-                },
-            };
-        }),
+        set((state) => ({
+            items: {
+                ...state.items,
+                ...Object.fromEntries(newItems.map((item) => [item.id.toString(), item])),
+            },
+        })),
 
     clearItems: () => set({ items: {} }),
 }));

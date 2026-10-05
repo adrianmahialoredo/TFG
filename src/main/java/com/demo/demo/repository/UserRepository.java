@@ -1,6 +1,7 @@
 package com.demo.demo.repository;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
 import com.demo.demo.model.User;
 
 import java.util.Optional;
@@ -15,6 +16,7 @@ import java.util.Optional;
  * @version 1.0
  * @since 2025-06-06
  */
+@Repository
 public interface UserRepository extends JpaRepository<User, Long> {
 
     /**

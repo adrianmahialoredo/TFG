@@ -1,6 +1,9 @@
 package com.demo.demo.model;
 
+import org.hibernate.annotations.ColumnDefault;
+
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
@@ -30,8 +33,8 @@ import java.util.*;
 @DiscriminatorValue("SONG")
 @Getter
 @Setter
-@AllArgsConstructor
 @NoArgsConstructor
+@AllArgsConstructor
 public class Song extends Item {
 
     /**
@@ -39,7 +42,7 @@ public class Song extends Item {
      * This field is required and cannot be blank.
      */
     @Column(nullable = false)
-    @NotBlank
+    @NotBlank(message = "Artist cannot be blank")
     private String artist;
 
     /**
@@ -70,12 +73,18 @@ public class Song extends Item {
      * A lesson can be associated with one song, but a song can have multiple lessons.
      */
     @OneToMany(mappedBy = "song", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<SongLesson> lessons = new ArrayList<>();
+    @JsonManagedReference(value = "song-songLessons")
+    @OrderBy("id ASC")
+    private Set<SongLesson> lessons = new LinkedHashSet<>();
 
-    // --- FILTERS --- //
+    /** Song filters */
     private boolean popular;
+    @ColumnDefault("false")
+    private boolean newSong;
     @Pattern(regexp = "^(19|20)\\d{2}s$|^$", message = "Decade must be in format like '1980s', '1990s', '2000s', etc. or empty")
     private String decade;  // e.g., "1980s", "1990s"
+
+    /** Genre filters */
     private boolean genreClassic;
     private boolean genrePopular;
     private boolean genreNew;

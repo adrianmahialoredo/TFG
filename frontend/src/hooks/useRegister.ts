@@ -5,15 +5,21 @@ export const useRegister = () => {
     const [isLoading, setIsLoading] = useState(false);
 
     const validate = (data: any) => {
-        if (!data.name?.trim()) throw new Error('El nombre es obligatorio');
+        // Mismas reglas que UserDto en el backend, para avisar antes de enviar
+        const name: string = data.name?.trim() ?? '';
+        const username: string = data.username?.trim() ?? '';
+        if (name.length < 2 || name.length > 100) throw new Error('El nombre debe tener entre 2 y 100 caracteres');
         if (!data.email?.includes('@')) throw new Error('Email no válido');
-        if (data.username?.length < 3) throw new Error('El usuario debe tener 3+ caracteres');
+        if (username.length < 3 || username.length > 20) throw new Error('El usuario debe tener entre 3 y 20 caracteres');
         if (data.password !== data.confirmPassword) throw new Error('Las contraseñas no coinciden');
 
-        const passRegex = /^(?=.*[A-Z])(?=.*[0-9])(?=.*[@$!%*?&])[A-Za-z0-9@$!%*?&]{8,}$/;
-        if (!passRegex.test(data.password)) {
-            throw new Error('Contraseña débil: requiere Mayúscula, Número y Símbolo');
-        }
+        // Cualquier carácter que no sea letra, número o espacio cuenta como símbolo
+        const password: string = data.password ?? '';
+        if (password.length < 8) throw new Error('La contraseña debe tener al menos 8 caracteres');
+        if (/\s/.test(password)) throw new Error('La contraseña no puede contener espacios');
+        if (!/[A-Z]/.test(password)) throw new Error('La contraseña necesita al menos una mayúscula');
+        if (!/[0-9]/.test(password)) throw new Error('La contraseña necesita al menos un número');
+        if (!/[^A-Za-z0-9\s]/.test(password)) throw new Error('La contraseña necesita al menos un símbolo');
     };
 
     const register = async (formData: any) => {

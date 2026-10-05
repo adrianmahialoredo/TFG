@@ -1,6 +1,7 @@
 import axios from 'axios';
 import { API_ENDPOINTS } from '../config/apiConfig';
 import {SpotifyRecommendationDTO} from "../types";
+import { useAuthStore } from '../stores/entities/auth.entities.store';
 
 export interface SpotifyRecommendation {
   id: string;
@@ -10,13 +11,16 @@ export interface SpotifyRecommendation {
   [key: string]: any;
 }
 
+/**
+ * Pide al backend la URL de autorización de Spotify para el usuario autenticado.
+ * El callback lo recibe directamente el backend (Spotify redirige al navegador a
+ * API_ENDPOINTS.SPOTIFY.CALLBACK), así que la app solo tiene que abrir esta URL.
+ */
 export const spotifyLogin = async (): Promise<{ authUrl: string }> => {
-  const response = await axios.get(API_ENDPOINTS.SPOTIFY.LOGIN);
-  return response.data;
-};
-
-export const spotifyCallback = async (code: string, state: string): Promise<{ token: string; userId: string }> => {
-  const response = await axios.post(API_ENDPOINTS.SPOTIFY.CALLBACK, { code, state });
+  const token = useAuthStore.getState().token;
+  const response = await axios.get(API_ENDPOINTS.SPOTIFY.LOGIN, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
   return response.data;
 };
 

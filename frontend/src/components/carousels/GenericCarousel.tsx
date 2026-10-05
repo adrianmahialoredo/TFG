@@ -11,6 +11,7 @@ type CarouselProps = {
   size?: CarouselSize;
   onItemPress?: (itemId: string) => void;
   showArtist?: boolean;
+  borderSquare?: boolean;
 };
 
 interface SizeConfig {
@@ -52,6 +53,7 @@ export default function GenericCarousel({
   size = 'medium',
   onItemPress,
   showArtist = true,
+  borderSquare = false,
 }: CarouselProps) {
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
   const config = CAROUSEL_SIZES[size];
@@ -83,7 +85,7 @@ export default function GenericCarousel({
           style={{
             width: config.imageWidth,
             height: config.imageHeight,
-            borderRadius: 6,
+            borderRadius: borderSquare ? 0 : 6,
           }}
           resizeMode="cover"
         />

@@ -5,6 +5,8 @@ import jakarta.validation.constraints.*;
 import lombok.*;
 import java.util.List;
 
+import com.demo.demo.utils.Identifiable;
+
 /**
  * Represents a musical chord with its properties and associated notes.
  * 
@@ -33,8 +35,7 @@ import java.util.List;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
-public class Chord {
+public class Chord implements Identifiable<Long> {
 
     /**
      * Unique identifier for the chord.
@@ -116,7 +117,23 @@ public class Chord {
      * Fret number for capo placement, if applicable.
      * This field is used to indicate where the capo is placed on the guitar neck.
      */
-    private int capoFret; 
+    private int capoFret;
 
+    /**
+     * Two Chords are equal when they have the same id, so collections (e.g. {@link java.util.Set})
+     * never hold the same Chord twice even if it was loaded in different places or is a Hibernate proxy.
+     * Ids are assigned manually before the entity is added to any collection, so the hash is stable.
+     */
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof Chord other)) return false;
+        return getId() != null && getId().equals(other.getId());
+    }
+
+    @Override
+    public int hashCode() {
+        return java.util.Objects.hashCode(getId());
+    }
 }
 

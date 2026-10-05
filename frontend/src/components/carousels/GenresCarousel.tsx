@@ -15,7 +15,7 @@ export default function VerticalButtonsCarousel({ data }: { data: GenreButton[] 
     >
       <Image
         source={{ uri: item.imageUrl }}
-        className="w-[158px] h-[158px]"
+        className="w-[170px] h-[170px]"
         resizeMode="cover"
         borderRadius={12}
       />
@@ -30,7 +30,7 @@ export default function VerticalButtonsCarousel({ data }: { data: GenreButton[] 
         keyExtractor={(item) => item.id}
         numColumns={2}
         scrollEnabled={false} // si está dentro de un ScrollView externo
-        columnWrapperStyle={{ columnGap: 10 }}
+        columnWrapperStyle={{ columnGap: 9 }}
       />
     </View>
   );

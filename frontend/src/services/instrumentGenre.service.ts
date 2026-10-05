@@ -13,20 +13,17 @@ export const getInstrumentGenreById = async (id: string): Promise<InstrumentGenr
 };
 
 export const getAllById = async (ids: string[]): Promise<InstrumentGenreDTO[]> => {
-  // @TODO: Requiere endpoint POST /instrument-genres/by-ids
-  const response = await axios.post(`${API_ENDPOINTS.INSTRUMENT_GENRES.BASE}/by-ids`, ids);
+  const response = await axios.post(API_ENDPOINTS.INSTRUMENT_GENRES.BY_IDS, ids);
   return response.data;
 };
 
 export const getByGenreId = async (genreId: string): Promise<InstrumentGenreDTO[]> => {
-  // @TODO: Requiere endpoint GET /instrument-genres/by-genre/{genreId}
-  const response = await axios.get(`${API_ENDPOINTS.INSTRUMENT_GENRES.BASE}/by-genre/${genreId}`);
+  const response = await axios.get(API_ENDPOINTS.INSTRUMENT_GENRES.BY_GENRE(genreId));
   return response.data;
 };
 
 export const getByInstrumentId = async (instrumentId: string): Promise<InstrumentGenreDTO[]> => {
-  // @TODO: Requiere endpoint GET /instrument-genres/by-instrument/{instrumentId}
-  const response = await axios.get(`${API_ENDPOINTS.INSTRUMENT_GENRES.BASE}/by-instrument/${instrumentId}`);
+  const response = await axios.get(API_ENDPOINTS.INSTRUMENT_GENRES.BY_INSTRUMENT(instrumentId));
   return response.data;
 };
 

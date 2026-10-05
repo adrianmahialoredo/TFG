@@ -1,5 +1,5 @@
 ﻿import { NavigationProp } from '@react-navigation/native';
-import { AnyItemDTO, ItemType, RootStackParamList } from '../types';
+import { ItemSummaryDTO, ItemType, RootStackParamList } from '../types';
 /**
  * Navega a la pantalla de detalle adecuada segun el tipo de item polimorfico.
  *
@@ -12,7 +12,7 @@ import { AnyItemDTO, ItemType, RootStackParamList } from '../types';
  */
 export const navigateToItem = (
   navigation: NavigationProp<RootStackParamList>,
-  item: AnyItemDTO
+  item: ItemSummaryDTO
 ): void => {
   switch (item.type) {
     case ItemType.SONG:

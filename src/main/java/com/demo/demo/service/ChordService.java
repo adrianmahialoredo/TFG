@@ -22,7 +22,7 @@ public interface ChordService {
      *
      * @return A list of ChordDto representing all chords.
      */
-    List<ChordDto> getAllChords();
+    List<ChordDto> findAll();
 
     /**
      * Retrieves a chord by its ID and converts it to a DTO.
@@ -30,7 +30,7 @@ public interface ChordService {
      * @param id The ID of the chord to retrieve.
      * @return An Optional containing the ChordDto if found, otherwise empty.
      */
-    Optional<ChordDto> getChordById(Long id);
+    Optional<ChordDto> findById(Long id);
 
     /**
      * Creates a new chord from the provided DTO and saves it to the repository.
@@ -38,7 +38,7 @@ public interface ChordService {
      * @param dto The ChordDto containing the details of the chord to create.
      * @return The created ChordDto.
      */
-    ChordDto createChord(ChordDto dto);
+    ChordDto create(ChordDto dto);
 
     /**
      * Updates an existing chord with the provided DTO.
@@ -47,14 +47,15 @@ public interface ChordService {
      * @param dto The ChordDto containing the updated details.
      * @return An Optional containing the updated ChordDto if found, otherwise empty.
      */
-    Optional<ChordDto> updateChord(Long id, ChordDto dto);
+    Optional<ChordDto> update(Long id, ChordDto dto);
 
     /**
      * Deletes a chord by its ID.
      *
      * @param id The ID of the chord to delete.
+     * @return true if the chord was deleted, false if it did not exist.
      */
-    void deleteChord(Long id);
+    boolean delete(Long id);
 
     /**
      * Retrieves all chords by a list of chord IDs and converts them to DTOs.
@@ -62,7 +63,7 @@ public interface ChordService {
      * @param ids The list of chord IDs to retrieve.
      * @return A list of ChordDto representing all chords with the provided IDs.
      */
-    List<ChordDto> getAllChordsByIds(List<Long> ids);
+    List<ChordDto> findByIds(List<Long> ids);
 
     /**
      * Retrieves all chord IDs associated with a specific song lesson.
@@ -70,5 +71,5 @@ public interface ChordService {
      * @param songLessonId The ID of the song lesson.
      * @return A list of chord IDs associated with the song lesson.
      */
-    List<Long> getChordsBySongLessonId(Long songLessonId);
+    List<Long> findIdsForSongLesson(Long songLessonId);
 }

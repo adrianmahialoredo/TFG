@@ -1,6 +1,5 @@
-// src/services/SongService.ts
 import axios from 'axios';
-import { SongDTO } from '../types/SongDTO';
+import { SongDTO } from '../types';
 import { API_ENDPOINTS } from '../config/apiConfig';
 
 export const getAll = async (): Promise<SongDTO[]> => {
@@ -13,49 +12,8 @@ export const getById = async (id: string): Promise<SongDTO> => {
   return response.data;
 };
 
-export const getPopular = async (): Promise<SongDTO[]> => {
-  const response = await axios.get(API_ENDPOINTS.SONGS.POPULAR);
-  return response.data;
-};
-
-export const getPopularIds = async (limit?: number): Promise<number[]> => {
-  const url = limit ? `${API_ENDPOINTS.SONGS.POPULAR_IDS}?limit=${limit}` : API_ENDPOINTS.SONGS.POPULAR_IDS;
-  const response = await axios.get(url);
-  return response.data;
-};
-
 export const getAllById = async (ids: string[]): Promise<SongDTO[]> => {
   const response = await axios.post(API_ENDPOINTS.SONGS.BY_IDS, ids);
-  return response.data;
-};
-
-export const getPopularByGenre = async (genreId: string): Promise<SongDTO[]> => {
-  const response = await axios.get(API_ENDPOINTS.SONGS.POPULAR_BY_GENRE(genreId));
-  return response.data;
-};
-
-export const getPopularByGenreId = async (genreId: string): Promise<SongDTO[]> => {
-  const response = await axios.get(API_ENDPOINTS.SONGS.POPULAR_BY_GENRE_ID(genreId));
-  return response.data;
-};
-
-export const getClassicByGenreId = async (genreId: string): Promise<SongDTO[]> => {
-  const response = await axios.get(API_ENDPOINTS.SONGS.CLASSIC_BY_GENRE_ID(genreId));
-  return response.data;
-};
-
-export const getNewByGenreId = async (genreId: string): Promise<SongDTO[]> => {
-  const response = await axios.get(API_ENDPOINTS.SONGS.NEW_BY_GENRE_ID(genreId));
-  return response.data;
-};
-
-export const getNewByGenre = async (genreId: string): Promise<SongDTO[]> => {
-  const response = await axios.get(API_ENDPOINTS.SONGS.NEW_BY_GENRE(genreId));
-  return response.data;
-};
-
-export const getClassicByGenre = async (genreId: string): Promise<SongDTO[]> => {
-  const response = await axios.get(API_ENDPOINTS.SONGS.CLASSIC_BY_GENRE(genreId));
   return response.data;
 };
 
@@ -78,17 +36,43 @@ export const deleteSong = async (id: string): Promise<void> => {
   await axios.delete(API_ENDPOINTS.SONGS.BY_ID(id));
 };
 
-export const getNew = async (): Promise<SongDTO[]> => {
-  const response = await axios.get(API_ENDPOINTS.SONGS.HOME_NEW);
+// --- Carruseles con DTO completo (decisión de negocio: el usuario suele abrir lo que ve) ---
+
+const withLimit = (url: string, limit?: number) => (limit ? `${url}?limit=${limit}` : url);
+
+export const getPopular = async (limit?: number): Promise<SongDTO[]> => {
+  const response = await axios.get(withLimit(API_ENDPOINTS.SONGS.POPULAR, limit));
   return response.data;
 };
 
-export const getRecommended = async (): Promise<SongDTO[]> => {
-  const response = await axios.get(API_ENDPOINTS.SONGS.HOME_RECOMMENDED);
+export const getNew = async (limit?: number): Promise<SongDTO[]> => {
+  const response = await axios.get(withLimit(API_ENDPOINTS.SONGS.NEW, limit));
   return response.data;
 };
 
-export const getFromSpotify = async (): Promise<SongDTO[]> => {
-  const response = await axios.get(API_ENDPOINTS.SONGS.HOME_SPOTIFY);
+export const getFromSpotify = async (limit?: number): Promise<SongDTO[]> => {
+  const response = await axios.get(withLimit(API_ENDPOINTS.SONGS.SPOTIFY, limit));
+  return response.data;
+};
+
+export const getPopularByGenreId = async (genreId: string): Promise<SongDTO[]> => {
+  const response = await axios.get(API_ENDPOINTS.SONGS.POPULAR_BY_GENRE(genreId));
+  return response.data;
+};
+
+export const getClassicByGenreId = async (genreId: string): Promise<SongDTO[]> => {
+  const response = await axios.get(API_ENDPOINTS.SONGS.CLASSIC_BY_GENRE(genreId));
+  return response.data;
+};
+
+export const getNewByGenreId = async (genreId: string): Promise<SongDTO[]> => {
+  const response = await axios.get(API_ENDPOINTS.SONGS.NEW_BY_GENRE(genreId));
+  return response.data;
+};
+
+// --- Carruseles por convención: solo IDs (se resuelven contra el catálogo de items) ---
+
+export const getRecommendedIds = async (limit?: number): Promise<string[]> => {
+  const response = await axios.get(withLimit(API_ENDPOINTS.SONGS.RECOMMENDED_IDS, limit));
   return response.data;
 };

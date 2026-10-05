@@ -2,9 +2,14 @@ import json
 import requests
 from pathlib import Path
 
+from console_utils import configure_console
+
+configure_console()
+
 # Configuration
-API_URL = 'http://localhost:8080/instrument-genres'
+API_URL = 'http://localhost:8080/api/instrument-genres'
 DATA_FILE = Path(__file__).parent.parent / 'data' / 'instrument_genres.json'
+REQUEST_TIMEOUT = 30
 
 def load_data(file_path):
     """Load JSON data from file with proper encoding."""
@@ -21,16 +26,19 @@ def load_data(file_path):
 def insert_instrument_genre(relationship):
     """Insert a single instrument-genre relationship via API."""
     try:
-        response = requests.post(API_URL, json=relationship, timeout=5)
-        
+        response = requests.post(API_URL, json=relationship, timeout=REQUEST_TIMEOUT)
+
         if response.status_code in [200, 201]:
             print(f"✓ Instrument-Genre relationship (Genre ID: {relationship.get('genreId')}, Instrument ID: {relationship.get('instrumentId')}) added successfully.")
             return True
         else:
-            print(f"✗ Error adding instrument-genre relationship: {response.status_code} - {response.text}")
+            print(f"✗ Error adding instrument-genre relationship (ID: {relationship.get('id')}): {response.status_code} - {response.text}")
             return False
+    except requests.exceptions.ConnectionError:
+        print(f"✗ Cannot reach the API at {API_URL}. Is the backend running on port 8080?")
+        return False
     except requests.exceptions.RequestException as e:
-        print(f"✗ Request error for instrument-genre relationship: {e}")
+        print(f"✗ Request error for instrument-genre relationship (ID: {relationship.get('id')}): {e}")
         return False
 
 def main():

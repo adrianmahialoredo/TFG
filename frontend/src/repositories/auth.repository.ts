@@ -1,6 +1,10 @@
 import * as authService from '../services/auth.service';
 import * as userLocal from '../local/user.local';
-import {useAuthStore, useUserEntitiesStore} from '../stores/entities';
+import * as itemListLocal from '../local/itemList.local';
+import * as itemLocal from '../local/item.local';
+import * as songLocal from '../local/song.local';
+import { SPOTIFY_INDEX_KEY } from './song.repository';
+import { useAuthStore, useUserEntitiesStore, useItemListEntitiesStore } from '../stores/entities';
 import { UserDTO } from '../types';
 
 export const login = async (email: string, password: string): Promise<{ token: string; user: UserDTO }> => {
@@ -19,7 +23,7 @@ export const login = async (email: string, password: string): Promise<{ token: s
 
     return { token, user };
   } catch (error) {
-    console.error("[AuthRepo] Login failed:", error);
+    console.warn("[AuthRepo] Login rejected by backend");
     throw error;
   }
 };
@@ -50,16 +54,25 @@ export const register = async (formData: any): Promise<{ token: string; user: Us
 
 export const logout = async (): Promise<void> => {
   try {
-    // 1. Limpiar RAM
+    // 1. Limpiar RAM: sesión y datos privados del usuario
     useAuthStore.getState().clearAuth();
     useUserEntitiesStore.getState().clearUsers();
+    useItemListEntitiesStore.getState().clearItemLists();
 
     // 2. LIMPIAR DISCO (Vital para la privacidad)
-    // Debemos borrar el token y los datos del usuario del storage local
-    await userLocal.clearAll();
+    // Borramos los datos del usuario, sus listas y los índices de feeds personalizados
+    // (recientes, recomendaciones, Spotify…), que otro usuario no debe ver.
+    await Promise.all([
+      userLocal.clearAll(),
+      itemListLocal.clearAll(),
+      // El catálogo de items es público: se conserva.
+      itemLocal.clearQueryIndexes(['items_catalog']),
+      // Las canciones de Spotify van con DTO completo y su índice vive en el de canciones.
+      songLocal.removeQueryIndexes([SPOTIFY_INDEX_KEY]),
+    ]);
 
-    // No borramos TODAS las entidades (como canciones globales),
-    // pero sí la sesión del usuario.
+    // Las entidades de contenido público (canciones, lecciones, géneros…)
+    // se conservan como caché compartida.
   } catch (error) {
     console.error("[AuthRepo] Logout failed:", error);
   }

@@ -101,6 +101,11 @@ Estructura (por item):
 - `genreId` (number, obligatorio)
 - `lessonIds` (array number, opcional)
 
+Relacion con las lecciones:
+- Cada leccion pertenece como mucho a un InstrumentGenre (`Lesson.instrumentGenre`, columna `lessons.instrument_genre_id`).
+- Al crear/actualizar el InstrumentGenre, las lecciones de `lessonIds` quedan con `belongsToInstrumentGenre = true` e `indexInInstrumentGenre` = su posicion en el array (empezando en 0). Por eso las lecciones deben cargarse antes.
+- Tambien se puede asignar desde la propia leccion (`LessonDTO`): `instrumentGenreId` + `indexInInstrumentGenre`.
+
 Validacion sensible:
 - `InstrumentGenre` hereda de `Item` (requiere `title` e `imageUrl` en entidad), pero el DTO no los incluye. Si el backend valida entidad, puede fallar.
 

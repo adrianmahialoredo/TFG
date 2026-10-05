@@ -4,19 +4,22 @@ import { useState, useMemo } from "react";
 import SearchBar from "../components/SearchBar";
 import SongsCarousel from "../components/carousels/SongsCarousel";
 import ProfileHeader from "../components/ProfileHeader";
-import { useHomeSongs } from "../hooks/useHomeSongs";
+import { useCategorizedSongs } from "../hooks/useCategorizedSongs";
 
 export default function SongsScreen() {
   const [query, setQuery] = useState('');
 
   // Nivel 6: Hook que orquesta con los repositorios y se suscribe a las Entity Stores
-  const { populars, news, recommendations, spotify, loading, error } = useHomeSongs();
+  const { populars, news, recommendations, spotify, favouriteGenre, loading, error } = useCategorizedSongs();
 
   // Filtrado por query si hay búsqueda (useMemo para evitar recálculos innecesarios)
   const filteredCategories = useMemo(() => {
     const categories = [
       { title: 'Populares', data: populars },
       { title: 'Nuevas', data: news },
+      ...(favouriteGenre
+        ? [{ title: `Populares en ${favouriteGenre.title || 'tu género favorito'}`, data: favouriteGenre.data }]
+        : []),
       { title: 'Según tus gustos', data: recommendations },
       { title: 'Según tu Spotify', data: spotify },
     ];
@@ -29,7 +32,7 @@ export default function SongsScreen() {
         item.title.toLowerCase().includes(query.toLowerCase())
       )
     })).filter(cat => cat.data.length > 0);
-  }, [populars, news, recommendations, spotify, query]);
+  }, [populars, news, recommendations, spotify, favouriteGenre, query]);
 
   return (
     <AppLayout>

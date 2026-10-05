@@ -17,13 +17,22 @@ import java.util.Optional;
  */
 public interface SongLessonService {
 
-    SongLessonDTO createSongLesson(SongLessonDTO dto);
+    SongLessonDTO create(SongLessonDTO dto);
 
-    Optional<SongLessonDTO> getSongLessonById(Long id);
+    Optional<SongLessonDTO> findById(Long id);
 
-    List<SongLessonDTO> getLessonsBySongId(Long songId);
+    List<SongLessonDTO> findByIds(List<Long> ids);
 
-    Optional<SongLessonDTO> updateSongLesson(Long id, SongLessonDTO dto);
+    List<SongLessonDTO> findForSong(Long songId);
 
-    boolean deleteSongLesson(Long id);
+    Optional<SongLessonDTO> update(Long id, SongLessonDTO dto);
+
+    boolean delete(Long id);
+
+    /**
+     * Retrieves all song lessons.
+     *
+     * @return a list of SongLessonDTO
+     */
+    List<SongLessonDTO> findAll();
 }

@@ -36,6 +36,8 @@ export const ProfileInput = ({
         placeholder={placeholder}
         placeholderTextColor={COLORS.primary}
         editable={editable}
+        underlineColorAndroid="transparent"
+        selectionColor={COLORS.primary}
       />
     </View>
   );

@@ -1,14 +1,19 @@
 package com.demo.demo.service;
 
 import com.demo.demo.dto.GenreDTO;
+import com.demo.demo.utils.mapper.DtoMapper;
+import com.demo.demo.utils.mapper.EntityMapper;
 import com.demo.demo.model.*;
 import com.demo.demo.repository.*;
 
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import java.util.*;
 import java.util.stream.Collectors;
+
+import static com.demo.demo.utils.EntityResolver.resolveLessons;
+import static com.demo.demo.utils.EntityResolver.findGenre;
 
 /**
  * Default implementation of {@link GenreService}.
@@ -20,44 +25,58 @@ import java.util.stream.Collectors;
  * @version 1.0
  * @since 2025-06-06
  */
-@Slf4j
 @Service
 @RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class GenreServiceImpl implements GenreService {
 
     private final GenreRepository genreRepository;
     private final SongRepository songRepository;
-    private final LessonRepository lessonRepository;
+    private final DtoMapper dtoMapper;
+    private final EntityMapper entityMapper;
 
     @Override
-    public List<GenreDTO> getAllGenres() {
+    public List<GenreDTO> findAll() {
         return genreRepository.findAll().stream()
-                .map(this::toDTO)
+                .map(dtoMapper::genreToGenreDto)
                 .collect(Collectors.toList());
     }
 
     @Override
-    public Optional<GenreDTO> getGenreById(Long id) {
-        return genreRepository.findById(id)
-                .map(this::toDTO);
+    public List<GenreDTO> findByIds(List<Long> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return List.of();
+        }
+        return genreRepository.findAllById(ids).stream()
+                .map(dtoMapper::genreToGenreDto)
+                .collect(Collectors.toList());
     }
 
     @Override
-    public GenreDTO createGenre(GenreDTO dto) {
-        Genre genre = toEntity(dto);
-        return toDTO(genreRepository.save(genre));
+    public Optional<GenreDTO> findById(Long id) {
+        return findGenre(id)
+                .map(dtoMapper::genreToGenreDto);
     }
 
     @Override
-    public Optional<GenreDTO> updateGenre(Long id, GenreDTO dto) {
-        return genreRepository.findById(id)
+    @Transactional
+    public GenreDTO create(GenreDTO dto) {
+        Genre genre = entityMapper.genreDtoToGenre(dto, resolveLessons(dto.getLessonIds()));
+        return dtoMapper.genreToGenreDto(genreRepository.save(genre));
+    }
+
+    @Override
+    @Transactional
+    public Optional<GenreDTO> update(Long id, GenreDTO dto) {
+        return findGenre(id)
                 .map(existing -> {
-                    return toDTO(genreRepository.save(updateGenreFromDTO(existing, dto)));
+                    return dtoMapper.genreToGenreDto(genreRepository.save(updateGenreFromDTO(existing, dto)));
                 });
     }
 
     @Override
-    public boolean deleteGenre(Long id) {
+    @Transactional
+    public boolean delete(Long id) {
         if (!genreRepository.existsById(id)) {
             return false;
         }
@@ -69,43 +88,6 @@ public class GenreServiceImpl implements GenreService {
     // DTO Mapping Utilities
     // ----------------------
 
-    private GenreDTO toDTO(Genre genre) {
-        GenreDTO dto = new GenreDTO();
-        dto.setId(genre.getId());
-        dto.setTitle(genre.getTitle());
-        dto.setImageUrl(genre.getImageUrl());
-        dto.setLevel(genre.getLevel());
-        dto.setDescription(genre.getDescription());
-        dto.setBannerUrl(genre.getBannerUrl());
-        dto.setWelcomeIntroVideoId(genre.getWelcomeIntroVideoId());
-        dto.setWelcomeSongVideoId(genre.getWelcomeSongVideoId());
-
-        if (genre.getLessons() == null) return dto;
-        dto.setLessonIds(genre.getLessons()
-                .stream()
-                .map(Lesson::getId)
-                .collect(Collectors.toList()));
-
-        return dto;
-    }
-
-    private Genre toEntity(GenreDTO dto) {
-        Genre genre = new Genre(); 
-        genre.setId(dto.getId());
-        genre.setTitle(dto.getTitle());
-        genre.setDescription(dto.getDescription());
-        genre.setImageUrl(dto.getImageUrl());
-        genre.setLevel(dto.getLevel());
-        genre.setBannerUrl(dto.getBannerUrl());
-        genre.setWelcomeIntroVideoId(dto.getWelcomeIntroVideoId());
-        genre.setWelcomeSongVideoId(dto.getWelcomeSongVideoId());
-        genre.setType(Item.Type.Genre);
-
-        if (dto.getLessonIds() == null) return genre;
-        genre.setLessons(resolveLessons(dto.getLessonIds()));
-        
-        return genre;
-    }
 
     private Genre updateGenreFromDTO(Genre existing, GenreDTO dto) {
         existing.setTitle(dto.getTitle());
@@ -121,16 +103,6 @@ public class GenreServiceImpl implements GenreService {
             existing.setLessons(resolveLessons(dto.getLessonIds()));
         }
         return existing;
-    }
-
-    private Set<Lesson> resolveLessons(List<Long> lessonIds) {
-        if (lessonIds == null || lessonIds.isEmpty()) {
-            return new HashSet<>();
-        }
-        return lessonIds.stream()
-                .map(id -> lessonRepository.findById(id)
-                        .orElseThrow(() -> new IllegalArgumentException("Lesson not found: " + id)))
-                .collect(Collectors.toSet());
     }
 
 }

@@ -1,160 +1,153 @@
 package com.demo.demo.controller;
 
-import com.demo.demo.service.LessonService;
 import com.demo.demo.dto.LessonDTO;
+import com.demo.demo.service.LessonService;
+import com.demo.demo.dto.validation.OnCreate;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.validation.annotation.Validated;
+
 import java.util.List;
-import org.springframework.http.HttpStatus;
 
 /**
- * Controller for managing lessons.
- * 
- * Provides endpoints to create, read, update, and delete lessons.
- * As well as to fetch all lessons or a specific lesson by ID.
- * 
- * This controller uses the LessonService to handle business logic
- * and convert entities to DTOs for API responses.
- * 
+ * REST controller for lessons.
+ *
+ * Base path: {@code /api/lessons}
+ *
  * Endpoints:
- * - GET /lessons: Fetch all lessons
- * - GET /lessons/{id}: Fetch a specific lesson by ID
- * - GET /lessons/by-genre/{genreId}: Fetch all lessons by genre ID
- * - GET /lessons/ids: Fetch multiple lessons by IDs
- * - POST /lessons: Create a new lesson
- * - PUT /lessons/{id}: Update an existing lesson by ID
- * - DELETE /lessons/{id}: Delete a lesson by ID
- * 
- * This controller is annotated with @RestController to handle RESTful requests
- * and @RequestMapping to define the base path for all endpoints.
- * 
+ * - GET    /api/lessons                    Retrieve all lessons
+ * - POST   /api/lessons/by-ids             Retrieve the lessons with the given IDs (IDs in the body)
+ * - GET    /api/lessons/{id}               Retrieve a lesson by ID
+ * - GET    /api/lessons/by-genre/{genreId} Retrieve the lessons that belong to a genre
+ * - GET    /api/lessons/popular/ids        Retrieve the IDs of the popular lessons
+ * - GET    /api/lessons/new/ids            Retrieve the IDs of the newest lessons
+ * - GET    /api/lessons/recommended/ids    Retrieve the IDs of the recommended lessons
+ * - POST   /api/lessons                    Create a lesson
+ * - PUT    /api/lessons/{id}               Update a lesson
+ * - DELETE /api/lessons/{id}               Delete a lesson
+ *
+ * Responses: 200 OK, 201 Created (create), 204 No Content (delete) and 404 Not Found
+ * when the lesson does not exist. Other errors are translated by
+ * {@link com.demo.demo.exception.GlobalExceptionHandler}.
+ *
  * @author Adrián Mahía
  * @version 1.0
  * @since 2025-06-06
- * @todo Completado - Implementación lista
  */
 @RestController
+@RequestMapping("/api/lessons")
 @RequiredArgsConstructor
-@RequestMapping("/lessons")
 public class LessonController {
 
     private final LessonService lessonService;
 
     /**
-     * Fetches all lessons from the service and returns them as a list of LessonDTOs.
+     * Retrieves all lessons.
      *
-     * @return List of LessonDTOs representing all lessons.
+     * @return 200 OK with the list of lessons
      */
     @GetMapping
-    public List<LessonDTO> getAllLessons() {
-        return lessonService.getAllLessons();
+    public ResponseEntity<List<LessonDTO>> getAll() {
+        return ResponseEntity.ok(lessonService.findAll());
     }
 
     /**
-     * Fetches a specific lesson by its ID and returns it as a LessonDTO.
+     * Retrieves the lessons with the given IDs. IDs that do not exist are ignored.
      *
-     * @param id The ID of the lesson to fetch.
-     * @return ResponseEntity containing the LessonDTO if found, or 404 Not Found if not found.
+     * @param ids the IDs of the lessons
+     * @return 200 OK with the lessons found
+     */
+    @PostMapping("/by-ids")
+    public ResponseEntity<List<LessonDTO>> getByIds(@RequestBody List<Long> ids) {
+        return ResponseEntity.ok(lessonService.findByIds(ids));
+    }
+
+    /**
+     * Retrieves a lesson by its ID.
+     *
+     * @param id the ID of the lesson
+     * @return 200 OK with the lesson, or 404 Not Found
      */
     @GetMapping("/{id}")
-    public ResponseEntity<LessonDTO> getLessonById(@PathVariable Long id) {
-        return lessonService.getLessonById(id)
-                .map(ResponseEntity::ok)
-                .orElseGet(() -> ResponseEntity.notFound().build());
+    public ResponseEntity<LessonDTO> getById(@PathVariable Long id) {
+        return ResponseEntity.of(lessonService.findById(id));
     }
 
     /**
-     * Creates a new lesson from the provided LessonDTO and returns the created lesson.
+     * Retrieves the lessons that belong to a genre.
      *
-     * @param lessonDto The LessonDTO containing the details of the lesson to create.
-     * @return ResponseEntity containing the created LessonDTO with status 201 Created.
-     */
-    @PostMapping
-    public ResponseEntity<LessonDTO> createLesson(@RequestBody LessonDTO lessonDto) {
-        LessonDTO created = lessonService.createLesson(lessonDto);
-        return ResponseEntity.status(HttpStatus.CREATED).body(created);
-    }
-
-    /**
-     * Updates an existing lesson identified by its ID with the provided LessonDTO.
-     *
-     * @param id The ID of the lesson to update.
-     * @param lessonDto The LessonDTO containing the updated details of the lesson.
-     * @return ResponseEntity containing the updated LessonDTO if successful, or 404 Not Found if not found.
-     */
-    @PutMapping("/{id}")
-    public ResponseEntity<LessonDTO> updateLesson(@PathVariable Long id, @RequestBody LessonDTO lessonDto) {
-        return lessonService.updateLesson(id, lessonDto)
-                .map(ResponseEntity::ok)
-                .orElseGet(() -> ResponseEntity.notFound().build());
-    }
-
-    /**
-     * Deletes a lesson identified by its ID.
-     *
-     * @param id The ID of the lesson to delete.
-     * @return ResponseEntity with status 204 No Content if successful, or 404 Not Found if not found.
-     */
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteLesson(@PathVariable Long id) {
-        if (lessonService.deleteLesson(id)) {
-            return ResponseEntity.noContent().build();
-        }
-        return ResponseEntity.notFound().build();
-    }
-
-    /**
-     * Fetches all lessons by a specific genre and returns them as a list of LessonDTOs.
-     *
-     * @param genreId The ID of the genre to filter lessons by.
-     * @return List of LessonDTOs representing all lessons from the specified genre.
+     * @param genreId the ID of the genre
+     * @return 200 OK with the lessons of the genre
      */
     @GetMapping("/by-genre/{genreId}")
-    public List<LessonDTO> getLessonsByGenreId(@PathVariable Long genreId) {
-        return lessonService.getLessonsByGenreId(genreId);
+    public ResponseEntity<List<LessonDTO>> getForGenre(@PathVariable Long genreId) {
+        return ResponseEntity.ok(lessonService.findForGenre(genreId));
     }
 
     /**
-     * Fetches all lessons by a list of IDs and returns them as a list of LessonDTOs.
+     * Retrieves the popular lessons.
      *
-     * @param ids The list of lesson IDs to fetch.
-     * @return List of LessonDTOs representing all lessons with the specified IDs.
+     * @return 200 OK with the IDs of the popular lessons
      */
-    @PostMapping("/ids")
-    public List<LessonDTO> getLessonsByIds(@RequestBody List<Long> ids) {
-        return lessonService.getLessonsByIds(ids);
+    @GetMapping("/popular/ids")
+    public ResponseEntity<List<Long>> getIdsPopular() {
+        return ResponseEntity.ok(lessonService.findIdsPopular());
     }
 
     /**
-     * Fetches all popular lessons globally for the Home screen.
+     * Retrieves the newest lessons.
      *
-     * @return List of LessonDTOs representing all popular lessons globally.
+     * @return 200 OK with the IDs of the newest lessons
      */
-    @GetMapping("/home/popular")
-    public List<LessonDTO> getHomeLessonsPopular() {
-        return lessonService.getHomeLessonsPopular();
+    @GetMapping("/new/ids")
+    public ResponseEntity<List<Long>> getIdsNew() {
+        return ResponseEntity.ok(lessonService.findIdsNew());
     }
 
     /**
-     * Fetches the newest lessons globally for the Home screen.
+     * Retrieves the recommended lessons.
      *
-     * @return List of LessonDTOs representing the newest lessons.
+     * @return 200 OK with the IDs of the recommended lessons
      */
-    @GetMapping("/home/new")
-    public List<LessonDTO> getHomeLessonsNew() {
-        return lessonService.getHomeLessonsNew();
+    @GetMapping("/recommended/ids")
+    public ResponseEntity<List<Long>> getIdsRecommended() {
+        return ResponseEntity.ok(lessonService.findIdsRecommended());
     }
 
     /**
-     * Fetches recommended lessons for the user for the Home screen.
+     * Creates a lesson.
      *
-     * @return List of LessonDTOs representing recommended lessons.
+     * @param dto the lesson to create
+     * @return 201 Created with the created lesson
      */
-    @GetMapping("/home/recommended")
-    public List<LessonDTO> getHomeLessonsRecommended() {
-        return lessonService.getHomeLessonsRecommended();
+    @PostMapping
+    public ResponseEntity<LessonDTO> create(@Validated(OnCreate.class) @RequestBody LessonDTO dto) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(lessonService.create(dto));
+    }
+
+    /**
+     * Updates a lesson.
+     *
+     * @param id  the ID of the lesson
+     * @param dto the new data of the lesson
+     * @return 200 OK with the updated lesson, or 404 Not Found
+     */
+    @PutMapping("/{id}")
+    public ResponseEntity<LessonDTO> update(@PathVariable Long id, @Valid @RequestBody LessonDTO dto) {
+        return ResponseEntity.of(lessonService.update(id, dto));
+    }
+
+    /**
+     * Deletes a lesson.
+     *
+     * @param id the ID of the lesson
+     * @return 204 No Content, or 404 Not Found
+     */
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> delete(@PathVariable Long id) {
+        return lessonService.delete(id) ? ResponseEntity.noContent().build() : ResponseEntity.notFound().build();
     }
 }
-
-

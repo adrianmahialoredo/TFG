@@ -1,9 +1,13 @@
 package com.demo.demo.model;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import java.util.*;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
 import lombok.*;
+
+import com.demo.demo.utils.Identifiable;
 
 /**
  * Represents a song lesson in the application.
@@ -24,9 +28,9 @@ import lombok.*;
 @Table(name = "song_lessons")
 @Getter
 @Setter
-@AllArgsConstructor
 @NoArgsConstructor
-public class SongLesson {
+@AllArgsConstructor
+public class SongLesson implements Identifiable<Long> {
     
     /**
      * Unique identifier for the song lesson.
@@ -50,10 +54,11 @@ public class SongLesson {
     @ManyToMany
     @JoinTable(
         name = "song_chords",
-        joinColumns = @JoinColumn(name = "song_id"),
+        joinColumns = @JoinColumn(name = "song_lesson_id"),
         inverseJoinColumns = @JoinColumn(name = "chord_id")
     )
-    private List<Chord> chords = new ArrayList<>();
+    @OrderBy("id ASC")
+    private Set<Chord> chords = new LinkedHashSet<>();
     
     /**
      * Lyrics of the song lesson.
@@ -67,7 +72,6 @@ public class SongLesson {
      * URL of the video lesson.
      * This field is optional and can be null.
      */
-    @Column(nullable = true)
     @Pattern(regexp = "^https?://.+|^$", message = "Video URL must be a valid HTTP/HTTPS URL or empty")
     private String videoUrl;
 
@@ -78,6 +82,7 @@ public class SongLesson {
      * A tab section can be associated with one specific song lesson.
      */
     @OneToMany(mappedBy = "songLesson", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonManagedReference(value = "songLesson-tabSections")
     private List<TabSection> tabSections = new ArrayList<>();
 
     /**
@@ -88,6 +93,7 @@ public class SongLesson {
     @NotNull(message = "Song cannot be null")
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "song_id")
+    @JsonBackReference(value = "song-songLessons")
     private Song song;
 
     /**
@@ -108,4 +114,20 @@ public class SongLesson {
         EASY, MEDIUM, ORIGINAL
     }
 
+    /**
+     * Two SongLessons are equal when they have the same id, so collections (e.g. {@link java.util.Set})
+     * never hold the same SongLesson twice even if it was loaded in different places or is a Hibernate proxy.
+     * Ids are assigned manually before the entity is added to any collection, so the hash is stable.
+     */
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof SongLesson other)) return false;
+        return getId() != null && getId().equals(other.getId());
+    }
+
+    @Override
+    public int hashCode() {
+        return java.util.Objects.hashCode(getId());
+    }
 }

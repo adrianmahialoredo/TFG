@@ -13,14 +13,12 @@ export const getById = async (id: string): Promise<ChordDTO> => {
 };
 
 export const getAllById = async (ids: string[]): Promise<ChordDTO[]> => {
-  const response = await axios.get(API_ENDPOINTS.CHORDS.BY_IDS, {
-    params: { ids },
-  });
+  const response = await axios.post(API_ENDPOINTS.CHORDS.BY_IDS, ids);
   return response.data;
 };
 
 export const getIdsBySongLesson = async (songLessonId: string): Promise<string[]> => {
-  const response = await axios.get(API_ENDPOINTS.CHORDS.BY_SONG_LESSON(songLessonId));
+  const response = await axios.get(API_ENDPOINTS.CHORDS.IDS_BY_SONG_LESSON(songLessonId));
   // Convertir los IDs numéricos a strings si es necesario
   return response.data.map((id: number | string) => String(id));
 };

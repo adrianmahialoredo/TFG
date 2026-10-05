@@ -2,6 +2,16 @@ import * as instrumentService from '../services/instrument.service';
 import * as instrumentLocal from '../local/instrument.local';
 import { useInstrumentEntitiesStore } from "../stores/entities";
 import { InstrumentDTO } from '../types';
+import { createEntityCache } from '../utils/entityCache.utils';
+
+/** Núcleo de caché de la entidad: RAM -> Disco -> API + Stale-While-Revalidate. */
+const cache = createEntityCache<InstrumentDTO>({
+    name: 'InstrumentRepo',
+    getRam: () => useInstrumentEntitiesStore.getState().instruments,
+    setRam: (entities) => useInstrumentEntitiesStore.getState().setInstruments(entities),
+    local: instrumentLocal,
+    fetchByIds: instrumentService.getAllById,
+});
 
 /**
  * Repositorio de Instruments
@@ -15,11 +25,13 @@ import { InstrumentDTO } from '../types';
  * @param id
  */
 export const getById = async (id: string): Promise<InstrumentDTO | null> => {
-    let instrument: InstrumentDTO | null = await instrumentLocal.getById(id);
+    let instrument: InstrumentDTO | null = useInstrumentEntitiesStore.getState().instruments[id] ?? await instrumentLocal.getById(id);
+    if (instrument) cache.revalidate([id]);
 
     if (!instrument) {
         try {
             instrument = await instrumentService.getInstrumentById(id);
+            cache.markFresh([id]);
             if (instrument) {
                 await instrumentLocal.saveBatch([instrument]).catch(e => console.error("Local save failed", e));
             }
@@ -42,28 +54,7 @@ export const getById = async (id: string): Promise<InstrumentDTO | null> => {
  * @param ids Array de IDs de instrumentos
  * @returns Array de InstrumentDTO
  */
-export const getAllById = async (ids: string[]): Promise<InstrumentDTO[]> => {
-    const { cached, missing } = await instrumentLocal.getAllById(ids);
-
-    let remoteInstruments: InstrumentDTO[] = [];
-
-    if (missing.length > 0) {
-        try {
-            remoteInstruments = await instrumentService.getAllById(missing);
-            if (remoteInstruments.length > 0) {
-                instrumentLocal.saveBatch(remoteInstruments).catch(console.error);
-            }
-        } catch (error) {
-            console.error("[InstrumentRepo] API Error", error);
-        }
-    }
-
-    const all = [...cached, ...remoteInstruments];
-    useInstrumentEntitiesStore.getState().setInstruments(all);
-
-    const map = new Map(all.map(i => [i.id.toString(), i]));
-    return ids.map(id => map.get(id)).filter((i): i is InstrumentDTO => !!i);
-}
+export const getAllById = cache.getAllById;
 
 /**
  * Obtiene todos los instrumentos

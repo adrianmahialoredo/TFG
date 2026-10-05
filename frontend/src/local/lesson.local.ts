@@ -71,4 +71,3 @@ export const getQueryIndex = async (key: string): Promise<string[] | null> => {
     return null;
   }
 };
-

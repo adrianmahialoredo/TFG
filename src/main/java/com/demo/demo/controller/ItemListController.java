@@ -2,38 +2,42 @@ package com.demo.demo.controller;
 
 import com.demo.demo.dto.ItemListDTO;
 import com.demo.demo.service.ItemListService;
-import org.springframework.http.*;
-import org.springframework.web.bind.annotation.*;
+import com.demo.demo.dto.validation.OnCreate;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.validation.annotation.Validated;
+
 import java.util.List;
 
 /**
- * Controller class for managing item lists.
- * 
- * Provides endpoints to create, retrieve, update, and delete item lists,
- * as well as adding and removing items from lists.
- * 
- * This controller interacts with the ItemListService to perform operations
- * and returns appropriate HTTP responses.
- * 
+ * REST controller for the item lists of the users.
+ *
+ * Base path: {@code /api/item-lists}
+ *
  * Endpoints:
- * - GET /item-lists: Retrieve all item lists
- * - GET /item-lists/{id}: Retrieve a specific item list by ID
- * - POST /item-lists: Create a new item list
- * - PUT /item-lists/{id}: Update an existing item list by ID
- * - DELETE /item-lists/{id}: Delete an item list by ID
- * - PUT /item-lists/{listId}/add-item/{itemId}: Add an item to an item list
- * - PUT /item-lists/{listId}/remove-item/{itemId}: Remove an item from an item list
- * 
- * This controller is annotated with @RestController to handle RESTful requests
- * and @RequestMapping to define the base path for all endpoints.
- * 
+ * - GET    /api/item-lists                         Retrieve all item lists
+ * - POST   /api/item-lists/by-ids                  Retrieve the item lists with the given IDs (IDs in the body)
+ * - GET    /api/item-lists/{id}                    Retrieve an item list by ID
+ * - GET    /api/item-lists/by-user/{userId}/ids    Retrieve the IDs of the item lists of a user
+ * - POST   /api/item-lists                         Create an item list
+ * - PUT    /api/item-lists/{id}                    Update an item list
+ * - DELETE /api/item-lists/{id}                    Delete an item list
+ * - POST   /api/item-lists/{listId}/items/{itemId} Add an item to an item list
+ * - DELETE /api/item-lists/{listId}/items/{itemId} Remove an item from an item list
+ *
+ * Responses: 200 OK, 201 Created (create), 204 No Content (delete) and 404 Not Found
+ * when the item list does not exist. Other errors are translated by
+ * {@link com.demo.demo.exception.GlobalExceptionHandler}.
+ *
  * @author Adrián Mahía
  * @version 1.0
  * @since 2025-06-06
  */
 @RestController
-@RequestMapping("/item-lists")
+@RequestMapping("/api/item-lists")
 @RequiredArgsConstructor
 public class ItemListController {
 
@@ -42,112 +46,101 @@ public class ItemListController {
     /**
      * Retrieves all item lists.
      *
-     * @return A list of ItemListDTOs representing all item lists.
+     * @return 200 OK with the list of item lists
      */
     @GetMapping
-    public List<ItemListDTO> getAllItemLists() {
-        return itemListService.getAllItemLists();
+    public ResponseEntity<List<ItemListDTO>> getAll() {
+        return ResponseEntity.ok(itemListService.findAll());
     }
 
     /**
-     * Retrieves all item list IDs associated with a specific user.
+     * Retrieves the item lists with the given IDs. IDs that do not exist are ignored.
      *
-     * @param userId The ID of the user.
-     * @return A list of item list IDs for the user.
+     * @param ids the IDs of the item lists
+     * @return 200 OK with the item lists found
      */
-    @GetMapping("/by-user/{userId}")
-    public List<Long> getAllItemListIdsByUserId(@PathVariable Long userId) {
-        return itemListService.getAllItemListIdsByUserId(userId);
-    }
-
-    /**
-     * Retrieves all item lists by a list of IDs.
-     *
-     * @param ids The list of item list IDs to retrieve.
-     * @return A list of ItemListDTOs representing all item lists with the provided IDs.
-     */
-    @GetMapping("/by-ids")
-    public List<ItemListDTO> getAllItemListsByIds(@RequestParam List<Long> ids) {
-        return itemListService.getAllItemListsByIds(ids);
+    @PostMapping("/by-ids")
+    public ResponseEntity<List<ItemListDTO>> getByIds(@RequestBody List<Long> ids) {
+        return ResponseEntity.ok(itemListService.findByIds(ids));
     }
 
     /**
      * Retrieves an item list by its ID.
      *
-     * @param id The ID of the item list to retrieve.
-     * @return An ItemListDTO if found, otherwise a 404 Not Found response.
+     * @param id the ID of the item list
+     * @return 200 OK with the item list, or 404 Not Found
      */
     @GetMapping("/{id}")
-    public ResponseEntity<ItemListDTO> getItemListById(@PathVariable Long id) {
-        return itemListService.getItemListById(id)
-                .map(ResponseEntity::ok)
-                .orElseGet(() -> ResponseEntity.notFound().build());
+    public ResponseEntity<ItemListDTO> getById(@PathVariable Long id) {
+        return ResponseEntity.of(itemListService.findById(id));
     }
 
     /**
-     * Creates a new item list.
+     * Retrieves the IDs of the item lists of a user.
      *
-     * @param dto The ItemListDTO containing the details of the list to create.
-     * @return The created ItemListDTO with a 201 Created status.
+     * @param userId the ID of the user
+     * @return 200 OK with the item list IDs
+     */
+    @GetMapping("/by-user/{userId}/ids")
+    public ResponseEntity<List<Long>> getIdsForUser(@PathVariable Long userId) {
+        return ResponseEntity.ok(itemListService.findIdsForUser(userId));
+    }
+
+    /**
+     * Creates an item list.
+     *
+     * @param dto the item list to create
+     * @return 201 Created with the created item list
      */
     @PostMapping
-    public ResponseEntity<ItemListDTO> createItemList(@RequestBody ItemListDTO dto) {
-        ItemListDTO created = itemListService.createItemList(dto);
-        return ResponseEntity.status(HttpStatus.CREATED).body(created);
+    public ResponseEntity<ItemListDTO> create(@Validated(OnCreate.class) @RequestBody ItemListDTO dto) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(itemListService.create(dto));
     }
 
     /**
-     * Updates an existing item list.
+     * Updates an item list.
      *
-     * @param id The ID of the item list to update.
-     * @param dto The ItemListDTO containing the updated details.
-     * @return The updated ItemListDTO if found, otherwise a 404 Not Found response.
+     * @param id  the ID of the item list
+     * @param dto the new data of the item list
+     * @return 200 OK with the updated item list, or 404 Not Found
      */
     @PutMapping("/{id}")
-    public ResponseEntity<ItemListDTO> updateItemList(@PathVariable Long id, @RequestBody ItemListDTO dto) {
-        return itemListService.updateItemList(id, dto)
-                .map(ResponseEntity::ok)
-                .orElseGet(() -> ResponseEntity.notFound().build());
+    public ResponseEntity<ItemListDTO> update(@PathVariable Long id, @Valid @RequestBody ItemListDTO dto) {
+        return ResponseEntity.of(itemListService.update(id, dto));
     }
 
     /**
-     * Deletes an item list by its ID.
+     * Deletes an item list.
      *
-     * @param id The ID of the item list to delete.
-     * @return A 204 No Content response if deleted, otherwise a 404 Not Found response.
+     * @param id the ID of the item list
+     * @return 204 No Content, or 404 Not Found
      */
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteItemList(@PathVariable Long id) {
-        boolean deleted = itemListService.deleteItemList(id);
-        return deleted ? ResponseEntity.noContent().build() : ResponseEntity.notFound().build();
+    public ResponseEntity<Void> delete(@PathVariable Long id) {
+        return itemListService.delete(id) ? ResponseEntity.noContent().build() : ResponseEntity.notFound().build();
     }
 
     /**
-     * Adds an item to an item list.
+     * Adds an item to an item list. Adding an item that is already in the list has no effect.
      *
-     * @param listId The ID of the item list to add the item to.
-     * @param itemId The ID of the item to add.
-     * @return The updated ItemListDTO if successful, otherwise a 404 Not Found response.
+     * @param listId the ID of the item list
+     * @param itemId the ID of the item to add
+     * @return 200 OK with the updated item list, or 404 Not Found if the list does not exist
      */
-    @PutMapping("/{listId}/add-item/{itemId}")
-    public ResponseEntity<ItemListDTO> addItemToList(@PathVariable Long listId, @PathVariable Long itemId) {
-        return itemListService.addItemToList(listId, itemId)
-                .map(ResponseEntity::ok)
-                .orElseGet(() -> ResponseEntity.notFound().build());
+    @PostMapping("/{listId}/items/{itemId}")
+    public ResponseEntity<ItemListDTO> addItem(@PathVariable Long listId, @PathVariable Long itemId) {
+        return ResponseEntity.of(itemListService.addItem(listId, itemId));
     }
 
     /**
      * Removes an item from an item list.
      *
-     * @param listId The ID of the item list to remove the item from.
-     * @param itemId The ID of the item to remove.
-     * @return The updated ItemListDTO if successful, otherwise a 404 Not Found response.
+     * @param listId the ID of the item list
+     * @param itemId the ID of the item to remove
+     * @return 200 OK with the updated item list, or 404 Not Found if the list does not exist
      */
-    @PutMapping("/{listId}/remove-item/{itemId}")
-    public ResponseEntity<ItemListDTO> removeItemFromList(@PathVariable Long listId, @PathVariable Long itemId) {
-        return itemListService.removeItemFromList(listId, itemId)
-                .map(ResponseEntity::ok)
-                .orElseGet(() -> ResponseEntity.notFound().build());
+    @DeleteMapping("/{listId}/items/{itemId}")
+    public ResponseEntity<ItemListDTO> removeItem(@PathVariable Long listId, @PathVariable Long itemId) {
+        return ResponseEntity.of(itemListService.removeItem(listId, itemId));
     }
-
 }

@@ -64,27 +64,41 @@ Response:
 
 ---
 
+### 📐 Convenciones
+
+Todos los controladores siguen la misma estructura:
+
+- Todas las rutas cuelgan de `/api/<recurso>` (en plural y kebab-case).
+- Operaciones comunes: `GET /` (todos), `POST /by-ids` (varios por ID, con el array de IDs en el body), `GET /{id}`, `POST /`, `PUT /{id}` y `DELETE /{id}`.
+- Filtros por relación: `/by-<relación>/{id}` (p. ej. `/api/lessons/by-genre/{genreId}`). Si el filtro devuelve IDs en lugar de objetos, la ruta termina en `/ids`.
+- Respuestas: `200 OK`, `201 Created` al crear, `204 No Content` al borrar y `404 Not Found` si el recurso no existe. El resto de errores los traduce `GlobalExceptionHandler` (`400` argumentos inválidos, `401` credenciales, `404` entidad no encontrada).
+
+---
+
 ### 👥 Usuarios (`/api/users`)
 
 | Método | Endpoint | Descripción |
 |--------|----------|-------------|
 | `GET` | `/api/users` | Obtener todos los usuarios |
+| `POST` | `/api/users/by-ids` | Obtener varios usuarios por ID (array de IDs en el body) |
 | `GET` | `/api/users/{id}` | Obtener usuario por ID |
+| `GET` | `/api/users/{id}/favorite-genres` | IDs de los géneros favoritos del usuario |
+| `POST` | `/api/users` | Crear usuario |
 | `PUT` | `/api/users/{id}` | Actualizar usuario |
 | `DELETE` | `/api/users/{id}` | Eliminar usuario |
-| `DELETE` | `/api/users/all` | Eliminar todos los usuarios |
 
 ---
 
-### 🎵 Géneros (`/genres`)
+### 🎵 Géneros (`/api/genres`)
 
 | Método | Endpoint | Descripción |
 |--------|----------|-------------|
-| `GET` | `/genres` | Obtener todos los géneros |
-| `GET` | `/genres/{id}` | Obtener género por ID |
-| `POST` | `/genres` | Crear nuevo género |
-| `PUT` | `/genres/{id}` | Actualizar género |
-| `DELETE` | `/genres/{id}` | Eliminar género |
+| `GET` | `/api/genres` | Obtener todos los géneros |
+| `POST` | `/api/genres/by-ids` | Obtener varios géneros por ID (array de IDs en el body) |
+| `GET` | `/api/genres/{id}` | Obtener género por ID |
+| `POST` | `/api/genres` | Crear género |
+| `PUT` | `/api/genres/{id}` | Actualizar género |
+| `DELETE` | `/api/genres/{id}` | Eliminar género |
 
 **Modelo GenreDTO:**
 ```json
@@ -103,20 +117,24 @@ Response:
 
 ---
 
-### 🎸 Canciones (`/songs`)
+### 🎸 Canciones (`/api/songs`)
 
 | Método | Endpoint | Descripción |
 |--------|----------|-------------|
-| `GET` | `/songs` | Obtener todas las canciones |
-| `GET` | `/songs/{id}` | Obtener canción por ID |
-| `GET` | `/songs/decades/{decade}` | Obtener canciones por década |
-| `GET` | `/songs/popular` | Obtener canciones populares |
-| `GET` | `/songs/popular/{genreId}` | Canciones populares por género |
-| `GET` | `/songs/new/{genreId}` | Canciones nuevas por género |
-| `GET` | `/songs/classic/{genreId}` | Canciones clásicas por género |
-| `POST` | `/songs` | Crear nueva canción |
-| `PUT` | `/songs/{id}` | Actualizar canción |
-| `DELETE` | `/songs/{id}` | Eliminar canción |
+| `GET` | `/api/songs` | Obtener todos los canciones |
+| `POST` | `/api/songs/by-ids` | Obtener varios canciones por ID (array de IDs en el body) |
+| `GET` | `/api/songs/{id}` | Obtener canción por ID |
+| `GET` | `/api/songs/by-decade/{decade}` | Canciones de una década (p. ej. `1990s`) |
+| `GET` | `/api/songs/by-genre/{genreId}/popular` | Canciones populares de un género (DTO completo) |
+| `GET` | `/api/songs/by-genre/{genreId}/classic` | Canciones clásicas de un género (DTO completo) |
+| `GET` | `/api/songs/by-genre/{genreId}/new` | Canciones nuevas de un género (DTO completo) |
+| `GET` | `/api/songs/popular?limit={n}` | Canciones populares (DTO completo) |
+| `GET` | `/api/songs/new?limit={n}` | Canciones nuevas (DTO completo) |
+| `GET` | `/api/songs/recommended/ids?limit={n}` | IDs de las canciones recomendadas para el usuario (**pendiente**: aún sin implementar) |
+| `GET` | `/api/songs/spotify?limit={n}` | Canciones recomendadas por Spotify (DTO completo) |
+| `POST` | `/api/songs` | Crear canción |
+| `PUT` | `/api/songs/{id}` | Actualizar canción |
+| `DELETE` | `/api/songs/{id}` | Eliminar canción |
 
 **Modelo SongDTO:**
 ```json
@@ -133,15 +151,31 @@ Response:
 
 ---
 
-### 📖 Lecciones de Canciones (`/song-lessons`)
+### 📖 Lecciones de Canciones (`/api/song-lessons`)
 
 | Método | Endpoint | Descripción |
 |--------|----------|-------------|
-| `GET` | `/song-lessons/{id}` | Obtener lección por ID |
-| `GET` | `/song-lessons/by-song/{songId}` | Obtener lecciones de una canción |
-| `POST` | `/song-lessons` | Crear nueva lección |
-| `PUT` | `/song-lessons/{id}` | Actualizar lección |
-| `DELETE` | `/song-lessons/{id}` | Eliminar lección |
+| `GET` | `/api/song-lessons` | Obtener todos los lecciones de canción |
+| `POST` | `/api/song-lessons/by-ids` | Obtener varios lecciones de canción por ID (array de IDs en el body) |
+| `GET` | `/api/song-lessons/{id}` | Obtener lección de canción por ID |
+| `GET` | `/api/song-lessons/by-song/{songId}` | Lecciones de una canción |
+| `POST` | `/api/song-lessons` | Crear lección de canción |
+| `PUT` | `/api/song-lessons/{id}` | Actualizar lección de canción |
+| `DELETE` | `/api/song-lessons/{id}` | Eliminar lección de canción |
+
+---
+
+### 🎼 Secciones de Tab (`/api/tab-sections`)
+
+| Método | Endpoint | Descripción |
+|--------|----------|-------------|
+| `GET` | `/api/tab-sections` | Obtener todos los secciones de tab |
+| `POST` | `/api/tab-sections/by-ids` | Obtener varios secciones de tab por ID (array de IDs en el body) |
+| `GET` | `/api/tab-sections/{id}` | Obtener sección de tab por ID |
+| `GET` | `/api/tab-sections/by-song-lesson/{songLessonId}` | Secciones de tab de una lección de canción |
+| `POST` | `/api/tab-sections` | Crear sección de tab |
+| `PUT` | `/api/tab-sections/{id}` | Actualizar sección de tab |
+| `DELETE` | `/api/tab-sections/{id}` | Eliminar sección de tab |
 
 ---
 
@@ -150,59 +184,114 @@ Response:
 | Método | Endpoint | Descripción |
 |--------|----------|-------------|
 | `GET` | `/api/chords` | Obtener todos los acordes |
+| `POST` | `/api/chords/by-ids` | Obtener varios acordes por ID (array de IDs en el body) |
 | `GET` | `/api/chords/{id}` | Obtener acorde por ID |
-| `POST` | `/api/chords` | Crear nuevo acorde |
+| `GET` | `/api/chords/by-song-lesson/{songLessonId}/ids` | IDs de los acordes de una lección de canción |
+| `POST` | `/api/chords` | Crear acorde |
 | `PUT` | `/api/chords/{id}` | Actualizar acorde |
 | `DELETE` | `/api/chords/{id}` | Eliminar acorde |
 
 ---
 
-### 🎹 Instrumentos (`/instruments`)
+### 📚 Lecciones (`/api/lessons`)
 
 | Método | Endpoint | Descripción |
 |--------|----------|-------------|
-| `GET` | `/instruments` | Obtener todos los instrumentos |
-| `GET` | `/instruments/{id}` | Obtener instrumento por ID |
-| `POST` | `/instruments` | Crear nuevo instrumento |
-| `PUT` | `/instruments/{id}` | Actualizar instrumento |
-| `DELETE` | `/instruments/{id}` | Eliminar instrumento |
+| `GET` | `/api/lessons` | Obtener todos los lecciones |
+| `POST` | `/api/lessons/by-ids` | Obtener varios lecciones por ID (array de IDs en el body) |
+| `GET` | `/api/lessons/{id}` | Obtener lección por ID |
+| `GET` | `/api/lessons/by-genre/{genreId}` | Lecciones que pertenecen a un género |
+| `GET` | `/api/lessons/popular/ids` | IDs de las lecciones populares |
+| `GET` | `/api/lessons/new/ids` | IDs de las lecciones más nuevas |
+| `GET` | `/api/lessons/recommended/ids` | IDs de las lecciones recomendadas |
+| `POST` | `/api/lessons` | Crear lección |
+| `PUT` | `/api/lessons/{id}` | Actualizar lección |
+| `DELETE` | `/api/lessons/{id}` | Eliminar lección |
 
 ---
 
-### 🎵🎹 Géneros de Instrumentos (`/instrument-genres`)
+### 🧩 Secciones de Lección (`/api/lesson-sections`)
 
 | Método | Endpoint | Descripción |
 |--------|----------|-------------|
-| `GET` | `/instrument-genres` | Obtener todas las relaciones |
-| `GET` | `/instrument-genres/{id}` | Obtener relación por ID |
-| `POST` | `/instrument-genres` | Crear nueva relación |
-| `PUT` | `/instrument-genres/{id}` | Actualizar relación |
-| `DELETE` | `/instrument-genres/{id}` | Eliminar relación |
+| `GET` | `/api/lesson-sections` | Obtener todos los secciones de lección |
+| `POST` | `/api/lesson-sections/by-ids` | Obtener varios secciones de lección por ID (array de IDs en el body) |
+| `GET` | `/api/lesson-sections/{id}` | Obtener sección de lección por ID |
+| `GET` | `/api/lesson-sections/by-lesson/{lessonId}` | Secciones de una lección |
+| `POST` | `/api/lesson-sections` | Crear sección de lección |
+| `PUT` | `/api/lesson-sections/{id}` | Actualizar sección de lección |
+| `DELETE` | `/api/lesson-sections/{id}` | Eliminar sección de lección |
 
 ---
 
-### 📝 Listas de Elementos (`/item-lists`)
+### 🎹 Instrumentos (`/api/instruments`)
 
 | Método | Endpoint | Descripción |
 |--------|----------|-------------|
-| `GET` | `/item-lists` | Obtener todas las listas |
-| `GET` | `/item-lists/{id}` | Obtener lista por ID |
-| `GET` | `/item-lists/by-user/{userId}` | Obtener listas de un usuario |
-| `POST` | `/item-lists` | Crear nueva lista |
-| `PUT` | `/item-lists/{id}` | Actualizar lista |
-| `DELETE` | `/item-lists/{id}` | Eliminar lista |
+| `GET` | `/api/instruments` | Obtener todos los instrumentos |
+| `POST` | `/api/instruments/by-ids` | Obtener varios instrumentos por ID (array de IDs en el body) |
+| `GET` | `/api/instruments/{id}` | Obtener instrumento por ID |
+| `POST` | `/api/instruments` | Crear instrumento |
+| `PUT` | `/api/instruments/{id}` | Actualizar instrumento |
+| `DELETE` | `/api/instruments/{id}` | Eliminar instrumento |
 
 ---
 
-### 🎼 Secciones de Tab (`/tab-sections`)
+### 🎵🎹 Géneros de Instrumentos (`/api/instrument-genres`)
 
 | Método | Endpoint | Descripción |
 |--------|----------|-------------|
-| `GET` | `/tab-sections/{id}` | Obtener sección por ID |
-| `GET` | `/tab-sections/by-lesson/{lessonId}` | Obtener secciones de una lección |
-| `POST` | `/tab-sections` | Crear nueva sección |
-| `PUT` | `/tab-sections/{id}` | Actualizar sección |
-| `DELETE` | `/tab-sections/{id}` | Eliminar sección |
+| `GET` | `/api/instrument-genres` | Obtener todos los instrument-genres |
+| `POST` | `/api/instrument-genres/by-ids` | Obtener varios instrument-genres por ID (array de IDs en el body) |
+| `GET` | `/api/instrument-genres/{id}` | Obtener instrument-genre por ID |
+| `GET` | `/api/instrument-genres/by-genre/{genreId}` | Instrument-genres de un género |
+| `GET` | `/api/instrument-genres/by-instrument/{instrumentId}` | Instrument-genres de un instrumento |
+| `POST` | `/api/instrument-genres` | Crear instrument-genre |
+| `PUT` | `/api/instrument-genres/{id}` | Actualizar instrument-genre |
+| `DELETE` | `/api/instrument-genres/{id}` | Eliminar instrument-genre |
+
+---
+
+### 📝 Listas de Elementos (`/api/item-lists`)
+
+| Método | Endpoint | Descripción |
+|--------|----------|-------------|
+| `GET` | `/api/item-lists` | Obtener todos los listas |
+| `POST` | `/api/item-lists/by-ids` | Obtener varios listas por ID (array de IDs en el body) |
+| `GET` | `/api/item-lists/{id}` | Obtener lista por ID |
+| `GET` | `/api/item-lists/by-user/{userId}/ids` | IDs de las listas de un usuario |
+| `POST` | `/api/item-lists` | Crear lista |
+| `PUT` | `/api/item-lists/{id}` | Actualizar lista |
+| `DELETE` | `/api/item-lists/{id}` | Eliminar lista |
+| `POST` | `/api/item-lists/{listId}/items/{itemId}` | Añadir un elemento a una lista (sin duplicados) |
+| `DELETE` | `/api/item-lists/{listId}/items/{itemId}` | Quitar un elemento de una lista |
+
+---
+
+> **IDs u objetos:** por defecto los carruseles devuelven solo IDs (rutas `/ids`) y la app pinta las tarjetas con su catálogo (`GET /api/items`). Algunos carruseles devuelven el DTO completo por decisión de negocio (se espera que el usuario los abra). Detalle en [`architecture.md`](architecture.md) §7.
+
+### 🗂️ Elementos (`/api/items`)
+
+Devuelven `ItemSummaryDTO` (`id`, `title`, `imageUrl`, `type`, `level`, `artist`), salvo las rutas `/ids` (solo IDs) y `/recent` (DTO completo de cada subtipo, con `type`).
+
+| Método | Endpoint | Descripción |
+|--------|----------|-------------|
+| `GET` | `/api/items` | Resumen de todos los elementos (catálogo que la app carga al arrancar) |
+| `POST` | `/api/items/by-ids` | Obtener varios elementos por ID (array de IDs en el body) |
+| `GET` | `/api/items/{id}` | Obtener elemento por ID |
+| `GET` | `/api/items/search?q={texto}` | Buscar elementos por título |
+| `GET` | `/api/items/recent` | Elementos accedidos más recientemente (DTO completo de cada subtipo) |
+| `GET` | `/api/items/recommended/ids` | IDs de los elementos recomendados para el usuario (**pendiente**: aún sin implementar) |
+| `GET` | `/api/items/recommended/by-item-list/{itemListId}` | Elementos recomendados para una lista (marcador: los 20 más nuevos) |
+| `PUT` | `/api/items/{id}/access` | Marcar un elemento como accedido |
+
+---
+
+### 💡 Recomendaciones (`/api/recommendations`)
+
+| Método | Endpoint | Descripción |
+|--------|----------|-------------|
+| `GET` | `/api/recommendations/items/by-item-list/{id}` | Elementos recomendados para añadir a una lista, DTO completo de cada subtipo (algoritmo por niveles; excluye los que ya están) |
 
 ---
 
@@ -211,7 +300,7 @@ Response:
 | Método | Endpoint | Descripción |
 |--------|----------|-------------|
 | `GET` | `/api/spotify/login` | Iniciar sesión con Spotify |
-| `GET` | `/api/spotify/callback` | Callback de autenticación Spotify |
+| `GET` | `/api/spotify/callback?code={code}` | Callback de autenticación Spotify |
 | `GET` | `/api/spotify/recommendations/{spotifyUserId}` | Obtener recomendaciones |
 
 ---

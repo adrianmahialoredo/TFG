@@ -1,18 +1,18 @@
 package com.demo.demo.repository;
 
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Query;
-import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import com.demo.demo.model.Lesson;
+
+import java.util.Collection;
 import java.util.List;
 
 /**
  * Repository interface for managing Lesson entities.
  *
- * This interface extends JpaRepository to provide CRUD operations
- * for Lesson entities in the database.
+ * All the queries are derived from the method names.
  *
  * @author Adrián Mahía
  * @version 1.0
@@ -22,49 +22,43 @@ import java.util.List;
 public interface LessonRepository extends JpaRepository<Lesson, Long> {
 
     /**
-     * Fetches all lessons that belong to a specific genre.
+     * Finds the lessons that belong to a genre.
      *
-     * @param genreId The ID of the genre.
-     * @return List of lessons belonging to the specified genre.
+     * @param genreId the ID of the genre
+     * @return the lessons of the genre
      */
-    @Query(
-        "SELECT l " +
-        "FROM Lesson l " +
-        "WHERE l.belongsToGenre = true " +
-        "AND l.genre.id = :genreId"
-    )
-    List<Lesson> findByGenreId(@Param("genreId") Long genreId);
+    List<Lesson> findByGenreIdAndBelongsToGenreTrue(Long genreId);
 
     /**
-     * Finds all popular lessons globally for the Home screen.
+     * Finds the popular lessons.
      *
-     * @return a list of all popular lessons globally
+     * @return the popular lessons
      */
-    @Query(
-        "SELECT l " +
-        "FROM Lesson l " +
-        "WHERE l.popular = true"
-    )
-    List<Lesson> findPopular();
+    List<Lesson> findByPopularTrue();
 
     /**
-     * Finds the newest lessons globally for the Home screen, ordered by creation date.
+     * Finds the lessons of a genre, excluding the ones with the given IDs.
      *
-     * @return a list of lessons ordered from newest to oldest
+     * @param genreId      the ID of the genre
+     * @param excludingIds the IDs of the lessons to exclude
+     * @return the lessons of the genre, excluding the given ones
      */
-    @Query(
-        "SELECT l " +
-        "FROM Lesson l " +
-        "ORDER BY l.createdAt DESC, l.id DESC")
-    List<Lesson> findHomeLessonsNew();
+    List<Lesson> findByGenreIdAndIdNotIn(Long genreId, Collection<Long> excludingIds, Pageable pageable);
 
     /**
-     * Finds recommended lessons for the user for the Home screen.
-     * @todo Implementar lógica de recomendación basada en preferencias del usuario.
-     * Por ahora se devuelven las lecciones ordenadas por nivel (de menor a mayor dificultad).
+     * Finds all the lessons ordered from newest to oldest.
      *
-     * @return a list of recommended lessons for the user
+     * @return the lessons, newest first
      */
-    @Query("SELECT l FROM Lesson l ORDER BY l.level ASC, l.id ASC")
-    List<Lesson> findHomeLessonsRecommended();
+    List<Lesson> findAllByOrderByCreatedAtDescIdDesc();
+
+    /**
+     * Finds all the lessons ordered by level (from easiest to hardest).
+     * Used as the recommended lessons until a real recommendation algorithm exists.
+     *
+     * @return the lessons, easiest first
+     */
+    List<Lesson> findAllByOrderByLevelAscIdAsc();
+
+    List<Lesson> findByIdNotIn(List<Long> excludingIds, Pageable pageable);
 }

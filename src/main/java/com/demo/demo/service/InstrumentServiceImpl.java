@@ -3,11 +3,15 @@ package com.demo.demo.service;
 import java.util.*;
 import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import com.demo.demo.dto.InstrumentDTO;
+import com.demo.demo.utils.mapper.DtoMapper;
+import com.demo.demo.utils.mapper.EntityMapper;
 import com.demo.demo.model.*;
 import com.demo.demo.repository.*;
-import lombok.AllArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import lombok.RequiredArgsConstructor;
+
+import static com.demo.demo.utils.EntityResolver.findInstrument;
 
 /**
  * Default implementation of {@link InstrumentService}.
@@ -19,42 +23,57 @@ import lombok.extern.slf4j.Slf4j;
  * @version 1.0
  * @since 2025-06-06
  */
-@Slf4j
-@AllArgsConstructor
 @Service
+@RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class InstrumentServiceImpl implements InstrumentService {
 
     private final InstrumentRepository instrumentRepository;
     private final SongRepository songRepository;
+    private final DtoMapper dtoMapper;
+    private final EntityMapper entityMapper;
 
     @Override
-    public List<InstrumentDTO> getAllInstruments() {
+    public List<InstrumentDTO> findAll() {
         return instrumentRepository.findAll().stream()
-                .map(this::toDTO)
+                .map(dtoMapper::instrumentToInstrumentDto)
                 .collect(Collectors.toList());
     }
 
     @Override
-    public Optional<InstrumentDTO> getInstrumentById(Long id) {
-        return instrumentRepository.findById(id)
-                .map(this::toDTO);
+    public List<InstrumentDTO> findByIds(List<Long> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return List.of();
+        }
+        return instrumentRepository.findAllById(ids).stream()
+                .map(dtoMapper::instrumentToInstrumentDto)
+                .collect(Collectors.toList());
     }
 
     @Override
-    public InstrumentDTO createInstrument(InstrumentDTO dto) {
-        Instrument instrument = toEntity(dto);
-        return toDTO(instrumentRepository.save(instrument));
+    public Optional<InstrumentDTO> findById(Long id) {
+        return findInstrument(id)
+                .map(dtoMapper::instrumentToInstrumentDto);
     }
 
     @Override
-    public Optional<InstrumentDTO> updateInstrument(Long id, InstrumentDTO dto) {
-        return instrumentRepository.findById(id).map(existing -> {
-            return toDTO(instrumentRepository.save(updateInstrumentFromDTO(existing, dto)));
+    @Transactional
+    public InstrumentDTO create(InstrumentDTO dto) {
+        Instrument instrument = entityMapper.instrumentDtoToInstrument(dto);
+        return dtoMapper.instrumentToInstrumentDto(instrumentRepository.save(instrument));
+    }
+
+    @Override
+    @Transactional
+    public Optional<InstrumentDTO> update(Long id, InstrumentDTO dto) {
+        return findInstrument(id).map(existing -> {
+            return dtoMapper.instrumentToInstrumentDto(instrumentRepository.save(updateInstrumentFromDTO(existing, dto)));
         });
     }
 
     @Override
-    public boolean deleteInstrument(Long id) {
+    @Transactional
+    public boolean delete(Long id) {
         if (!instrumentRepository.existsById(id)) {
             return false;
         }
@@ -66,21 +85,6 @@ public class InstrumentServiceImpl implements InstrumentService {
     // DTO Mapping Utilities
     // ----------------------
 
-    private InstrumentDTO toDTO(Instrument instrument) {
-        InstrumentDTO dto = new InstrumentDTO();
-        dto.setId(instrument.getId());
-        dto.setName(instrument.getName());
-        dto.setImageUrl(instrument.getImageUrl());
-        return dto;
-    }
-
-    private Instrument toEntity(InstrumentDTO dto) {
-        Instrument instrument = new Instrument();
-        instrument.setId(dto.getId());
-        instrument.setName(dto.getName());
-        instrument.setImageUrl(dto.getImageUrl());
-        return instrument;
-    }
 
     private Instrument updateInstrumentFromDTO(Instrument existing, InstrumentDTO dto) {
         existing.setName(dto.getName());

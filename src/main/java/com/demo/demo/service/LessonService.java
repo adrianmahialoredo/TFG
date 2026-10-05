@@ -16,23 +16,23 @@ import java.util.Optional;
  */
 public interface LessonService {
 
-    List<LessonDTO> getAllLessons();
+    List<LessonDTO> findAll();
 
-    Optional<LessonDTO> getLessonById(Long id);
+    Optional<LessonDTO> findById(Long id);
 
-    LessonDTO createLesson(LessonDTO dto);
+    LessonDTO create(LessonDTO dto);
 
-    Optional<LessonDTO> updateLesson(Long id, LessonDTO dto);
+    Optional<LessonDTO> update(Long id, LessonDTO dto);
 
-    boolean deleteLesson(Long id);
+    boolean delete(Long id);
 
-    List<LessonDTO> getLessonsByGenreId(Long genreId);
+    List<LessonDTO> findForGenre(Long genreId);
 
-    List<LessonDTO> getLessonsByIds(List<Long> ids);
+    List<LessonDTO> findByIds(List<Long> ids);
 
-    List<LessonDTO> getHomeLessonsPopular();
+    List<Long> findIdsPopular();
 
-    List<LessonDTO> getHomeLessonsNew();
+    List<Long> findIdsNew();
 
-    List<LessonDTO> getHomeLessonsRecommended();
+    List<Long> findIdsRecommended();
 }

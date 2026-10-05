@@ -111,7 +111,7 @@ class SongServiceTest {
     @Test
     void testCreateSong_Success() {
         // Arrange
-        when(songRepository.save(any(Song.class))).thenReturn(testSong);
+        when(songRepository.saveAndFlush(any(Song.class))).thenReturn(testSong);
 
         // Act
         SongDTO result = songService.createSong(testSongDTO);
@@ -119,7 +119,7 @@ class SongServiceTest {
         // Assert
         assertNotNull(result);
         assertEquals("Bohemian Rhapsody", result.getTitle());
-        verify(songRepository, times(1)).save(any(Song.class));
+        verify(songRepository, times(1)).saveAndFlush(any(Song.class));
     }
 
     @SuppressWarnings("unchecked")

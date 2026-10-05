@@ -2,6 +2,16 @@ import * as chordService from '../services/chord.service';
 import * as chordLocal from '../local/chord.local';
 import { useChordEntitiesStore } from "../stores/entities";
 import { ChordDTO } from '../types';
+import { createEntityCache } from '../utils/entityCache.utils';
+
+/** Núcleo de caché de la entidad: RAM -> Disco -> API + Stale-While-Revalidate. */
+const cache = createEntityCache<ChordDTO>({
+    name: 'ChordRepo',
+    getRam: () => useChordEntitiesStore.getState().chords,
+    setRam: (entities) => useChordEntitiesStore.getState().setChords(entities),
+    local: chordLocal,
+    fetchByIds: chordService.getAllById,
+});
 
 /**
  * Repositorio de Chord
@@ -14,28 +24,7 @@ import { ChordDTO } from '../types';
  * @param chordIds Array de IDs de acordes (pueden ser strings o números)
  * @returns Array de ChordDTO
  */
-export const getAllById = async (ids: string[]): Promise<ChordDTO[]> => {
-    const { cached, missing } = await chordLocal.getAllById(ids);
-
-    let remoteChords: ChordDTO[] = [];
-
-    if (missing.length > 0) {
-        try {
-            remoteChords = await chordService.getAllById(missing);
-            if (remoteChords.length > 0) {
-                chordLocal.saveBatch(remoteChords).catch(console.error);
-            }
-        } catch (error) {
-            console.error("[ChordRepo] API Error", error);
-        }
-    }
-
-    const all = [...cached, ...remoteChords];
-    useChordEntitiesStore.getState().setChords(all);
-
-    const map = new Map(all.map(c => [c.id.toString(), c]));
-    return ids.map(id => map.get(id)).filter((c): c is ChordDTO => !!c);
-}
+export const getAllById = cache.getAllById;
 
 /**
  * Obtiene un acorde por su ID
@@ -44,11 +33,13 @@ export const getAllById = async (ids: string[]): Promise<ChordDTO[]> => {
  * @returns ChordDTO o null
  */
 export const getById = async (id: string): Promise<ChordDTO | null> => {
-    let chord: ChordDTO|null = await chordLocal.getById(id);
+    let chord: ChordDTO|null = useChordEntitiesStore.getState().chords[id] ?? await chordLocal.getById(id);
+    if (chord) cache.revalidate([id]);
 
     if (!chord) {
         try {
             chord = await chordService.getById(id);
+            cache.markFresh([id]);
             if (chord) {
                 await chordLocal.saveBatch([chord]).catch(e => console.error("Local save failed", e));
             }

@@ -3,6 +3,7 @@ import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { StatusBar } from 'expo-status-bar';
 import { AuthProvider, useAuth } from './src/context/AuthContext';
+import { AlertModalProvider } from './src/context/AlertModalContext';
 import AppNavigator from './src/navigation/AppNavigator';
 import { ActivityIndicator, View } from 'react-native';
 
@@ -30,7 +31,9 @@ function AppContent() {
 export default function App() {
   return (
     <AuthProvider>
-      <AppContent />
+      <AlertModalProvider>
+        <AppContent />
+      </AlertModalProvider>
     </AuthProvider>
   );
 }

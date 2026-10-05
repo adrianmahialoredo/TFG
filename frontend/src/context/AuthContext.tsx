@@ -3,9 +3,8 @@ import { AuthContextType } from '../types';
 import {useAuthStore, useUserEntitiesStore} from '../stores/entities';
 import * as authRepository from '../repositories/auth.repository';
 import * as userRepository from '../repositories/user.repository';
-import * as genreService from '../services/genre.service';
-import * as genreLocal from '../local/genre.local';
-import { useGenreEntitiesStore } from '../stores/entities';
+import * as genreRepository from '../repositories/genre.repository';
+import * as itemRepository from '../repositories/item.repository';
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
@@ -31,8 +30,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       currentUserId ? state.users[currentUserId] : null
   );
 
-  // Evita recargar los géneros en cada cambio de `user`.
-  const genresLoadedRef = useRef(false);
+  // Evita recargar los datos globales en cada cambio de `user`.
+  const initialDataLoadedRef = useRef(false);
 
   useEffect(() => {
     // Esperamos a que la AuthStore termine de leer del disco para no parpadear.
@@ -48,10 +47,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               .catch((e) => console.error('[AuthContext] Error restaurando usuario:', e));
         }
 
-        // Cargamos los géneros UNA sola vez por sesión.
-        if (token && !genresLoadedRef.current) {
-          genresLoadedRef.current = true;
-          await loadInitialGenres();
+        // Cargamos los datos globales UNA sola vez por sesión.
+        if (token && !initialDataLoadedRef.current) {
+          initialDataLoadedRef.current = true;
+          await loadInitialData();
         }
       } finally {
         setLoading(false);
@@ -77,34 +76,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 };
 
   /**
-   * Cargar géneros al inicializar la app
+   * Carga los datos globales al inicializar la app (cache-first, Disco -> RAM, con sync de fondo):
+   *  - Géneros: se esperan.
+   *  - Catálogo de items (resúmenes): en segundo plano, para no retrasar el arranque.
    */
-  const loadInitialGenres = async () => {
+  const loadInitialData = async () => {
+    itemRepository.getCatalog()
+      .catch((err) => console.error('[AuthContext] Error cargando el catálogo de items:', err));
     try {
-      // Intentar cargar desde local
-      const localGenres = await genreLocal.getAll();
-
-      if (localGenres && localGenres.length > 0) {
-        // Si hay en local, usar esos
-        useGenreEntitiesStore.getState().setGenres(localGenres);
-
-        // Actualizar en background
-        genreService.getAll()
-          .then(fresh => {
-            if (fresh && fresh.length > 0) {
-              genreLocal.saveBatch(fresh);
-              useGenreEntitiesStore.getState().setGenres(fresh);
-            }
-          })
-          .catch(() => {});
-      } else {
-        // Si local está vacío, traer de la API
-        const genres = await genreService.getAll();
-        if (genres && genres.length > 0) {
-          genreLocal.saveBatch(genres).catch(console.error);
-          useGenreEntitiesStore.getState().setGenres(genres);
-        }
-      }
+      await genreRepository.getAll();
     } catch (err) {
       console.error('[AuthContext] Error cargando géneros:', err);
     }
@@ -117,9 +97,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       await authRepository.login(email, password);
       // El estado se actualiza automáticamente vía useAuthStore
-      await loadInitialGenres();
+      await loadInitialData();
     } catch (error) {
-      console.error('[AuthContext] Login failed:', error);
+      console.warn('[AuthContext] Login rejected by backend');
       throw error;
     }
   };

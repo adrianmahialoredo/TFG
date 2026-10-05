@@ -2,6 +2,7 @@ package com.demo.demo.model;
 
 import java.util.HashSet;
 import java.util.Set;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
@@ -33,8 +34,8 @@ import lombok.*;
 @DiscriminatorValue("GENRE")
 @Getter
 @Setter
-@AllArgsConstructor
 @NoArgsConstructor
+@AllArgsConstructor
 public class Genre extends Item {
     
     /**
@@ -42,7 +43,7 @@ public class Genre extends Item {
      */
     @Lob
     @Column(name = "description", nullable = false, columnDefinition = "TEXT")
-    @NotBlank
+    @NotBlank(message = "Description cannot be blank")
     private String description;
 
     /**
@@ -75,5 +76,6 @@ public class Genre extends Item {
      * This is a one-to-many relationship, meaning that one genre can have many lessons.
      */
     @OneToMany(mappedBy = "genre")
+    @JsonIgnore
     private Set<Lesson> lessons = new HashSet<>();
 }

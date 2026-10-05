@@ -43,7 +43,7 @@ public class LessonSection {
      * Title of the lesson section.
      * This field is required and cannot be blank.
      */
-    @NotBlank
+    @NotBlank(message = "Section title cannot be blank")
     private String title; 
 
     /**
@@ -61,7 +61,7 @@ public class LessonSection {
     @NotNull(message = "Lesson cannot be null")
     @ManyToOne
     @JoinColumn(name = "lesson_id")
-    @JsonBackReference
+    @JsonBackReference(value = "lesson-sections")
     private Lesson lesson;
 
     /**

@@ -1,55 +1,44 @@
 package com.demo.demo.controller;
 
-import java.util.List;
-import java.util.Map;
-
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import com.demo.demo.dto.ItemDTO;
+import com.demo.demo.dto.SongDTO;
 import com.demo.demo.service.SpotifyRecommendationService;
-
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 /**
- * Controller for managing Spotify music recommendations.
+ * REST controller for the music recommendations obtained from Spotify.
  *
- * Provides endpoints to retrieve personalized music recommendations from Spotify
- * based on the user's favorite artists and listening history.
+ * Base path: {@code /api/spotify}
  *
  * Endpoints:
- * - GET /api/spotify/recommendations/{spotifyUserId}: Fetch song recommendations for a Spotify user
+ * - GET    /api/spotify/recommendations/{spotifyUserId} Retrieve song recommendations for a Spotify user
  *
- * This controller uses the SpotifyRecommendationService to fetch recommendations
- * from the Spotify Web API.
+ * The Spotify login flow lives in {@link SpotifyAuthController}.
+ *
+ * Responses: 200 OK. Errors are translated by {@link com.demo.demo.exception.GlobalExceptionHandler}.
  *
  * @author Adrián Mahía
  * @version 1.0
  * @since 2025-06-06
  */
-@RequiredArgsConstructor
 @RestController
 @RequestMapping("/api/spotify")
+@RequiredArgsConstructor
 public class SpotifyRecommendationController {
 
-    /**
-     * Service for fetching Spotify recommendations.
-     */
-    private final SpotifyRecommendationService recommendationService;
+    private final SpotifyRecommendationService spotifyRecommendationService;
 
-    /**
-     * Retrieves music recommendations for a Spotify user.
-     *
-     * Fetches personalized song recommendations based on the user's top artists
-     * and listening history from Spotify.
-     *
-     * @param spotifyUserId The unique identifier of the Spotify user
-     * @return ResponseEntity containing a list of recommended songs
-     */
-    @GetMapping("/recommendations/{spotifyUserId}")
-    public ResponseEntity<?> getRecommendations(@PathVariable String spotifyUserId) {
-        List<Map<String, Object>> recs = recommendationService.getRecommendations(spotifyUserId);
-        return ResponseEntity.ok(recs);
+    @GetMapping("/recommendations/items/{userId}")
+    public ResponseEntity<List<ItemDTO>> getItemsForUser(@PathVariable Long userId) {
+        return ResponseEntity.ok(spotifyRecommendationService.findItemsForUser(userId));
+    }
+
+    @GetMapping("/recommendations/songs/{userId}")
+    public ResponseEntity<List<SongDTO>> getSongsForUser(@PathVariable Long userId, @RequestParam int limit) {
+        return ResponseEntity.ok(spotifyRecommendationService.findSongsForUser(userId,  limit));
     }
 }

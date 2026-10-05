@@ -22,7 +22,7 @@ public interface InstrumentGenreService {
      *
      * @return List of InstrumentGenreDTOs representing all instrument genres.
      */
-    List<InstrumentGenreDTO> getAllInstrumentGenres();
+    List<InstrumentGenreDTO> findAll();
 
     /**
      * Fetches an instrument genre by its ID and converts it to a DTO.
@@ -30,7 +30,7 @@ public interface InstrumentGenreService {
      * @param id The ID of the instrument genre to fetch.
      * @return An Optional containing the InstrumentGenreDTO if found, otherwise empty.
      */
-    Optional<InstrumentGenreDTO> getInstrumentGenreById(Long id);
+    Optional<InstrumentGenreDTO> findById(Long id);
 
     /**
      * Creates a new instrument genre from the provided DTO and saves it to the repository.
@@ -38,7 +38,7 @@ public interface InstrumentGenreService {
      * @param dto The InstrumentGenreDTO containing the details of the instrument genre to create.
      * @return The created InstrumentGenreDTO.
      */
-    InstrumentGenreDTO createInstrumentGenre(InstrumentGenreDTO dto);
+    InstrumentGenreDTO create(InstrumentGenreDTO dto);
 
     /**
      * Updates an existing instrument genre identified by its ID with the details from the provided DTO.
@@ -47,7 +47,7 @@ public interface InstrumentGenreService {
      * @param dto The InstrumentGenreDTO containing the updated details of the instrument genre.
      * @return An Optional containing the updated InstrumentGenreDTO if found, otherwise empty.
      */
-    Optional<InstrumentGenreDTO> updateInstrumentGenre(Long id, InstrumentGenreDTO dto);
+    Optional<InstrumentGenreDTO> update(Long id, InstrumentGenreDTO dto);
 
     /**
      * Deletes an instrument genre by its ID.
@@ -55,7 +55,7 @@ public interface InstrumentGenreService {
      * @param id The ID of the instrument genre to delete.
      * @return true if the deletion was successful, false if the instrument genre was not found.
      */
-    boolean deleteInstrumentGenre(Long id);
+    boolean delete(Long id);
 
     /**
      * Finds instrument genres by genre ID.
@@ -63,7 +63,7 @@ public interface InstrumentGenreService {
      * @param genreId The ID of the genre to search for.
      * @return List of InstrumentGenreDTOs associated with the specified genre ID.
      */
-    List<InstrumentGenreDTO> findByGenreId(Long genreId);
+    List<InstrumentGenreDTO> findForGenre(Long genreId);
 
     /**
      * Finds instrument genres by instrument ID.
@@ -71,5 +71,13 @@ public interface InstrumentGenreService {
      * @param instrumentId The ID of the instrument to search for.
      * @return List of InstrumentGenreDTOs associated with the specified instrument ID.
      */
-    List<InstrumentGenreDTO> findByInstrumentId(Long instrumentId);
+    List<InstrumentGenreDTO> findForInstrument(Long instrumentId);
+
+    /**
+     * Retrieves the instrument-genres with the given IDs. IDs that do not exist are ignored.
+     *
+     * @param ids the IDs of the instrument-genres
+     * @return a list of InstrumentGenreDTO (empty if no IDs are given)
+     */
+    List<InstrumentGenreDTO> findByIds(List<Long> ids);
 }

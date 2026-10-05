@@ -2,6 +2,8 @@ package com.demo.demo.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.NoArgsConstructor;
+
 
 /**
  * Represents the response returned after a successful user login.
@@ -13,8 +15,9 @@ import lombok.Data;
  * @version 1.0
  * @since 2025-06-06
  */
-@AllArgsConstructor
 @Data
+@NoArgsConstructor
+@AllArgsConstructor
 public class LoginResponse {
 
     /**

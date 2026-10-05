@@ -17,23 +17,23 @@ import java.util.Optional;
  */
 public interface UserService {
 
-    UserDto registerUser(UserDto userDto);
+    UserDto register(UserDto userDto);
 
-    LoginResponse loginUser(UserDto userDto);
+    LoginResponse login(String email, String password);
 
-    UserDto createUser(UserDto userDto);
+    UserDto create(UserDto userDto);
 
     Optional<UserDto> findByEmail(String email);
 
-    List<UserDto> getAllUsers();
+    List<UserDto> findAll();
 
-    Optional<List<Long>> getFavoriteGenreIdsByUserId(Long userId);
+    Optional<List<Long>> findFavoriteGenreIdsForUser(Long userId);
 
-    List<UserDto> getAllUsersByIds(List<Long> ids);
+    List<UserDto> findByIds(List<Long> ids);
 
-    Optional<UserDto> getUserById(Long id);
+    Optional<UserDto> findById(Long id);
 
-    Optional<UserDto> updateUser(Long id, UserDto updatedUserDto);
+    Optional<UserDto> update(Long id, UserDto updatedUserDto);
 
-    boolean deleteUser(Long id);
+    boolean delete(Long id);
 }

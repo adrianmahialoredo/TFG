@@ -1,39 +1,34 @@
 import * as lessonService from '../services/lesson.service';
 import * as lessonLocal from '../local/lesson.local';
-import { useLessonEntitiesStore } from "../stores/entities";
-import { LessonDTO } from "../types";
+import * as itemRepository from './item.repository';
+import { useLessonEntitiesStore, useItemEntitiesStore } from "../stores/entities";
+import { LessonDTO, ItemType } from "../types";
+import { toItemSummary } from '../utils/mappers.utils';
+import { createEntityCache, OnFresh } from '../utils/entityCache.utils';
 
-/**
- * Helper para orquestar la hidratación de RAM, Local y retornar IDs.
- * Maneja el guardado de la "Foto" (Índice) para persistencia offline.
- */
-const hydrateAndGetIds = async (lessons: LessonDTO[], cacheKey?: string): Promise<string[]> => {
-    if (lessons.length === 0) return [];
-
-    const ids = lessons.map(l => l.id.toString());
-
-    // 1. Hidratar RAM (Despensa)
-    useLessonEntitiesStore.getState().setLessons(lessons);
-
-    // 2. Hidratar Local (Baúl de entidades)
-    lessonLocal.saveBatch(lessons).catch(console.error);
-
-    // 3. Si hay clave de caché, guardar la "Foto" (Índice/Orden)
-    if (cacheKey) {
-        lessonLocal.saveQueryIndex(cacheKey, ids).catch(console.error);
-    }
-
-    return ids;
-};
+/** Núcleo de caché de la entidad: RAM -> Disco -> API + Stale-While-Revalidate. */
+const cache = createEntityCache<LessonDTO>({
+    name: 'LessonRepo',
+    getRam: () => useLessonEntitiesStore.getState().lessons,
+    // El resumen de la ItemEntitiesStore (tarjetas de carrusel) se mantiene al día con el DTO completo.
+    setRam: (entities) => {
+        useLessonEntitiesStore.getState().setLessons(entities);
+        useItemEntitiesStore.getState().setItems(entities.map((e) => toItemSummary(e, ItemType.LESSON)));
+    },
+    local: lessonLocal,
+    fetchByIds: lessonService.getAllById,
+});
 
 export const getById = async (id: string): Promise<LessonDTO | null> => {
     let lesson: LessonDTO | null = null;
 
     try {
         // 1. Intentar obtener la lección (Local o API)
-        lesson = await lessonLocal.getById(id);
+        lesson = useLessonEntitiesStore.getState().lessons[id] ?? await lessonLocal.getById(id);
+        if (lesson) cache.revalidate([id]);
         if (!lesson) {
             lesson = await lessonService.getById(id);
+            cache.markFresh([id]);
             if (lesson) await lessonLocal.saveSingle(lesson).catch(e => console.error("Error guardando lección local", e));
         }
 
@@ -50,80 +45,24 @@ export const getById = async (id: string): Promise<LessonDTO | null> => {
     return lesson;
 }
 
-export const getAllById = async (ids: string[]): Promise<LessonDTO[]> => {
-    // 1. Preguntar al local
-    const { cached, missing } = await lessonLocal.getAllById(ids);
+export const getAllById = cache.getAllById;
 
-    let remoteLessons: LessonDTO[] = [];
+/** Guarda en RAM + Disco DTOs completos recibidos por otra vía (p.ej. un feed mixto de items). */
+export const hydrate = (entities: LessonDTO[]): string[] => cache.hydrate(entities);
 
-    // 2. Si falta algo, vamos a la API directamente con la lista que nos dio el local
-    if (missing.length > 0) {
-        try {
-            remoteLessons = await lessonService.getAllById(missing);
-            if (remoteLessons.length > 0) {
-                lessonLocal.saveBatch(remoteLessons).catch(console.error);
-            }
-        } catch (error) {
-            console.error("[LessonRepo] API Error", error);
-        }
-    }
+// --- LISTAS (Cache-First: índice guardado al instante + refresco de red vía `onFresh`) ---
 
-    // 3. Unificamos y actualizamos la RAM (Despensa)
-    const all = [...cached, ...remoteLessons];
-    useLessonEntitiesStore.getState().setLessons(all);
+export const getByGenreId = (genreId: string, onFresh?: OnFresh): Promise<string[]> =>
+    cache.list(`genre_${genreId}`, () => lessonService.getByGenreId(genreId), onFresh);
 
-    // 4. Reordenar según el array de 'ids' original (Fundamental para la UI)
-    const map = new Map(all.map(s => [s.id.toString(), s]));
-    return ids.map(id => map.get(id)).filter((s): s is LessonDTO => !!s);
-}
+// --- CARRUSELES (el backend devuelve IDs; las tarjetas se pintan con el catálogo de items) ---
+// Devuelven IDs de la `ItemEntitiesStore`. El LessonDTO completo solo se pide al abrir el detalle.
 
-/**
- * Obtiene lecciones de un género específico
- * Retorna IDs para mantener la arquitectura (Entidades pesadas se recuperan por ID)
- */
-export const getByGenreId = async (genreId: string): Promise<string[]> => {
-    try {
-        const lessons = await lessonService.getByGenreId(genreId);
-        if (lessons.length > 0) {
-            useLessonEntitiesStore.getState().setLessons(lessons);
-            await lessonLocal.saveBatch(lessons).catch(console.error);
-        }
-        return lessons.map(s => s.id.toString());
-    } catch (error) {
-        console.error("[LessonRepo] Error en getByGenreId:", error);
-        return [];
-    }
-}
+export const getPopular = (onFresh?: OnFresh): Promise<string[]> =>
+    itemRepository.getFeed('lessons_popular', () => lessonService.getPopularIds(), onFresh);
 
-// --- MÉTODOS HOME CON FALLBACK OFFLINE ---
+export const getNew = (onFresh?: OnFresh): Promise<string[]> =>
+    itemRepository.getFeed('lessons_new', () => lessonService.getNewIds(), onFresh);
 
-export const getPopular = async (): Promise<string[]> => {
-    const key = 'home_popular';
-    try {
-        const lessons = await lessonService.getPopular();
-        return await hydrateAndGetIds(lessons, key);
-    } catch (error) {
-        return (await lessonLocal.getQueryIndex(key)) || [];
-    }
-}
-
-export const getNew = async (): Promise<string[]> => {
-    const key = 'home_new';
-    try {
-        const lessons = await lessonService.getNew();
-        return await hydrateAndGetIds(lessons, key);
-    } catch (error) {
-        return (await lessonLocal.getQueryIndex(key)) || [];
-    }
-}
-
-export const getRecommended = async (): Promise<string[]> => {
-    const key = 'home_recommended';
-    try {
-        const lessons = await lessonService.getRecommended();
-        return await hydrateAndGetIds(lessons, key);
-    } catch (error) {
-        return (await lessonLocal.getQueryIndex(key)) || [];
-    }
-}
-
+export const getRecommended = (onFresh?: OnFresh): Promise<string[]> =>
+    itemRepository.getFeed('lessons_recommended', () => lessonService.getRecommendedIds(), onFresh);

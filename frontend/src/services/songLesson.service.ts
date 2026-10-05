@@ -18,7 +18,7 @@ export const getBySong = async (songId: string): Promise<SongLessonDTO[]> => {
 };
 
 export const getAllById = async (ids: string[]): Promise<SongLessonDTO[]> => {
-  const response = await axios.post(API_ENDPOINTS.SONG_LESSONS.BASE, ids);
+  const response = await axios.post(API_ENDPOINTS.SONG_LESSONS.BY_IDS, ids);
   return response.data;
 };
 

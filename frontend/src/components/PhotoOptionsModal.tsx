@@ -24,31 +24,31 @@ export const PhotoOptionsModal = ({
   isLoading = false,
 }: PhotoOptionsModalProps) => {
   return (
-    <Modal visible={visible} transparent animationType="slide">
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <Pressable
-        className="flex-1 bg-black/50 justify-end"
+        className="flex-1 bg-black/70 items-center justify-center px-6"
         onPress={onClose}
       >
-        <View className="bg-white p-4 rounded-t-2xl">
-          <Text className="text-center text-lg font-semibold text-gray-800 mb-4">
+        <Pressable className="w-full max-w-sm rounded-2xl bg-background border border-primary p-5" onPress={() => {}}>
+          <Text className="text-center text-lg font-semibold text-secondary mb-4">
             Opciones de imagen
           </Text>
 
           <Pressable
             onPress={onViewImage}
-            className="w-full py-3 items-center border-b border-gray-200"
+            className="w-full py-3 items-center border-b border-secondary/25"
           >
-            <Text className="text-lg text-blue-600 font-semibold">
+            <Text className="text-lg text-secondary font-semibold">
               Ver foto ampliada
             </Text>
           </Pressable>
 
           <Pressable
             onPress={onPickImage}
-            className="w-full py-3 items-center border-b border-gray-200"
+            className="w-full py-3 items-center border-b border-secondary/25"
             disabled={isLoading}
           >
-            <Text className="text-lg text-blue-600 font-semibold">
+            <Text className="text-lg text-secondary font-semibold">
               {isLoading ? 'Cargando...' : 'Subir nueva foto'}
             </Text>
           </Pressable>
@@ -57,9 +57,9 @@ export const PhotoOptionsModal = ({
             onPress={onClose}
             className="w-full py-3 items-center mt-2"
           >
-            <Text className="text-lg text-red-500 font-semibold">Cancelar</Text>
+            <Text className="text-lg text-primary font-semibold">Cancelar</Text>
           </Pressable>
-        </View>
+        </Pressable>
       </Pressable>
     </Modal>
   );

@@ -3,41 +3,36 @@ import * as songLocal from '../local/song.local';
 import * as songLessonRepository from './songLesson.repository';
 import * as tabSectionRepository from './tabSection.repository';
 import * as chordRepository from './chord.repository';
-import { useSongEntitiesStore } from "../stores/entities";
-import { SongDTO } from "../types";
+import * as itemRepository from './item.repository';
+import { useSongEntitiesStore, useItemEntitiesStore } from "../stores/entities";
+import { SongDTO, ItemType } from "../types";
 import axios from 'axios';
+import { toItemSummary } from '../utils/mappers.utils';
+import { createEntityCache, OnFresh } from '../utils/entityCache.utils';
 
-/**
- * Helper para orquestar la hidratación de RAM, Local y retornar IDs
- * Maneja el guardado de la "Foto" (Índice) para persistencia offline
- */
-const hydrateAndGetIds = async (songs: SongDTO[], cacheKey?: string): Promise<string[]> => {
-    if (songs.length === 0) return [];
-
-    const ids = songs.map(s => s.id.toString());
-
-    // 1. Hidratar RAM (Despensa)
-    useSongEntitiesStore.getState().setSongs(songs);
-
-    // 2. Hidratar Local (Baúl de entidades)
-    songLocal.saveBatch(songs).catch(console.error);
-
-    // 3. Si hay clave de caché, guardar la "Foto" (Índice/Orden)
-    if (cacheKey) {
-        songLocal.saveQueryIndex(cacheKey, ids).catch(console.error);
-    }
-
-    return ids;
-};
+/** Núcleo de caché de la entidad: RAM -> Disco -> API + Stale-While-Revalidate. */
+const cache = createEntityCache<SongDTO>({
+    name: 'SongRepo',
+    getRam: () => useSongEntitiesStore.getState().songs,
+    // El resumen de la ItemEntitiesStore (tarjetas de carrusel) se mantiene al día con el DTO completo.
+    setRam: (entities) => {
+        useSongEntitiesStore.getState().setSongs(entities);
+        useItemEntitiesStore.getState().setItems(entities.map((e) => toItemSummary(e, ItemType.SONG)));
+    },
+    local: songLocal,
+    fetchByIds: songService.getAllById,
+});
 
 export const getById = async (id: string): Promise<SongDTO | null> => {
     let song: SongDTO | null = null;
 
     try {
-        song = await songLocal.getById(id);
+        song = useSongEntitiesStore.getState().songs[id] ?? await songLocal.getById(id);
+        if (song) cache.revalidate([id]);
         if (!song) {
             try {
                 song = await songService.getById(id);
+                cache.markFresh([id]);
                 if (song) await songLocal.saveSingle(song).catch(e => console.error("Error guardando local", e));
             } catch (serviceError) {
                 if (axios.isAxiosError(serviceError) && serviceError.response?.status === 404) {
@@ -75,138 +70,38 @@ export const getById = async (id: string): Promise<SongDTO | null> => {
     return song;
 };
 
-export const getAllById = async (ids: string[]): Promise<SongDTO[]> => {
-    const { cached, missing } = await songLocal.getAllById(ids);
-    let remoteSongs: SongDTO[] = [];
+export const getAllById = cache.getAllById;
 
-    if (missing.length > 0) {
-        try {
-            remoteSongs = await songService.getAllById(missing);
-            if (remoteSongs.length > 0) {
-                songLocal.saveBatch(remoteSongs).catch(console.error);
-            }
-        } catch (error) {
-            console.error("[SongRepo] API Error", error);
-        }
-    }
+/** Guarda en RAM + Disco DTOs completos recibidos por otra vía (p.ej. un feed mixto de items). */
+export const hydrate = (entities: SongDTO[]): string[] => cache.hydrate(entities);
 
-    const all = [...cached, ...remoteSongs];
-    useSongEntitiesStore.getState().setSongs(all);
+// --- CARRUSELES CON DTO COMPLETO (decisión de negocio) ---
+// El usuario suele abrir lo que ve en estos carruseles: el backend devuelve el SongDTO
+// completo, así el detalle abre al instante. La tarjeta se pinta con el resumen, que la
+// propia caché mantiene en la ItemEntitiesStore.
 
-    const map = new Map(all.map(s => [s.id.toString(), s]));
-    return ids.map(id => map.get(id)).filter((s): s is SongDTO => !!s);
-};
+export const getPopularByGenreId = (genreId: string, onFresh?: OnFresh): Promise<string[]> =>
+    cache.list(`popular_genre_${genreId}`, () => songService.getPopularByGenreId(genreId), onFresh);
 
-// --- MÉTODOS POR GÉNERO CON FALLBACK OFFLINE ---
+export const getClassicByGenreId = (genreId: string, onFresh?: OnFresh): Promise<string[]> =>
+    cache.list(`classic_genre_${genreId}`, () => songService.getClassicByGenreId(genreId), onFresh);
 
-export const getPopularByGenreId = async (genreId: string): Promise<string[]> => {
-    const key = `popular_genre_${genreId}`;
-    try {
-        const songs = await songService.getPopularByGenreId(genreId);
-        return await hydrateAndGetIds(songs, key);
-    } catch (error) {
-        return (await songLocal.getQueryIndex(key)) || [];
-    }
-};
+export const getNewByGenreId = (genreId: string, onFresh?: OnFresh): Promise<string[]> =>
+    cache.list(`new_genre_${genreId}`, () => songService.getNewByGenreId(genreId), onFresh);
 
-export const getClassicByGenreId = async (genreId: string): Promise<string[]> => {
-    const key = `classic_genre_${genreId}`;
-    try {
-        const songs = await songService.getClassicByGenreId(genreId);
-        return await hydrateAndGetIds(songs, key);
-    } catch (error) {
-        return (await songLocal.getQueryIndex(key)) || [];
-    }
-};
+export const getPopular = (onFresh?: OnFresh): Promise<string[]> =>
+    cache.list('popular', () => songService.getPopular(), onFresh);
 
-export const getNewByGenreId = async (genreId: string): Promise<string[]> => {
-    const key = `new_genre_${genreId}`;
-    try {
-        const songs = await songService.getNewByGenreId(genreId);
-        return await hydrateAndGetIds(songs, key);
-    } catch (error) {
-        return (await songLocal.getQueryIndex(key)) || [];
-    }
-};
+export const getNew = (onFresh?: OnFresh): Promise<string[]> =>
+    cache.list('new', () => songService.getNew(), onFresh);
 
-/**
- * Versión optimizada para GenreSongs (Devuelve objetos para evitar parpadeos en carruseles)
- */
-export const getGenreSongCategories = async (genreId: string) => {
-    const keyBase = `categories_genre_${genreId}`;
-    try {
-        const [populars, classics, news] = await Promise.all([
-            songService.getPopularByGenreId(genreId),
-            songService.getClassicByGenreId(genreId),
-            songService.getNewByGenreId(genreId)
-        ]);
+/** Personalizado por usuario: su índice se borra en el logout. */
+export const SPOTIFY_INDEX_KEY = 'spotify';
 
-        // Hidratamos todo de golpe
-        await hydrateAndGetIds([...populars, ...classics, ...news]);
+export const getFromSpotify = (onFresh?: OnFresh): Promise<string[]> =>
+    cache.list(SPOTIFY_INDEX_KEY, () => songService.getFromSpotify(), onFresh);
 
-        // Guardamos los índices individuales para fallback
-        songLocal.saveQueryIndex(`${keyBase}_pop`, populars.map(s => s.id.toString()));
-        songLocal.saveQueryIndex(`${keyBase}_cla`, classics.map(s => s.id.toString()));
-        songLocal.saveQueryIndex(`${keyBase}_new`, news.map(s => s.id.toString()));
+// --- CARRUSELES POR CONVENCIÓN (el backend devuelve IDs; se pintan con el catálogo de items) ---
 
-        return { populars, classics, news };
-    } catch (error) {
-        console.error("[SongRepo] Error en categorías, intentando local...");
-        // Fallback: obtenemos los IDs y luego los objetos de la RAM/Local
-        const [pIds, cIds, nIds] = await Promise.all([
-            songLocal.getQueryIndex(`${keyBase}_pop`),
-            songLocal.getQueryIndex(`${keyBase}_cla`),
-            songLocal.getQueryIndex(`${keyBase}_new`)
-        ]);
-
-        const [populars, classics, news] = await Promise.all([
-            getAllById(pIds || []),
-            getAllById(cIds || []),
-            getAllById(nIds || [])
-        ]);
-
-        return { populars, classics, news };
-    }
-};
-
-// --- MÉTODOS HOME CON FALLBACK OFFLINE ---
-
-export const getPopular = async (): Promise<string[]> => {
-    const key = 'home_popular';
-    try {
-        const songs = await songService.getPopular();
-        return await hydrateAndGetIds(songs, key);
-    } catch (error) {
-        return (await songLocal.getQueryIndex(key)) || [];
-    }
-};
-
-export const getNew = async (): Promise<string[]> => {
-    const key = 'home_new';
-    try {
-        const songs = await songService.getNew();
-        return await hydrateAndGetIds(songs, key);
-    } catch (error) {
-        return (await songLocal.getQueryIndex(key)) || [];
-    }
-};
-
-export const getRecommended = async (): Promise<string[]> => {
-    const key = 'home_recommended';
-    try {
-        const songs = await songService.getRecommended();
-        return await hydrateAndGetIds(songs, key);
-    } catch (error) {
-        return (await songLocal.getQueryIndex(key)) || [];
-    }
-};
-
-export const getFromSpotify = async (): Promise<string[]> => {
-    const key = 'home_spotify';
-    try {
-        const songs = await songService.getFromSpotify();
-        return await hydrateAndGetIds(songs, key);
-    } catch (error) {
-        return (await songLocal.getQueryIndex(key)) || [];
-    }
-};
+export const getRecommended = (onFresh?: OnFresh): Promise<string[]> =>
+    itemRepository.getFeed('songs_recommended', () => songService.getRecommendedIds(), onFresh);

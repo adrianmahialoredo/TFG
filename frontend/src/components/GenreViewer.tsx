@@ -1,7 +1,7 @@
 import { View, Text, TouchableOpacity } from "react-native";
 import { CirclePlus } from "lucide-react-native";
 import { COLORS } from "../constants/Theme";
-import { useGenreEntitiesStore } from "../stores/entities";
+import { useGenresByIds } from "../hooks/useGenres";
 
 type Props = {
     ids: (string | number)[]; // Recibimos solo los IDs
@@ -9,13 +9,8 @@ type Props = {
 };
 
 export default function GenreViewer({ ids, label }: Props) {
-    // Accedemos a la RAM directamente (O(1) access)
-    const genresMap = useGenreEntitiesStore(state => state.genres);
-
-    // Mapeamos los IDs a los objetos reales que ya están en la Store
-    const genres = ids.map(id => genresMap[id]).filter(Boolean);
-
-    if (genres.length === 0) return null;
+    // IDs -> Objetos (el hook trae de Disco/API los que no estén en RAM)
+    const genres = useGenresByIds(ids);
 
     return (
         <View className="mb-5">
@@ -28,10 +23,12 @@ export default function GenreViewer({ ids, label }: Props) {
                         key={genre.id}
                         className="px-3 py-1 bg-primary rounded-lg border border-secondary/20"
                     >
-                        <Text className="text-secondary text-base">{genre.name}</Text>
+                        <Text className="text-secondary text-base">{genre.title}</Text>
                     </View>
                 ))}
-                {/* Solo mostramos el Plus si es nuestro perfil (opcional) */}
+                <TouchableOpacity className="py-1">
+                    <CirclePlus size={20} color={COLORS.primary} strokeWidth={1} />
+                </TouchableOpacity>
             </View>
         </View>
     );

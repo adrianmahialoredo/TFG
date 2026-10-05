@@ -13,14 +13,12 @@ export const getById = async (id: string): Promise<TabSectionDTO> => {
 };
 
 export const getByLesson = async (lessonId: string): Promise<TabSectionDTO[]> => {
-  const response = await axios.get(API_ENDPOINTS.TAB_SECTIONS.BY_LESSON(lessonId));
+  const response = await axios.get(API_ENDPOINTS.TAB_SECTIONS.BY_SONG_LESSON(lessonId));
   return response.data;
 };
 
 export const getAllById = async (ids: string[]): Promise<TabSectionDTO[]> => {
-  const response = await axios.get(API_ENDPOINTS.TAB_SECTIONS.BASE, {
-    params: { ids },
-  });
+  const response = await axios.post(API_ENDPOINTS.TAB_SECTIONS.BY_IDS, ids);
   return response.data;
 };
 

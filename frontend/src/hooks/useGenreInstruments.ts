@@ -1,6 +1,5 @@
 import { useMemo, useState } from 'react';
 import { useInstrumentGenreEntitiesStore } from '../stores/entities';
-import { InstrumentGenreDTO } from '../types';
 
 export const useGenreInstruments = (genreId: string) => {
     // 1. Acceso a la RAM (Entity Store)
@@ -13,7 +12,7 @@ export const useGenreInstruments = (genreId: string) => {
     const instrumentGenres = useMemo(() => {
         return Object.values(allInstrumentGenres)
             .filter((ig) => ig.genreId === genreId)
-            .sort((a, b) => (a.name ?? '').localeCompare(b.name ?? ''));
+            .sort((a, b) => (a.title ?? '').localeCompare(b.title ?? ''));
     }, [allInstrumentGenres, genreId]);
 
     // 4. Obtener el objeto seleccionado (si existe)

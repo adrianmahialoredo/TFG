@@ -30,11 +30,15 @@ import java.util.Set;
  * @since 2025-06-06
  */
 @Entity
+@Table(name = "preferences")
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 public class Preferences {
+
+    public static final int MIN_NUMBER_OF_FAVOURITE_GENRES = 2;
+    public static final int MIN_NUMBER_OF_FAVOURITE_INSTRUMENTS = 2;
 
     /**
      * Unique identifier for the preferences, shared with the owning

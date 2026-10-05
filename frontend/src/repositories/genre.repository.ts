@@ -1,7 +1,22 @@
 import * as genreService from '../services/genre.service';
 import * as genreLocal from '../local/genre.local';
-import { useGenreEntitiesStore } from "../stores/entities";
-import { GenreDTO } from '../types';
+import { useGenreEntitiesStore, useItemEntitiesStore } from "../stores/entities";
+import { GenreDTO, ItemType } from '../types';
+import { toItemSummary } from '../utils/mappers.utils';
+import { createEntityCache } from '../utils/entityCache.utils';
+
+/** Núcleo de caché de la entidad: RAM -> Disco -> API + Stale-While-Revalidate. */
+const cache = createEntityCache<GenreDTO>({
+    name: 'GenreRepo',
+    getRam: () => useGenreEntitiesStore.getState().genres,
+    // El resumen de la ItemEntitiesStore (tarjetas de carrusel) se mantiene al día con el DTO completo.
+    setRam: (entities) => {
+        useGenreEntitiesStore.getState().setGenres(entities);
+        useItemEntitiesStore.getState().setItems(entities.map((e) => toItemSummary(e, ItemType.GENRE)));
+    },
+    local: genreLocal,
+    fetchByIds: genreService.getAllById,
+});
 
 /**
  * Repositorio de Genre
@@ -15,11 +30,13 @@ import { GenreDTO } from '../types';
  * @returns GenreDTO o undefined si no se encuentra
  */
 export const getById = async (id: string): Promise<GenreDTO | null> => {
-    let genre: GenreDTO|null = await genreLocal.getById(id);
+    let genre: GenreDTO|null = useGenreEntitiesStore.getState().genres[id] ?? await genreLocal.getById(id);
+    if (genre) cache.revalidate([id]);
 
     if (!genre) {
         try {
             genre = await genreService.getById(id);
+            cache.markFresh([id]);
             if (genre) {
                 await genreLocal.saveBatch([genre]).catch(e => console.error("Local save failed", e));
             }
@@ -41,28 +58,10 @@ export const getById = async (id: string): Promise<GenreDTO | null> => {
  * Cache first, backend fallback
  * @returns Array de GenreDTO
  */
-export const getAllById = async (ids: string[]): Promise<GenreDTO[]> => {
-    const { cached, missing } = await genreLocal.getAllById(ids);
+export const getAllById = cache.getAllById;
 
-    let remoteGenres: GenreDTO[] = [];
-
-    if (missing.length > 0) {
-        try {
-            remoteGenres = await genreService.getAllById(missing);
-            if (remoteGenres.length > 0) {
-                genreLocal.saveBatch(remoteGenres).catch(console.error);
-            }
-        } catch (error) {
-            console.error("[GenreRepo] API Error", error);
-        }
-    }
-
-    const all = [...cached, ...remoteGenres];
-    useGenreEntitiesStore.getState().setGenres(all);
-
-    const map = new Map(all.map(g => [g.id.toString(), g]));
-    return ids.map(id => map.get(id)).filter((g): g is GenreDTO => !!g);
-}
+/** Guarda en RAM + Disco DTOs completos recibidos por otra vía (p.ej. un feed mixto de items). */
+export const hydrate = (entities: GenreDTO[]): string[] => cache.hydrate(entities);
 
 export const getAll = async (): Promise<GenreDTO[]> => {
     try {

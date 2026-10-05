@@ -1,32 +1,35 @@
-import { Image, Text, TextInput, TouchableOpacity, View, Alert, ActivityIndicator } from "react-native";
+import { Image, Text, TextInput, TouchableOpacity, View, ActivityIndicator } from "react-native";
 import AppLayout from "../components/AppLayout";
-import { UserRound, Lock } from "lucide-react-native";
+import { UserRound, Lock, Eye, EyeOff } from "lucide-react-native";
 import { COLORS } from "../constants/Theme";
 import { useAuth } from "../context/AuthContext";
 import { useState } from "react";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../types/RootStackParamList";
+import { useAppAlert } from "../context/AlertModalContext";
 
 export default function LoginScreen() {
   const { login } = useAuth();
+  const { showAlert } = useAppAlert();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList, 'LoginScreen'>>();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const validateForm = (): boolean => {
     if (!email.trim()) {
-      Alert.alert('Error', 'Por favor ingresa tu email');
+      showAlert({ title: 'Error', message: 'Por favor ingresa tu email' });
       return false;
     }
     if (!password.trim()) {
-      Alert.alert('Error', 'Por favor ingresa tu contraseña');
+      showAlert({ title: 'Error', message: 'Por favor ingresa tu contrasena' });
       return false;
     }
     if (!email.includes('@')) {
-      Alert.alert('Error', 'Por favor ingresa un email válido');
+      showAlert({ title: 'Error', message: 'Por favor ingresa un email valido' });
       return false;
     }
     return true;
@@ -43,10 +46,12 @@ export default function LoginScreen() {
         index: 0,
         routes: [{ name: 'BottomTab' }],
       });
-    } catch (error: any) {
-      console.error('Login failed:', error);
-      const errorMessage = error?.response?.data?.message || 'Email o contraseña incorrectos';
-      Alert.alert('Error de Inicio de Sesión', errorMessage);
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : 'Email o contrasena incorrectos';
+      showAlert({ title: 'Error de Inicio de Sesion', message: errorMessage });
     } finally {
       setLoading(false);
     }
@@ -72,6 +77,8 @@ export default function LoginScreen() {
           placeholderTextColor={COLORS.placeholder}
           keyboardType="email-address"
           editable={!loading}
+          underlineColorAndroid="transparent"
+          selectionColor={COLORS.secondary}
         />
         <View className="absolute right-4 top-1/3 transform -translate-y-1/4">
           <UserRound size={25} color={COLORS.secondary} />
@@ -85,10 +92,23 @@ export default function LoginScreen() {
           className="text-secondary border border-secondary rounded-lg p-4 mb-2 pr-12"
           placeholder="Contraseña"
           placeholderTextColor={COLORS.placeholder}
-          secureTextEntry
+          secureTextEntry={!showPassword}
           editable={!loading}
+          underlineColorAndroid="transparent"
+          selectionColor={COLORS.secondary}
         />
-        <View className="absolute right-4 top-1/3 transform -translate-y-1/4">
+        <View className="absolute right-4 top-1/3 transform -translate-y-1/4 flex-row items-center gap-3">
+          <TouchableOpacity
+            onPress={() => setShowPassword((prev) => !prev)}
+            disabled={loading}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            {showPassword ? (
+              <EyeOff size={22} color={COLORS.secondary} />
+            ) : (
+              <Eye size={22} color={COLORS.secondary} />
+            )}
+          </TouchableOpacity>
           <Lock size={25} color={COLORS.secondary} />
         </View>
       </View>

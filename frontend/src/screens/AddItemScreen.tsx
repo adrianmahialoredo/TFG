@@ -49,11 +49,12 @@ export default function AddItemScreen() {
             </View>
           ) : items.length > 0 ? (
             <View className="flex-column gap-3 mb-7">
-              {items.map((item) => (
+              {items.map((item, index) => (
                 <AddListItem
                   key={item.id}
                   item={itemToAddListItem(item)}
                   added={isAdded(item.id)}
+                  inverted={index % 2 !== 0}
                   onPress={() => addItem(item.id)}
                 />
               ))}

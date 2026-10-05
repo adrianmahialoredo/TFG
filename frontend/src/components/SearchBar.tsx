@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, TextInput, TextInputProps } from 'react-native';
+import { View, TextInput } from 'react-native';
 import { Search } from 'lucide-react-native';
 import { COLORS } from '../constants/Theme';
 
@@ -19,6 +19,8 @@ export default function SearchBar({ placeholder = '¿Que quieres tocar?', value,
         placeholderTextColor={COLORS.secondary}
         value={value}
         onChangeText={onChangeText}
+        underlineColorAndroid="transparent"
+        selectionColor={COLORS.secondary}
       />
     </View>
   );

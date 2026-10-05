@@ -3,66 +3,43 @@
  * Centraliza la lógica de transformación de datos entre capas
  */
 
-import { SongDTO, LessonDTO, ItemDTO, CarouselItemDTO, GenreDTO, InstrumentDTO, AnyItemDTO, ItemType } from '../types';
+import { AnyItemDTO, CarouselItemDTO, GenreDTO, InstrumentDTO, ItemSummaryDTO, ItemType, SongDTO } from '../types';
 
 /**
- * Mapea un SongDTO a CarouselItemDTO
- * @param song El SongDTO a mapear
- * @returns CarouselItemDTO listo para usar en carruseles
+ * Deriva el resumen (catálogo) de un DTO completo.
+ * @param dto DTO completo de cualquier subtipo
+ * @param type Subtipo; por defecto el `type` del propio DTO
+ * @returns ItemSummaryDTO equivalente
  */
-export const songToCarouselItem = (song: SongDTO): CarouselItemDTO => ({
-  id: song.id,
-  title: song.title,
-  imgUrl: song.imageUrl,
-  artist: song.artist,
-  description: song.artist,
+export const toItemSummary = (dto: AnyItemDTO, type: ItemType = dto.type): ItemSummaryDTO => ({
+  id: dto.id,
+  title: dto.title,
+  imageUrl: dto.imageUrl,
+  type,
+  level: dto.level,
+  artist: type === ItemType.SONG ? (dto as SongDTO).artist : null,
 });
 
 /**
- * Mapea múltiples SongDTOs a CarouselItemDTOs
- * @param songs Array de SongDTOs
- * @returns Array de CarouselItemDTOs
- */
-export const songsToCarouselItems = (songs: SongDTO[]): CarouselItemDTO[] =>
-  songs.map(songToCarouselItem);
-
-/**
- * Mapea un LessonDTO a CarouselItemDTO
- * @param lesson El LessonDTO a mapear
+ * Mapea un ItemSummaryDTO (catálogo) a CarouselItemDTO.
+ * Mantiene la descripción que tenía cada tipo: artista en canciones, título en lecciones.
+ * @param item El resumen del item a mapear
  * @returns CarouselItemDTO listo para usar en carruseles
  */
-export const lessonToCarouselItem = (lesson: LessonDTO): CarouselItemDTO => ({
-  id: lesson.id,
-  title: lesson.title,
-  imgUrl: lesson.imageUrl,
-  description: lesson.title,
-});
-
-/**
- * Mapea múltiples LessonDTOs a CarouselItemDTOs
- * @param lessons Array de LessonDTOs
- * @returns Array de CarouselItemDTOs
- */
-export const lessonsToCarouselItems = (lessons: LessonDTO[]): CarouselItemDTO[] =>
-  lessons.map(lessonToCarouselItem);
-
-/**
- * Mapea un ItemDTO a CarouselItemDTO
- * @param item El ItemDTO a mapear
- * @returns CarouselItemDTO listo para usar en carruseles
- */
-export const itemToCarouselItem = (item: ItemDTO): CarouselItemDTO => ({
+export const itemToCarouselItem = (item: ItemSummaryDTO): CarouselItemDTO => ({
   id: item.id,
   title: item.title,
   imgUrl: item.imageUrl,
+  ...(item.type === ItemType.SONG && { artist: item.artist ?? undefined, description: item.artist ?? undefined }),
+  ...(item.type === ItemType.LESSON && { description: item.title }),
 });
 
 /**
- * Mapea múltiples ItemDTOs a CarouselItemDTOs
- * @param items Array de ItemDTOs
+ * Mapea múltiples ItemSummaryDTOs a CarouselItemDTOs
+ * @param items Array de resúmenes de items
  * @returns Array de CarouselItemDTOs
  */
-export const itemsToCarouselItems = (items: ItemDTO[]): CarouselItemDTO[] =>
+export const itemsToCarouselItems = (items: ItemSummaryDTO[]): CarouselItemDTO[] =>
   items.map(itemToCarouselItem);
 
 /**
@@ -109,10 +86,10 @@ export const instrumentsToCarouselItems = (instruments: InstrumentDTO[]): Carous
  * @param item Cualquier item (Song, Lesson, Genre, InstrumentGenre)
  * @returns Texto descriptivo del tipo
  */
-export const getItemSubtitle = (item: AnyItemDTO): string => {
+export const getItemSubtitle = (item: ItemSummaryDTO): string => {
   switch (item.type) {
     case ItemType.SONG:
-      return `Canción · ${(item as SongDTO).artist || 'Artista desconocido'}`;
+      return `Canción · ${item.artist || 'Artista desconocido'}`;
     case ItemType.LESSON:
       return 'Lección';
     case ItemType.GENRE:
@@ -125,11 +102,11 @@ export const getItemSubtitle = (item: AnyItemDTO): string => {
 };
 
 /**
- * Mapea un AnyItemDTO a las props que espera el componente AddListItem.
+ * Mapea un ItemSummaryDTO a las props que espera el componente AddListItem.
  * @param item Cualquier item polimórfico
  * @returns Objeto con { id, title, description, imageUrl, info } listo para AddListItem
  */
-export const itemToAddListItem = (item: AnyItemDTO) => ({
+export const itemToAddListItem = (item: ItemSummaryDTO) => ({
   id: item.id,
   title: item.title,
   description: getItemSubtitle(item),

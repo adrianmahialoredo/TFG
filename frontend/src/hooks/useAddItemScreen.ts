@@ -1,14 +1,24 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { useItemEntitiesStore } from '../stores/entities/item.entities.store';
+import { useItemEntitiesStore } from '../stores/entities';
 import { useItemListEntitiesStore } from '../stores/entities';
 import * as itemRepository from '../repositories/item.repository';
+import * as itemFeedRepository from '../repositories/itemFeed.repository';
 import * as itemListRepository from '../repositories/itemList.repository';
+import { ItemSummaryDTO } from '../types';
+
+/** Máximo de resultados de búsqueda pintados a la vez. */
+const MAX_RESULTS = 50;
+
+/** Minúsculas y sin tildes, para que "cancion" encuentre "Canción". */
+const normalize = (text?: string | null) =>
+  (text ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 
 /**
  * Nivel 6: Hook orquestador de la pantalla AddItemScreen.
  *
- * - Carga las recomendaciones ("Para ti") al montar.
- * - Busca items en el backend (con debounce) cuando cambia la query.
+ * - Sin búsqueda: muestra las recomendaciones ("Para ti") del backend para esta lista.
+ * - Con búsqueda: filtra en local el catálogo completo de items (cargado al arrancar
+ *   la app), sin llamar al backend.
  * - Añade un item a la lista destino sincronizando la Entity Store (Hidratación Atómica).
  *
  * La UI (Nivel 7) solo consume este hook.
@@ -21,11 +31,11 @@ export const useAddItemScreen = (itemListId: string) => {
   );
 
   const [recommendedIds, setRecommendedIds] = useState<string[]>([]);
-  const [resultIds, setResultIds] = useState<string[]>([]);
+  const [catalogIds, setCatalogIds] = useState<string[]>([]);
   const [query, setQuery] = useState('');
 
   const [loading, setLoading] = useState(true);
-  const [searching, setSearching] = useState(false);
+  const [catalogLoading, setCatalogLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   // IDs añadidos en esta sesión (para feedback inmediato aunque la store tarde)
@@ -33,10 +43,17 @@ export const useAddItemScreen = (itemListId: string) => {
 
   // 1. Cargar recomendaciones al montar
   useEffect(() => {
+    let cancelled = false;
+    // Si se sirvió la caché, la red avisa después con los IDs frescos.
+    const onFresh = (fresh: string[]) => {
+      if (!cancelled) setRecommendedIds(fresh);
+    };
+
     const fetchRecommended = async () => {
       setLoading(true);
       try {
-        const ids = await itemRepository.getRecommended();
+        const ids = await itemFeedRepository.getRecommendedByItemList(itemListId, onFresh);
+        if (cancelled) return;
         setRecommendedIds(ids);
         setError(null);
       } catch (err) {
@@ -47,31 +64,30 @@ export const useAddItemScreen = (itemListId: string) => {
       }
     };
 
-    fetchRecommended();
-  }, []);
+    if (itemListId) fetchRecommended();
+    return () => {
+      cancelled = true;
+    };
+  }, [itemListId]);
 
-  // 2. Búsqueda con debounce cuando cambia la query
+  // 2. Catálogo completo para la búsqueda local (normalmente ya está en RAM desde el arranque)
   useEffect(() => {
-    if (!query.trim()) {
-      setResultIds([]);
-      setSearching(false);
-      return;
-    }
+    let cancelled = false;
+    const apply = (ids: string[]) => {
+      if (!cancelled) setCatalogIds(ids);
+    };
 
-    setSearching(true);
-    const handler = setTimeout(async () => {
-      try {
-        const ids = await itemRepository.search(query);
-        setResultIds(ids);
-      } catch (err) {
-        console.error('[useAddItemScreen] Error en búsqueda:', err);
-      } finally {
-        setSearching(false);
-      }
-    }, 350);
+    itemRepository.getCatalog(apply)
+      .then(apply)
+      .catch((err) => console.error('[useAddItemScreen] Error cargando el catálogo:', err))
+      .finally(() => {
+        if (!cancelled) setCatalogLoading(false);
+      });
 
-    return () => clearTimeout(handler);
-  }, [query]);
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // 3. Hidratación reactiva: IDs -> objetos desde la Entity Store
   const recommended = useMemo(
@@ -79,10 +95,32 @@ export const useAddItemScreen = (itemListId: string) => {
     [recommendedIds, allItems]
   );
 
-  const results = useMemo(
-    () => resultIds.map((id) => allItems[id]).filter(Boolean),
-    [resultIds, allItems]
-  );
+  // Búsqueda local por título (y artista en canciones). Primero los que empiezan por la query.
+  const results = useMemo(() => {
+    const q = normalize(query.trim());
+    if (!q) return [];
+
+    const matches: { item: ItemSummaryDTO; title: string }[] = [];
+    for (const id of catalogIds) {
+      const item = allItems[id];
+      if (!item) continue;
+      const title = normalize(item.title);
+      if (title.includes(q) || normalize(item.artist).includes(q)) {
+        matches.push({ item, title });
+      }
+    }
+
+    return matches
+      .sort((a, b) =>
+        Number(b.title.startsWith(q)) - Number(a.title.startsWith(q)) ||
+        a.title.localeCompare(b.title)
+      )
+      .slice(0, MAX_RESULTS)
+      .map((m) => m.item);
+  }, [query, catalogIds, allItems]);
+
+  // Solo se "busca" mientras el catálogo aún no ha llegado (primer arranque sin caché)
+  const searching = !!query.trim() && catalogLoading && catalogIds.length === 0;
 
   // Items mostrados: resultados si hay búsqueda, si no las recomendaciones
   const items = query.trim() ? results : recommended;

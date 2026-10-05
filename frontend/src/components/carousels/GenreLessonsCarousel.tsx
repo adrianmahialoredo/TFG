@@ -37,7 +37,7 @@ export default function GenreLessonsCarousel({ title, genreId }: CarouselProps) 
 
     return (
         <View className="my-2">
-            <Text className="text-2xl font-semibold text-secondary mb-4 px-4">{title}</Text>
+            <Text className="text-xl font-semibold text-secondary mb-4 text-center w-full">{title}</Text>
             <FlatList
                 data={lessons}
                 keyExtractor={(item) => item.id}

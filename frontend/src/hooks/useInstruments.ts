@@ -26,3 +26,24 @@ export const useInstruments = (query: string = "") => {
 
     return { instruments, loading };
 };
+
+/**
+ * Resuelve una lista de IDs de instrumentos contra la Entity Store,
+ * trayendo los que falten vía Repository (Disco -> API).
+ */
+export const useInstrumentsByIds = (ids: (string | number)[]) => {
+    const instrumentsMap = useInstrumentEntitiesStore(state => state.instruments);
+    const key = ids.map(String).join(',');
+
+    useEffect(() => {
+        const missing = ids.map(String).filter(id => !instrumentsMap[id]);
+        if (missing.length > 0) instrumentRepository.getAllById(missing).catch(console.error);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [key]);
+
+    return useMemo(
+        () => ids.map(id => instrumentsMap[String(id)]).filter(Boolean),
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+        [key, instrumentsMap]
+    );
+};

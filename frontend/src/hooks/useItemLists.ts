@@ -2,9 +2,11 @@
 import { useEffect, useMemo, useState } from "react";
 import {useItemListEntitiesStore} from "../stores/entities";
 import * as itemListRepository from "../repositories/itemList.repository";
+import { CreateItemListDTO } from "../types";
 
 export const useItemLists = (userId: string | number |undefined) => {
     const [loading, setLoading] = useState(false);
+    const [creating, setCreating] = useState(false);
 
     // Selector estable: evitamos crear arrays nuevos dentro del snapshot de Zustand.
     const itemListsMap = useItemListEntitiesStore((state) => state.itemLists);
@@ -20,11 +22,27 @@ export const useItemLists = (userId: string | number |undefined) => {
         if (!userId) return;
         const load = async () => {
             setLoading(true);
-            await itemListRepository.getByUserId(userId);
+            await itemListRepository.getByUserId(userId.toString());
             setLoading(false);
         };
         load();
     }, [userId]);
 
-    return { lists, loading };
+    const createList = async (
+        payload: Omit<CreateItemListDTO, 'userId'>
+    ) => {
+        if (!userId) return null;
+
+        setCreating(true);
+        try {
+            return await itemListRepository.createItemList({
+                ...payload,
+                userId: userId.toString(),
+            });
+        } finally {
+            setCreating(false);
+        }
+    };
+
+    return { lists, loading, creating, createList };
 };

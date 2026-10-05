@@ -1,5 +1,6 @@
 package com.demo.demo.model;
 
+import com.demo.demo.utils.Identifiable;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
 import lombok.*;
@@ -29,7 +30,7 @@ import lombok.*;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class Instrument {
+public class Instrument implements Identifiable<Long> {
 
     /**
      * Unique identifier for the instrument.
@@ -55,4 +56,21 @@ public class Instrument {
     @NotBlank(message = "Instrument name cannot be blank")
     @Size(min = 2, max = 100, message = "Instrument name must be between 2 and 100 characters")
     private String name;
+
+    /**
+     * Two Instruments are equal when they have the same id, so collections (e.g. {@link java.util.Set})
+     * never hold the same Instrument twice even if it was loaded in different places or is a Hibernate proxy.
+     * Ids are assigned manually before the entity is added to any collection, so the hash is stable.
+     */
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof Instrument other)) return false;
+        return getId() != null && getId().equals(other.getId());
+    }
+
+    @Override
+    public int hashCode() {
+        return java.util.Objects.hashCode(getId());
+    }
 }

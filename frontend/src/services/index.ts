@@ -6,19 +6,9 @@
  *      import { getAll, getById } from './genre.service';
  */
 
-// Auth
-export * from './auth.service';
-
-// Users
-export * from './user.service';
-
-// Instruments
-export * from './instrument.service';
-
-// Instrument Genres
-export * from './instrumentGenre.service';
-
-
 // Spotify
-export * from './spotify.service';
+export { spotifyLogin, getSpotifyRecommendations } from './spotify.service';
+
+// Media
+export { uploadProfileImageToCloudinary } from './cloudinary.service';
 

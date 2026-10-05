@@ -2,6 +2,7 @@ package com.demo.demo.config;
 
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.validation.annotation.Validated;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 
@@ -21,6 +22,7 @@ import jakarta.validation.constraints.Pattern;
  */
 @Data
 @ConfigurationProperties(prefix = "spotify")
+@Validated
 public class SpotifyProperties {
 
     /**

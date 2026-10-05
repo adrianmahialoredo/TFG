@@ -5,6 +5,7 @@ import com.fasterxml.jackson.annotation.JsonManagedReference;
 import lombok.*;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
+import org.hibernate.annotations.ColumnDefault;
 
 /**
  * Represents a music lesson in the application.
@@ -29,14 +30,27 @@ import jakarta.validation.constraints.*;
 @DiscriminatorValue("LESSON")
 @Getter
 @Setter
-@AllArgsConstructor
 @NoArgsConstructor
+@AllArgsConstructor
 public class Lesson extends Item {
 
     /**
      * Indicates whether the lesson belongs to a specific genre.
      */
     private boolean belongsToGenre;
+
+    /**
+     * Indicates whether the lesson belongs to a specific instrument-genre.
+     * The default value lets Hibernate add the column to tables that already have rows.
+     */
+    @ColumnDefault("false")
+    private boolean belongsToInstrumentGenre;
+
+    /**
+     * Position of the lesson inside its instrument-genre (0-based).
+     */
+    @ColumnDefault("0")
+    private int indexInInstrumentGenre = 0;
 
     /**
      * Relation with Genre
@@ -46,7 +60,16 @@ public class Lesson extends Item {
      */
     @ManyToOne
     @JoinColumn(name = "genre_id")
-    private Genre genre;   
+    private Genre genre;
+
+    /**
+     * Relation with InstrumentGenre
+     * This is a many-to-one relationship, meaning that many lessons can belong to one instrument-genre.
+     * This side owns the relationship; {@link InstrumentGenre#getLessons()} is its inverse side.
+     */
+    @ManyToOne
+    @JoinColumn(name = "instrument_genre_id")
+    private InstrumentGenre instrumentGenre;
 
     /**
      * List of sections that make up the lesson.
@@ -56,7 +79,7 @@ public class Lesson extends Item {
     @OneToMany(mappedBy = "lesson", cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("orderIndex ASC")
     //@NotEmpty(message = "Lesson must have at least one section")
-    @JsonManagedReference
+    @JsonManagedReference(value = "lesson-sections")
     private List<LessonSection> sections = new ArrayList<>();
 
     // --- FILTERS --- //
@@ -68,5 +91,23 @@ public class Lesson extends Item {
     public void addSection(LessonSection section) {
         this.sections.add(section);
         section.setLesson(this);
+    }
+
+    /**
+     * Makes the lesson part of the given instrument-genre at the given position.
+     */
+    public void joinInstrumentGenre(InstrumentGenre instrumentGenre, int index) {
+        this.instrumentGenre = instrumentGenre;
+        this.belongsToInstrumentGenre = true;
+        this.indexInInstrumentGenre = index;
+    }
+
+    /**
+     * Removes the lesson from its instrument-genre.
+     */
+    public void leaveInstrumentGenre() {
+        this.instrumentGenre = null;
+        this.belongsToInstrumentGenre = false;
+        this.indexInInstrumentGenre = 0;
     }
 }

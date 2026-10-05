@@ -1,8 +1,10 @@
 package com.demo.demo.service;
 
 import com.demo.demo.dto.LessonDTO;
+import com.demo.demo.utils.mapper.DtoMapper;
 import com.demo.demo.model.*;
 import com.demo.demo.repository.*;
+import com.demo.demo.utils.EntityResolver;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -10,6 +12,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
 import java.util.stream.Collectors;
+
+import static com.demo.demo.utils.EntityResolver.findLesson;
 
 /**
  * Default implementation of {@link LessonService}.
@@ -22,32 +26,31 @@ import java.util.stream.Collectors;
 @Slf4j
 @Service
 @RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class LessonServiceImpl implements LessonService {
 
     private final LessonRepository lessonRepository;
-    private final GenreRepository genreRepository;
+    private final DtoMapper dtoMapper;
 
     @Override
-    @Transactional(readOnly = true)
-    public List<LessonDTO> getAllLessons() {
+    public List<LessonDTO> findAll() {
         return lessonRepository.findAll().stream()
-                .map(this::toDto)
+                .map(dtoMapper::lessonToLessonDto)
                 .collect(Collectors.toList());
     }
 
     @Override
-    @Transactional(readOnly = true)
-    public Optional<LessonDTO> getLessonById(Long id) {
-        return lessonRepository.findById(id).map(this::toDto);
+    public Optional<LessonDTO> findById(Long id) {
+        return findLesson(id).map(dtoMapper::lessonToLessonDto);
     }
 
     @Override
     @Transactional
-    public LessonDTO createLesson(LessonDTO dto) {
+    public LessonDTO create(LessonDTO dto) {
         // 1. Creamos la instancia
         Lesson lesson = new Lesson();
 
-        // 2. Seteamos el ID manual (crucial para tu arquitectura)
+        // 2. Seteamos el ID manual (crucial para la arquitectura)
         lesson.setId(dto.getId());
         lesson.setType(Item.Type.Lesson);
 
@@ -58,9 +61,18 @@ public class LessonServiceImpl implements LessonService {
         lesson.setBelongsToGenre(dto.isBelongsToGenre());
         lesson.setPopular(dto.isPopular());
 
-        if (dto.getGenreId() != null) {
-            lesson.setGenre(resolveGenre(dto.getGenreId()));
-        }
+        Optional.ofNullable(dto.getGenreId())
+                .map(EntityResolver::resolveGenre)
+                .ifPresent(genre -> {
+                    lesson.setGenre(genre);
+
+                    //Si pertenece a genero, sobrescribir la portada
+                    if (dto.isBelongsToGenre() && genre.getImageUrl() != null) {
+                        lesson.setImageUrl(genre.getImageUrl());
+                    }
+                });
+
+        assignInstrumentGenre(lesson, dto);
 
         // 4. IMPORTANTE: Poblamos las secciones ANTES del save
         // Esto es lo que satisface la validación @NotEmpty
@@ -81,98 +93,67 @@ public class LessonServiceImpl implements LessonService {
 
         // 6. Guardamos
         Lesson saved = lessonRepository.save(lesson);
-        return toDto(saved);
+        return dtoMapper.lessonToLessonDto(saved);
     }
 
     @Override
     @Transactional
-    public Optional<LessonDTO> updateLesson(Long id, LessonDTO dto) {
-        return lessonRepository.findById(id).map(existing -> {
+    public Optional<LessonDTO> update(Long id, LessonDTO dto) {
+        return findLesson(id).map(existing -> {
             updateLessonFromDto(existing, dto);
-            return toDto(lessonRepository.save(existing));
+            return dtoMapper.lessonToLessonDto(lessonRepository.save(existing));
         });
     }
 
     @Override
     @Transactional
-    public boolean deleteLesson(Long id) {
+    public boolean delete(Long id) {
         if (!lessonRepository.existsById(id)) return false;
         lessonRepository.deleteById(id);
         return true;
     }
 
     @Override
-    @Transactional(readOnly = true)
-    public List<LessonDTO> getLessonsByGenreId(Long genreId) {
-        return lessonRepository.findAll().stream()
-                .filter(l -> l.isBelongsToGenre() && l.getGenre() != null && l.getGenre().getId().equals(genreId))
-                .map(this::toDto)
+    public List<LessonDTO> findForGenre(Long genreId) {
+        return lessonRepository.findByGenreIdAndBelongsToGenreTrue(genreId).stream()
+                .map(dtoMapper::lessonToLessonDto)
                 .collect(Collectors.toList());
     }
 
     @Override
-    @Transactional(readOnly = true)
-    public List<LessonDTO> getLessonsByIds(List<Long> ids) {
+    public List<LessonDTO> findByIds(List<Long> ids) {
         if (ids == null || ids.isEmpty()) {
             return new ArrayList<>();
         }
 
         return lessonRepository.findAllById(ids).stream()
-                .map(this::toDto)
+                .map(dtoMapper::lessonToLessonDto)
                 .collect(Collectors.toList());
     }
 
     @Override
-    @Transactional(readOnly = true)
-    public List<LessonDTO> getHomeLessonsPopular() {
-        return lessonRepository.findPopular().stream()
-                .map(this::toDto)
+    public List<Long> findIdsPopular() {
+        return lessonRepository.findByPopularTrue().stream()
+                .map(Lesson::getId)
                 .collect(Collectors.toList());
     }
 
     @Override
-    @Transactional(readOnly = true)
-    public List<LessonDTO> getHomeLessonsNew() {
-        return lessonRepository.findHomeLessonsNew().stream()
-                .map(this::toDto)
+    public List<Long> findIdsNew() {
+        return lessonRepository.findAllByOrderByCreatedAtDescIdDesc().stream()
+                .map(Lesson::getId)
                 .collect(Collectors.toList());
     }
 
     @Override
-    @Transactional(readOnly = true)
-    public List<LessonDTO> getHomeLessonsRecommended() {
-        return lessonRepository.findHomeLessonsRecommended().stream()
-                .map(this::toDto)
+    public List<Long> findIdsRecommended() {
+        return lessonRepository.findAllByOrderByLevelAscIdAsc().stream()
+                .map(Lesson::getId)
                 .collect(Collectors.toList());
     }
 
     // -------- MAPPING (Paz con el Frontend) --------
 
-    private LessonDTO toDto(Lesson lesson) {
-        LessonDTO dto = new LessonDTO();
-        dto.setId(lesson.getId());
-        dto.setTitle(lesson.getTitle());
-        dto.setLevel(lesson.getLevel());
-
-        // Lógica de imagen: prioridad al género, luego a la lección
-        dto.setImageUrl(lesson.getGenre() != null && lesson.getGenre().getImageUrl() != null
-                ? lesson.getGenre().getImageUrl()
-                : lesson.getImageUrl());
-
-        dto.setBelongsToGenre(lesson.isBelongsToGenre());
-        dto.setPopular(lesson.isPopular());
-        if (lesson.getGenre() != null) {
-            dto.setGenreId(lesson.getGenre().getId());
-        }
-
-        // Devolvemos solo la lista de IDs para el Front
-        if (lesson.getSections() != null) {
-            dto.setSectionIds(lesson.getSections().stream()
-                    .map(LessonSection::getId)
-                    .collect(Collectors.toList()));
-        }
-        return dto;
-    }
 
     private void updateLessonFromDto(Lesson lesson, LessonDTO dto) {
         lesson.setTitle(dto.getTitle());
@@ -181,9 +162,11 @@ public class LessonServiceImpl implements LessonService {
         lesson.setBelongsToGenre(dto.isBelongsToGenre());
         lesson.setPopular(dto.isPopular());
 
-        if (dto.getGenreId() != null) {
-            lesson.setGenre(resolveGenre(dto.getGenreId()));
-        }
+        Optional.ofNullable(dto.getGenreId())
+                .map(EntityResolver::resolveGenre)
+                .ifPresent(lesson::setGenre);
+
+        assignInstrumentGenre(lesson, dto);
 
         // Si la actualización incluye secciones, refrescamos el agregado
         if (dto.getSections() != null) {
@@ -198,9 +181,14 @@ public class LessonServiceImpl implements LessonService {
         }
     }
 
-    private Genre resolveGenre(Long genreId) {
-        return genreRepository.findById(genreId)
-                .orElseThrow(() -> new IllegalArgumentException("Genre not found: " + genreId));
+    /**
+     * Makes the lesson part of the instrument-genre indicated in the DTO, if any.
+     * As with the genre, a DTO without instrumentGenreId leaves the current instrument-genre untouched.
+     */
+    private void assignInstrumentGenre(Lesson lesson, LessonDTO dto) {
+        Optional.ofNullable(dto.getInstrumentGenreId())
+                .map(EntityResolver::resolveInstrumentGenre)
+                .ifPresent(instrumentGenre -> lesson.joinInstrumentGenre(instrumentGenre, dto.getIndexInInstrumentGenre()));
     }
 }
 

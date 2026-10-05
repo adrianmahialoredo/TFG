@@ -6,7 +6,8 @@ import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
-import lombok.*;
+import lombok.Data;
+import com.demo.demo.dto.validation.OnCreate;
 
 /**
  * Data Transfer Object for user information.
@@ -63,11 +64,12 @@ public class UserDto {
      * This is required and should be transmitted securely.
      * Must be at least 8 characters and contain uppercase, digit and special character.
      */
-    @NotBlank(message = "Password is required")
+    @NotBlank(message = "Password is required", groups = OnCreate.class)
     @Size(min = 8, message = "Password must be at least 8 characters")
     @Pattern(
-        regexp = "^(?=.*[A-Z])(?=.*[0-9])(?=.*[@$!%*?&])[A-Za-z0-9@$!%*?&]{8,}$",
-        message = "Password must contain uppercase letter, digit and special character (@$!%*?&)"
+        // Same rule as the app: any character that is not a letter, digit or whitespace counts as a symbol
+        regexp = "^(?=.*[A-Z])(?=.*[0-9])(?=.*[^A-Za-z0-9\\s])\\S{8,}$",
+        message = "Password must contain an uppercase letter, a digit and a symbol, and no spaces"
     )
     private String password;
     

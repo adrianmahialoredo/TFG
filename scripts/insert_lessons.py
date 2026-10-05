@@ -2,8 +2,12 @@ import json
 import requests
 from pathlib import Path
 
+from console_utils import configure_console
+
+configure_console()
+
 # Configuration
-API_URL = 'http://localhost:8080/lessons'
+API_URL = 'http://localhost:8080/api/lessons'
 DATA_FILE = Path(__file__).parent.parent / 'data' / 'lessons.json'
 
 def load_data(file_path):
@@ -59,4 +63,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-

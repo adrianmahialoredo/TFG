@@ -1,7 +1,8 @@
 import React from "react";
 import { TouchableOpacity, View, Text, Image } from "react-native";
-import { CirclePlus, CircleCheck } from "lucide-react-native";
+import { CircleCheck } from "lucide-react-native";
 import { COLORS } from "../constants/Theme";
+import RoundedSquarePlus from "./icons/RoundedSquarePlus";
 
 type ItemProps = {
   item: {
@@ -11,14 +12,23 @@ type ItemProps = {
     imageUrl: string;
     info: string; // Additional information to display
   };
-    onPress: () => void;
-    added?: boolean;
+  onPress: () => void;
+  added?: boolean;
+  inverted?: boolean;
 };
 
-export default function AddListItem({ item, onPress, added = false }: ItemProps ) {
+export default function AddListItem({ item, onPress, added = false, inverted = false }: ItemProps ) {
+  const cardClassName = inverted
+    ? 'flex-row flex-1 bg-primary border border-secondary rounded-2xl shadow-md'
+    : 'flex-row flex-1 bg-secondary rounded-2xl shadow-md';
+  const infoClassName = inverted
+    ? 'text-base text-secondary justify-center text-center'
+    : 'text-base text-primary justify-center text-center';
+  const iconColor = inverted ? COLORS.secondary : COLORS.primary;
+
   return (
     <View
-      className="flex-row flex-1 bg-secondary rounded-2xl shadow-md"
+      className={cardClassName}
       style={{ opacity: added ? 0.5 : 1 }}
     >
         <Image
@@ -26,13 +36,13 @@ export default function AddListItem({ item, onPress, added = false }: ItemProps 
           className="h-24 w-24 rounded-l-xl"
         />
         <View className="self-center items-center flex-1">
-          <Text className="text-base text-primary justify-center text-center">{item.info}</Text>
+          <Text className={infoClassName}>{item.info}</Text>
         </View>
         <TouchableOpacity onPress={onPress} disabled={added} className="p-4 items-center justify-center">
           {added ? (
-            <CircleCheck size={36} color={COLORS.primary} />
+            <CircleCheck size={36} color={iconColor} />
           ) : (
-            <CirclePlus size={36} color={COLORS.primary} />
+            <RoundedSquarePlus size={36} color={iconColor} />
           )}
         </TouchableOpacity>
     </View>

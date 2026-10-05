@@ -2,6 +2,7 @@ package com.demo.demo.repository;
 
 import java.util.Optional;
 
+import com.demo.demo.model.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
@@ -23,6 +24,14 @@ public interface SpotifyUserRepository extends JpaRepository<SpotifyUser, Long> 
     /**
      * Finds a SpotifyUser by their Spotify user ID.
      * 
+     * @param userId the related user ID to search for
+     * @return an Optional containing the SpotifyUser if found, or empty if not found
+     */
+    Optional<SpotifyUser> findByUserId(Long userId);
+
+    /**
+     * Finds a SpotifyUser by the ID of the account in Spotify.
+     *
      * @param spotifyUserId the Spotify user ID to search for
      * @return an Optional containing the SpotifyUser if found, or empty if not found
      */

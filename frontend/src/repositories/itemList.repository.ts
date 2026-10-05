@@ -2,104 +2,103 @@ import * as itemListService from '../services/itemList.service';
 import * as itemListLocal from '../local/itemList.local';
 import * as itemRepository from '../repositories/item.repository';
 import { useItemListEntitiesStore } from "../stores/entities";
-import {AnyItemDTO, ItemListDTO} from '../types';
+import { CreateItemListDTO, ItemListDTO } from '../types';
+import { createEntityCache } from '../utils/entityCache.utils';
+
+/** Núcleo de caché de la entidad: RAM -> Disco -> API + Stale-While-Revalidate. */
+const cache = createEntityCache<ItemListDTO>({
+    name: 'ItemListRepo',
+    getRam: () => useItemListEntitiesStore.getState().itemLists,
+    setRam: (entities) => useItemListEntitiesStore.getState().setItemLists(entities),
+    local: { ...itemListLocal, saveBatch: itemListLocal.saveBatchWithUserIndex },
+    fetchByIds: itemListService.getAllById,
+});
+
+const hydrateItemLists = async (itemLists: ItemListDTO[]) => {
+    if (itemLists.length === 0) return;
+    useItemListEntitiesStore.getState().setItemLists(itemLists);
+    cache.markFresh(itemLists.map(l => l.id.toString()));
+    await itemListLocal.saveBatchWithUserIndex(itemLists).catch(console.error);
+};
 
 export const getById = async (id: string): Promise<ItemListDTO | null> => {
-    let itemList: ItemListDTO|null = await itemListLocal.getById(id);
+    // 1. RAM
+    const inRam = useItemListEntitiesStore.getState().itemLists[id];
+    if (inRam) {
+        cache.revalidate([id]);
+        return inRam;
+    }
 
+    // 2. DISCO
+    let itemList: ItemListDTO | null = await itemListLocal.getById(id);
+    if (itemList) cache.revalidate([id]);
+
+    // 3. API
     if (!itemList) {
         try {
             itemList = await itemListService.getById(id);
-            if (itemList) {
-                await itemListLocal.saveBatch([itemList]).catch(e => console.error("Local save failed", e));
-            }
+            cache.markFresh([id]);
+            if (itemList) await hydrateItemLists([itemList]);
         } catch (error) {
             console.error(`Error fetching itemList with ID ${id}:`, error);
             return null;
         }
     }
 
-    if (itemList) {
-        useItemListEntitiesStore.getState().setItemLists([itemList]);
-    }
+    if (itemList) useItemListEntitiesStore.getState().setItemLists([itemList]);
 
     return itemList;
 }
 
-export const getAllById = async (ids: string[]): Promise<ItemListDTO[]> => {
-    const { cached, missing } = await itemListLocal.getAllById(ids);
+export const getAllById = cache.getAllById;
 
-    let remoteItemLists: ItemListDTO[] = [];
-
-    if (missing.length > 0) {
-        try {
-            remoteItemLists = await itemListService.getAllById(missing);
-            if (remoteItemLists.length > 0) {
-                itemListLocal.saveBatch(remoteItemLists).catch(console.error);
-            }
-        } catch (error) {
-            console.error("[ItemListRepo] API Error", error);
-        }
-    }
-
-    const all = [...cached, ...remoteItemLists];
-    useItemListEntitiesStore.getState().setItemLists(all);
-
-    const map = new Map(all.map(i => [i.id.toString(), i]));
-    return ids.map(id => map.get(id)).filter((i): i is ItemListDTO => !!i);
-}
-
-export const getItemListWithItems = async (
-    itemListId: string
-): Promise<{ list: ItemListDTO | null, items: AnyItemDTO[] }> => {
+/**
+ * Carga una lista y sus items (cabecera + entidades) en la RAM.
+ * Retorna los IDs de los items en el orden de la lista; la UI los resuelve
+ * contra las Entity Stores.
+ */
+export const getItemListWithItems = async (itemListId: string): Promise<string[]> => {
     try {
-        // 1. Obtener la cabecera de la lista
-        let list = await itemListLocal.getById(itemListId);
-        if (!list) {
-            list = await itemListService.getById(itemListId);
-            if (list) await itemListLocal.saveSingle(list);
-        }
-
-        if (!list) return { list: null, items: [] };
-
-        // 2. Obtener los objetos reales usando el nuevo repo polimórfico
-        // Esto buscará en Local -> Service (Batch) -> RAM
-        const items = await itemRepository.getAllById(list.itemIds || []);
-
-        return { list, items };
+        const list = await getById(itemListId);
+        const itemIds = list?.itemIds || [];
+        await itemRepository.getAllById(itemIds);
+        return itemIds;
     } catch (error) {
         console.error("[ItemListRepo] Error en getItemListWithItems:", error);
-        return { list: null, items: [] };
+        return [];
     }
 };
 
-export const getByUserId = async (userId: string): Promise<ItemListDTO[]> => {
+/**
+ * Obtiene las listas de un usuario. Retorna IDs (hidratando la RAM y el Local).
+ * Cache-first con sincronización de fondo.
+ */
+export const getByUserId = async (userId: string): Promise<string[]> => {
     try {
-        // 1. Intentar siempre primero el DISCO para velocidad
+        // 1. Cache-first: DISCO
         const localLists = await itemListLocal.getByUserId(userId);
 
         if (localLists && localLists.length > 0) {
-            // Actualizamos la RAM para que la UI reaccione, pero devolvemos local
             useItemListEntitiesStore.getState().setItemLists(localLists);
 
-            // Opcional: Actualizar de fondo sin bloquear
-            itemListService.getByUserId(userId).then(remote => {
-                if (remote.length > 0) {
-                    itemListLocal.saveBatchWithUserIndex(remote);
-                    useItemListEntitiesStore.getState().setItemLists(remote);
+            // 2. Sync de fondo para mantener RAM/Disco frescos
+            itemListService.getUserIds(userId).then(async (remoteIds) => {
+                if (remoteIds.length > 0) {
+                    const remoteLists = await itemListService.getAllById(remoteIds);
+                    await hydrateItemLists(remoteLists);
                 }
             }).catch(() => {});
 
-            return localLists;
+            return localLists.map(l => l.id.toString());
         }
 
-        // 2. Si no hay nada en disco, vamos a la API
-        const remoteLists = await itemListService.getByUserId(userId);
-        if (remoteLists.length > 0) {
-            useItemListEntitiesStore.getState().setItemLists(remoteLists);
-            await itemListLocal.saveBatchWithUserIndex(remoteLists);
-        }
-        return remoteLists;
+        // 3. Si no hay nada en local: API (ids -> entidades completas)
+        const remoteIds = await itemListService.getUserIds(userId);
+        if (remoteIds.length === 0) return [];
+
+        const remoteLists = await itemListService.getAllById(remoteIds);
+        await hydrateItemLists(remoteLists);
+        return remoteLists.map(l => l.id.toString());
 
     } catch (error) {
         console.error("[ItemListRepo] Error en getByUserId:", error);
@@ -138,6 +137,51 @@ export const removeItemFromList = async (listId: string, itemId: string): Promis
         return updated;
     } catch (error) {
         console.error("[ItemListRepo] Error en removeItemFromList:", error);
+        return null;
+    }
+};
+
+/**
+ * Crea una lista nueva y garantiza hidratación atómica (RAM + Disco) antes de devolver.
+ */
+export const createItemList = async (payload: CreateItemListDTO): Promise<ItemListDTO | null> => {
+    try {
+        const created = await itemListService.createItemList(payload);
+        await hydrateItemLists([created]);
+        return created;
+    } catch (error) {
+        console.error("[ItemListRepo] Error en createItemList:", error);
+        return null;
+    }
+};
+
+/**
+ * Actualiza una lista existente y sincroniza RAM + Disco antes de retornar.
+ */
+export const updateItemList = async (
+    listId: string,
+    updates: Partial<ItemListDTO>
+): Promise<ItemListDTO | null> => {
+    try {
+        const current = await getById(listId);
+        if (!current) return null;
+
+        const payload: ItemListDTO = {
+            ...current,
+            ...updates,
+            id: current.id,
+            userId: current.userId,
+            itemIds: updates.itemIds ?? current.itemIds ?? [],
+        };
+
+        const updated = await itemListService.updateItemList(listId, payload);
+        if (updated) {
+            useItemListEntitiesStore.getState().setItemLists([updated]);
+            await itemListLocal.saveSingle(updated).catch(console.error);
+        }
+        return updated;
+    } catch (error) {
+        console.error('[ItemListRepo] Error en updateItemList:', error);
         return null;
     }
 };

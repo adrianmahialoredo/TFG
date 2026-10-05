@@ -1,12 +1,12 @@
 package com.demo.demo.dto;
 
+import lombok.Data;
+
 import com.demo.demo.model.Item;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import java.time.LocalDateTime;
-import lombok.Getter;
-import lombok.Setter;
 
 /**
  * Base Data Transfer Object for items that share common identifiers.
@@ -17,8 +17,7 @@ import lombok.Setter;
  * @version 1.0
  * @since 2026-05-10
  */
-@Getter
-@Setter
+@Data
 public abstract class ItemDTO {
 
     /**
@@ -39,8 +38,18 @@ public abstract class ItemDTO {
 
     /**
      * Level of the item, represented as a rating between 1 and 5 stars.
+     * 0 means the item has no level (e.g. songs).
      */
-    @Min(value = 1, message = "Level must be at least 1")
+    @Min(value = 0, message = "Level must be at least 0")
     @Max(value = 5, message = "Level must be at most 5")
     private int level;
+
+    /**
+     * Concrete subtype of the item. Serialized as {@code "type"} so the frontend can tell
+     * apart the DTOs of a mixed item feed (e.g. recent items) and store each one in its place.
+     * It is read-only: each subclass returns its constant and incoming values are ignored.
+     *
+     * @return the subtype of the item
+     */
+    public abstract Item.Type getType();
 }

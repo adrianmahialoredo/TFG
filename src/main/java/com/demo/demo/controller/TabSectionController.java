@@ -2,101 +2,119 @@ package com.demo.demo.controller;
 
 import com.demo.demo.dto.TabSectionDTO;
 import com.demo.demo.service.TabSectionService;
+import com.demo.demo.dto.validation.OnCreate;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.*;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.validation.annotation.Validated;
+
 import java.util.List;
 
 /**
- * Controller for managing tab sections in a song lesson.
- * 
- * Provides endpoints to create, retrieve, update, and delete tab sections,
- * as well as to retrieve tab sections by their associated song lesson ID.
- * 
- * This controller uses the TabSectionService to handle business logic
- * and convert entities to DTOs for API responses.
- * 
+ * REST controller for the tab sections of a song lesson.
+ *
+ * Base path: {@code /api/tab-sections}
+ *
  * Endpoints:
- * - POST /tab-sections: Create a new tab section
- * - GET /tab-sections/{id}: Retrieve a tab section by ID
- * - GET /tab-sections/by-lesson/{lessonId}: Retrieve tab sections by song lesson ID
- * - PUT /tab-sections/{id}: Update an existing tab section by ID
- * - DELETE /tab-sections/{id}: Delete a tab section by ID
- * 
- * This controller is annotated with @RestController to handle RESTful requests
- * and @RequestMapping to define the base path for all endpoints.
- * 
+ * - GET    /api/tab-sections                                Retrieve all tab sections
+ * - POST   /api/tab-sections/by-ids                         Retrieve the tab sections with the given IDs (IDs in the body)
+ * - GET    /api/tab-sections/{id}                           Retrieve a tab section by ID
+ * - GET    /api/tab-sections/by-song-lesson/{songLessonId}  Retrieve the tab sections of a song lesson
+ * - POST   /api/tab-sections                                Create a tab section
+ * - PUT    /api/tab-sections/{id}                           Update a tab section
+ * - DELETE /api/tab-sections/{id}                           Delete a tab section
+ *
+ * Responses: 200 OK, 201 Created (create), 204 No Content (delete) and 404 Not Found
+ * when the tab section does not exist. Other errors are translated by
+ * {@link com.demo.demo.exception.GlobalExceptionHandler}.
+ *
  * @author Adrián Mahía
  * @version 1.0
  * @since 2025-06-06
  */
 @RestController
+@RequestMapping("/api/tab-sections")
 @RequiredArgsConstructor
-@RequestMapping("/tab-sections")
 public class TabSectionController {
 
     private final TabSectionService tabSectionService;
 
     /**
-     * Creates a new tab section.
-     * 
-     * @param dto The TabSectionDTO containing the details of the section to create
-     * @return ResponseEntity with the created TabSectionDTO and HTTP status 201 (Created)
+     * Retrieves all tab sections.
+     *
+     * @return 200 OK with the list of tab sections
      */
-    @PostMapping
-    public ResponseEntity<TabSectionDTO> create(@RequestBody TabSectionDTO dto) {
-        TabSectionDTO created = tabSectionService.createTabSection(dto);
-        return ResponseEntity.status(HttpStatus.CREATED).body(created);
+    @GetMapping
+    public ResponseEntity<List<TabSectionDTO>> getAll() {
+        return ResponseEntity.ok(tabSectionService.findAll());
+    }
+
+    /**
+     * Retrieves the tab sections with the given IDs. IDs that do not exist are ignored.
+     *
+     * @param ids the IDs of the tab sections
+     * @return 200 OK with the tab sections found
+     */
+    @PostMapping("/by-ids")
+    public ResponseEntity<List<TabSectionDTO>> getByIds(@RequestBody List<Long> ids) {
+        return ResponseEntity.ok(tabSectionService.findByIds(ids));
     }
 
     /**
      * Retrieves a tab section by its ID.
-     * 
-     * @param id The ID of the TabSection to retrieve
-     * @return ResponseEntity with the TabSectionDTO if found, or HTTP status 404 (Not Found) if not found
+     *
+     * @param id the ID of the tab section
+     * @return 200 OK with the tab section, or 404 Not Found
      */
     @GetMapping("/{id}")
     public ResponseEntity<TabSectionDTO> getById(@PathVariable Long id) {
-        return tabSectionService.getTabSectionById(id)
-                .map(ResponseEntity::ok)
-                .orElseGet(() -> ResponseEntity.notFound().build());
+        return ResponseEntity.of(tabSectionService.findById(id));
     }
 
     /**
-     * Retrieves all tab sections associated with a specific song lesson ID.
-     * 
-     * @param lessonId The ID of the song lesson to retrieve sections for
-     * @return A list of TabSectionDTOs associated with the given song lesson ID
+     * Retrieves the tab sections of a song lesson.
+     *
+     * @param songLessonId the ID of the song lesson
+     * @return 200 OK with the tab sections of the song lesson
      */
-    @GetMapping("/by-lesson/{lessonId}")
-    public List<TabSectionDTO> getByLessonId(@PathVariable Long lessonId) {
-        return tabSectionService.getTabSectionsBySongLessonId(lessonId);
+    @GetMapping("/by-song-lesson/{songLessonId}")
+    public ResponseEntity<List<TabSectionDTO>> getForSongLesson(@PathVariable Long songLessonId) {
+        return ResponseEntity.ok(tabSectionService.findForSongLesson(songLessonId));
     }
 
     /**
-     * Updates an existing tab section.
-     * 
-     * @param id The ID of the TabSection to update
-     * @param dto The TabSectionDTO containing the updated details
-     * @return ResponseEntity with the updated TabSectionDTO if found, or HTTP status 404 (Not Found) if not found
+     * Creates a tab section.
+     *
+     * @param dto the tab section to create
+     * @return 201 Created with the created tab section
+     */
+    @PostMapping
+    public ResponseEntity<TabSectionDTO> create(@Validated(OnCreate.class) @RequestBody TabSectionDTO dto) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(tabSectionService.create(dto));
+    }
+
+    /**
+     * Updates a tab section.
+     *
+     * @param id  the ID of the tab section
+     * @param dto the new data of the tab section
+     * @return 200 OK with the updated tab section, or 404 Not Found
      */
     @PutMapping("/{id}")
-    public ResponseEntity<TabSectionDTO> update(@PathVariable Long id, @RequestBody TabSectionDTO dto) {
-        return tabSectionService.updateTabSection(id, dto)
-                .map(ResponseEntity::ok)
-                .orElseGet(() -> ResponseEntity.notFound().build());
+    public ResponseEntity<TabSectionDTO> update(@PathVariable Long id, @Valid @RequestBody TabSectionDTO dto) {
+        return ResponseEntity.of(tabSectionService.update(id, dto));
     }
 
     /**
-     * Deletes a tab section by its ID.
-     * 
-     * @param id The ID of the TabSection to delete
-     * @return ResponseEntity with HTTP status 204 (No Content) if deleted, or HTTP status 404 (Not Found) if not found
+     * Deletes a tab section.
+     *
+     * @param id the ID of the tab section
+     * @return 204 No Content, or 404 Not Found
      */
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
-        boolean deleted = tabSectionService.deleteTabSection(id);
-        return deleted ? ResponseEntity.noContent().build() : ResponseEntity.notFound().build();
+        return tabSectionService.delete(id) ? ResponseEntity.noContent().build() : ResponseEntity.notFound().build();
     }
 }
-

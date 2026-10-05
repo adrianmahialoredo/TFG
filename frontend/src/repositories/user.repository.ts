@@ -1,7 +1,18 @@
 import * as userService from '../services/user.service';
 import * as userLocal from '../local/user.local';
+import { uploadProfileImageToCloudinary } from '../services/cloudinary.service';
 import { useUserEntitiesStore } from "../stores/entities";
 import { UserDTO } from '../types';
+import { createEntityCache } from '../utils/entityCache.utils';
+
+/** Núcleo de caché de la entidad: RAM -> Disco -> API + Stale-While-Revalidate. */
+const cache = createEntityCache<UserDTO>({
+    name: 'UserRepo',
+    getRam: () => useUserEntitiesStore.getState().users,
+    setRam: (entities) => useUserEntitiesStore.getState().setUsers(entities),
+    local: userLocal,
+    fetchByIds: userService.getAllById,
+});
 
 /**
  * Helper para hidratar RAM y Local de forma atómica
@@ -10,6 +21,7 @@ const hydrateUsers = async (users: UserDTO[]) => {
   if (users.length === 0) return;
   // 1. RAM
   useUserEntitiesStore.getState().setUsers(users);
+  cache.markFresh(users.map(u => u.id.toString()));
   // 2. DISCO
   await userLocal.saveBatch(users).catch(console.error);
 };
@@ -17,15 +29,20 @@ const hydrateUsers = async (users: UserDTO[]) => {
 export const getById = async (id: string): Promise<UserDTO | null> => {
   // 1. Intentar RAM primero (Súper rápido)
   let user: UserDTO | null = useUserEntitiesStore.getState().users[id];
-  if (user) return user;
+  if (user) {
+    cache.revalidate([id]);
+    return user;
+  }
 
   // 2. Intentar Local
   user = await userLocal.getById(id);
+  if (user) cache.revalidate([id]);
 
   // 3. Fallback a API
   if (!user) {
     try {
       user = await userService.getById(id);
+      cache.markFresh([id]);
       if (user) await hydrateUsers([user]);
     } catch (error) {
       console.error(`[UserRepo] Error fetching user ${id}:`, error);
@@ -39,37 +56,7 @@ export const getById = async (id: string): Promise<UserDTO | null> => {
   return user;
 };
 
-export const getAllById = async (ids: string[]): Promise<UserDTO[]> => {
-  // 1. Preguntar al local
-  const { cached, missing } = await userLocal.getAllById(ids);
-
-  let remoteUsers: UserDTO[] = [];
-
-  // 2. Si faltan IDs, vamos a la API
-  if (missing.length > 0) {
-    try {
-      // Usamos el servicio de usuarios, no el de canciones (obvio)
-      remoteUsers = await userService.getAllById(missing);
-
-      if (remoteUsers.length > 0) {
-        // Usamos el helper que definimos antes
-        await hydrateUsers(remoteUsers);
-      }
-    } catch (error) {
-      console.error("[UserRepo] API Error al recuperar usuarios faltantes", error);
-    }
-  }
-
-  // 3. Unificamos lo que había en caché y lo que vino de la API
-  const all = [...cached, ...remoteUsers];
-
-  // Aseguramos que la RAM esté al día con todo
-  useUserEntitiesStore.getState().setUsers(all);
-
-  // 4. Reordenar para que coincida con el array de IDs original
-  const map = new Map(all.map(u => [u.id.toString(), u]));
-  return ids.map(id => map.get(id)).filter((u): u is UserDTO => !!u);
-};
+export const getAllById = cache.getAllById;
 
 /**
  * Actualizar el perfil del usuario
@@ -102,4 +89,12 @@ export const updateProfile = async (userId: string, updates: Partial<UserDTO>): 
     console.error(`[UserRepo] Error updating profile, rolled back:`, error);
     throw error;
   }
+};
+
+/**
+ * Sube una imagen de perfil a Cloudinary y actualiza el usuario con la URL resultante.
+ */
+export const updateProfileImage = async (userId: string, localUri: string): Promise<UserDTO | null> => {
+  const secureUrl = await uploadProfileImageToCloudinary(localUri);
+  return updateProfile(userId, { profileImageUrl: secureUrl });
 };

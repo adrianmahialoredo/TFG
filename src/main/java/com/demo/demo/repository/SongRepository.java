@@ -1,126 +1,117 @@
 package com.demo.demo.repository;
 
+import com.demo.demo.model.Genre;
+import com.demo.demo.model.Instrument;
 import com.demo.demo.model.Song;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Query;
-import org.springframework.data.repository.query.Param;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.stereotype.Repository;
+
+import java.util.Collection;
 import java.util.List;
 
 /**
  * Repository interface for managing Song entities.
- * 
- * This interface extends JpaRepository to provide CRUD operations
- * for Song entities, including methods to find songs by artist name.
+ *
+ * All the queries are derived from the method names. {@code Distinct} avoids repeated songs when
+ * joining the {@code genres} / {@code instruments} collections, and {@code IdNotIn} receives the IDs
+ * of the songs that must be excluded (e.g. the songs already in a playlist).
  *
  * @author Adrián Mahía
  * @version 1.0
  * @since 2025-06-06
  */
 @Repository
-public interface SongRepository extends JpaRepository<Song, Long> {
+public interface SongRepository extends JpaRepository<Song, Long>, JpaSpecificationExecutor<Song> {
 
     /**
-     * Finds a Song entity by its ID.
+     * Finds the songs of a decade.
      *
-     * @param id
-     * @return the song matching id
+     * @param decade the decade, in the format "1990s"
+     * @return the songs of the decade
      */
-    Song findById(long id);
-
     List<Song> findByDecade(String decade);
 
     /**
-     * Finds all popular songs with a limit.
+     * Finds the popular songs.
      *
-     * @return a list of popular songs limited by the specified limit
+     * @param pageable limit of songs to return
+     * @return the popular songs
      */
-    @Query(value =
-        "SELECT s " +
-        "FROM Song s " +
-        "WHERE s.popular = true"
-    )
-    List<Song> findPopular(Pageable pageable);
+    List<Song> findByPopularTrue(Pageable pageable);
 
     /**
-     * Finds all popular songs associated with a specific genre.
+     * Finds the new songs.
      *
-     * @param genreId the ID of the genre
-     * @return a list of popular songs associated with the given genre
+     * @param pageable limit of songs to return
+     * @return the new songs
      */
-    @Query(value =
-        "SELECT DISTINCT s " +
-        "FROM Song s " +
-        "JOIN s.genres g " +
-        "WHERE g.id = :genreId " +
-        "AND s.genrePopular = true"
-    )
-    List<Song> findGenrePopularByGenreId(@Param("genreId") Long genreId);
+    List<Song> findByGenreNewTrue(Pageable pageable);
 
     /**
-     * Finds all classic songs associated with a specific genre.
+     * Finds the popular songs of a genre.
      *
      * @param genreId the ID of the genre
-     * @return a list of classic songs associated with the given genre
+     * @return the popular songs of the genre
      */
-    @Query(value =
-        "SELECT DISTINCT s " +
-        "FROM Song s " +
-        "JOIN s.genres g " +
-        "WHERE g.id = :genreId " +
-        "AND s.genreClassic = true"
-    )
-    List<Song> findGenreClassicByGenreId(@Param("genreId") Long genreId);
+    List<Song> findDistinctByGenresIdAndGenrePopularTrue(Long genreId);
 
     /**
-     * Finds all new songs associated with a specific genre.
+     * Finds the classic songs of a genre.
      *
      * @param genreId the ID of the genre
-     * @return a list of new songs associated with the given genre
+     * @return the classic songs of the genre
      */
-    @Query(value =
-        "SELECT DISTINCT s " +
-        "FROM Song s " +
-        "JOIN s.genres g " +
-        "WHERE g.id = :genreId " +
-        "AND s.genreNew = true"
-    )
-    List<Song> findGenreNewByGenreId(@Param("genreId") Long genreId);
+    List<Song> findDistinctByGenresIdAndGenreClassicTrue(Long genreId);
 
     /**
-     * Finds all popular songs globally for the Home screen.
-     * @todo Implementar criterios de popularidad global
-     * 
-     * @return a list of all popular songs globally
+     * Finds the new songs of a genre.
+     *
+     * @param genreId the ID of the genre
+     * @return the new songs of the genre
      */
-    @Query("SELECT s FROM Song s WHERE s.popular = true")
-    List<Song> findHomeSongsPopular();
+    List<Song> findDistinctByGenresIdAndGenreNewTrue(Long genreId);
 
     /**
-     * Finds all new songs globally for the Home screen.
-     * @todo Implementar criterios de canciones nuevas
-     * 
-     * @return a list of all new songs globally
+     * Finds the songs of a genre that feature any of the given instruments, excluding some songs.
+     *
+     * @param genreId     the ID of the genre
+     * @param instruments the instruments (any of them)
+     * @param excludedIds the IDs of the songs to exclude
+     * @param pageable    limit of songs to return
+     * @return the matching songs
      */
-    @Query("SELECT s FROM Song s WHERE s.genreNew = true")
-    List<Song> findHomeSongsNew();
+    List<Song> findDistinctByGenresIdAndInstrumentsInAndIdNotIn(Long genreId, Collection<Instrument> instruments, Collection<Long> excludedIds, Pageable pageable);
 
     /**
-     * Finds all recommended songs for the user for the Home screen.
-     * @todo Implementar lógica de recomendación basada en preferencias del usuario
-     * 
-     * @return a list of recommended songs for the user
+     * Finds the songs of a genre, excluding some songs.
+     *
+     * @param genreId     the ID of the genre
+     * @param excludedIds the IDs of the songs to exclude
+     * @param pageable    limit of songs to return
+     * @return the matching songs
      */
-    @Query("SELECT s FROM Song s WHERE 1 = 0")
-    List<Song> findHomeSongsRecommended();
+    List<Song> findDistinctByGenresIdAndIdNotIn(Long genreId, Collection<Long> excludedIds, Pageable pageable);
 
     /**
-     * Finds all songs from Spotify for the user for the Home screen.
-     * @todo Implementar integración con Spotify para obtener canciones del usuario
-     * 
-     * @return a list of songs from Spotify
+     * Finds the songs that feature any of the given instruments, excluding some songs.
+     *
+     * @param instruments the instruments (any of them)
+     * @param excludedIds the IDs of the songs to exclude
+     * @param pageable    limit of songs to return
+     * @return the matching songs
      */
-    @Query("SELECT s FROM Song s WHERE 1 = 0")
-    List<Song> findHomeSongsFromSpotify();
+    List<Song> findDistinctByInstrumentsInAndIdNotIn(Collection<Instrument> instruments, Collection<Long> excludedIds, Pageable pageable);
+
+    /**
+     * Finds the songs of any of the given genres that feature any of the given instruments, excluding some songs.
+     *
+     * @param genres      the genres (any of them)
+     * @param instruments the instruments (any of them)
+     * @param excludedIds the IDs of the songs to exclude
+     * @param pageable    limit of songs to return
+     * @return the matching songs
+     */
+    List<Song> findDistinctByGenresInAndInstrumentsInAndIdNotIn(Collection<Genre> genres, Collection<Instrument> instruments, Collection<Long> excludedIds, Pageable pageable);
 }

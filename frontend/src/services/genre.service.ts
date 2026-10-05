@@ -14,9 +14,7 @@ export const getById = async (id: string): Promise<GenreDTO> => {
 };
 
 export const getAllById = async (ids: string[]): Promise<GenreDTO[]> => {
-  const response = await axios.get(API_ENDPOINTS.GENRES.BASE, {
-    params: { ids },
-  });
+  const response = await axios.post(API_ENDPOINTS.GENRES.BY_IDS, ids);
   return response.data;
 };
 

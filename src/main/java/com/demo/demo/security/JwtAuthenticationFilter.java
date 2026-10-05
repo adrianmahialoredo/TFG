@@ -2,14 +2,15 @@ package com.demo.demo.security;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Optional;
 
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 import org.springframework.lang.NonNull;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -29,24 +30,17 @@ import jakarta.servlet.http.HttpServletResponse;
  * @version 1.0
  * @since 2025-06-06
  */
+@Slf4j
 @Component
+@RequiredArgsConstructor
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
-    private static final Logger logger = LoggerFactory.getLogger(JwtAuthenticationFilter.class);
+    private static final String BEARER_PREFIX = "Bearer ";
 
     /**
      * JWT utility for token validation and extraction.
      */
     private final JwtUtil jwtUtil;
-
-    /**
-     * Constructs a new JwtAuthenticationFilter with the specified JwtUtil.
-     *
-     * @param jwtUtil The JWT utility for token operations
-     */
-    public JwtAuthenticationFilter(JwtUtil jwtUtil) {
-        this.jwtUtil = jwtUtil;
-    }
 
     /**
      * Filters incoming requests to extract and validate JWT tokens.
@@ -63,28 +57,25 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     @Override
     protected void doFilterInternal(@NonNull HttpServletRequest request, @NonNull HttpServletResponse response, @NonNull FilterChain filterChain) throws ServletException, IOException {
         try {
-            // Extract the token from the Authorization header
-            String authorizationHeader = request.getHeader("Authorization");
-
-            // Process the token only if it starts with "Bearer "
-            if (authorizationHeader != null && authorizationHeader.startsWith("Bearer ")) {
-                String token = authorizationHeader.substring(7); // Extract token without "Bearer "
-
-                // Validate the token
-                jwtUtil.extractUsername(token).ifPresentOrElse(username -> {
-                    if (jwtUtil.validateToken(token, username)) {
-                        // Set up the authentication context for the authenticated user
-                        UsernamePasswordAuthenticationToken authentication =
-                            new UsernamePasswordAuthenticationToken(username, null, new ArrayList<>());
-                        SecurityContextHolder.getContext().setAuthentication(authentication);
-                        logger.debug("JWT authentication successful for user: {}", username);
-                    } else {
-                        logger.warn("JWT token validation failed for request: {}", request.getRequestURI());
-                    }
-                }, () -> logger.warn("JWT token validation failed for request: {}", request.getRequestURI()));
-            }
+            // Extract the token from the Authorization header, only if it starts with "Bearer "
+            Optional.ofNullable(request.getHeader("Authorization"))
+                    .filter(header -> header.startsWith(BEARER_PREFIX))
+                    .map(header -> header.substring(BEARER_PREFIX.length()))
+                    .ifPresent(token ->
+                            // Validate the token
+                            jwtUtil.extractUsername(token).ifPresentOrElse(username -> {
+                                if (jwtUtil.validateToken(token, username)) {
+                                    // Set up the authentication context for the authenticated user
+                                    UsernamePasswordAuthenticationToken authentication =
+                                        new UsernamePasswordAuthenticationToken(username, null, new ArrayList<>());
+                                    SecurityContextHolder.getContext().setAuthentication(authentication);
+                                    log.debug("JWT authentication successful for user: {}", username);
+                                } else {
+                                    log.warn("JWT token validation failed for request: {}", request.getRequestURI());
+                                }
+                            }, () -> log.warn("JWT token validation failed for request: {}", request.getRequestURI())));
         } catch (Exception e) {
-            logger.error("Error in JWT authentication filter: {}", e.getMessage(), e);
+            log.error("Error in JWT authentication filter: {}", e.getMessage(), e);
             // Continue with the filter chain even if there's an error
         }
 

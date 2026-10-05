@@ -22,7 +22,7 @@ public interface InstrumentService {
      *
      * @return List of InstrumentDTOs representing all instruments.
      */
-    List<InstrumentDTO> getAllInstruments();
+    List<InstrumentDTO> findAll();
 
     /**
      * Fetches an instrument by its ID and converts it to a DTO.
@@ -30,7 +30,7 @@ public interface InstrumentService {
      * @param id The ID of the instrument to fetch.
      * @return An Optional containing the InstrumentDTO if found, otherwise empty.
      */
-    Optional<InstrumentDTO> getInstrumentById(Long id);
+    Optional<InstrumentDTO> findById(Long id);
 
     /**
      * Creates a new instrument from the provided DTO and saves it to the repository.
@@ -38,7 +38,7 @@ public interface InstrumentService {
      * @param dto The InstrumentDTO containing the details of the instrument to create.
      * @return The created InstrumentDTO.
      */
-    InstrumentDTO createInstrument(InstrumentDTO dto);
+    InstrumentDTO create(InstrumentDTO dto);
 
     /**
      * Updates an existing instrument with the provided DTO and saves it to the repository.
@@ -47,7 +47,7 @@ public interface InstrumentService {
      * @param dto The InstrumentDTO containing the updated details of the instrument.
      * @return An Optional containing the updated InstrumentDTO if found, otherwise empty.
      */
-    Optional<InstrumentDTO> updateInstrument(Long id, InstrumentDTO dto);
+    Optional<InstrumentDTO> update(Long id, InstrumentDTO dto);
 
     /**
      * Deletes an instrument by its ID.
@@ -55,5 +55,13 @@ public interface InstrumentService {
      * @param id The ID of the instrument to delete.
      * @return true if the instrument was deleted, false if it did not exist.
      */
-    boolean deleteInstrument(Long id);
+    boolean delete(Long id);
+
+    /**
+     * Retrieves the instruments with the given IDs. IDs that do not exist are ignored.
+     *
+     * @param ids the IDs of the instruments
+     * @return a list of InstrumentDTO (empty if no IDs are given)
+     */
+    List<InstrumentDTO> findByIds(List<Long> ids);
 }

@@ -22,7 +22,7 @@ public interface GenreService {
      *
      * @return List of GenreDTOs representing all genres.
      */
-    List<GenreDTO> getAllGenres();
+    List<GenreDTO> findAll();
 
     /**
      * Fetches a genre by its ID and converts it to a DTO.
@@ -30,7 +30,7 @@ public interface GenreService {
      * @param id The ID of the genre to fetch.
      * @return An Optional containing the GenreDTO if found, otherwise empty.
      */
-    Optional<GenreDTO> getGenreById(Long id);
+    Optional<GenreDTO> findById(Long id);
 
     /**
      * Creates a new genre from the provided DTO and saves it to the repository.
@@ -38,7 +38,7 @@ public interface GenreService {
      * @param dto The GenreDTO containing the details of the genre to create.
      * @return The created GenreDTO.
      */
-    GenreDTO createGenre(GenreDTO dto);
+    GenreDTO create(GenreDTO dto);
 
     /**
      * Updates an existing genre identified by its ID with the details from the provided DTO.
@@ -47,7 +47,7 @@ public interface GenreService {
      * @param dto The GenreDTO containing the updated details of the genre.
      * @return An Optional containing the updated GenreDTO if found, otherwise empty.
      */
-    Optional<GenreDTO> updateGenre(Long id, GenreDTO dto);
+    Optional<GenreDTO> update(Long id, GenreDTO dto);
 
     /**
      * Deletes a genre by its ID.
@@ -55,5 +55,13 @@ public interface GenreService {
      * @param id The ID of the genre to delete.
      * @return true if the genre was deleted, false if it did not exist.
      */
-    boolean deleteGenre(Long id);
+    boolean delete(Long id);
+
+    /**
+     * Retrieves the genres with the given IDs. IDs that do not exist are ignored.
+     *
+     * @param ids the IDs of the genres
+     * @return a list of GenreDTO (empty if no IDs are given)
+     */
+    List<GenreDTO> findByIds(List<Long> ids);
 }

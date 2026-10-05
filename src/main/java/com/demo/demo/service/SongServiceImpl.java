@@ -2,16 +2,23 @@ package com.demo.demo.service;
 
 import com.demo.demo.dto.SongLessonDTO;
 import com.demo.demo.dto.TabSectionDTO;
+import com.demo.demo.utils.mapper.DtoMapper;
 import com.demo.demo.model.*;
 import com.demo.demo.repository.*;
-import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import com.demo.demo.dto.SongDTO;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import java.util.*;
 import java.util.stream.Collectors;
+
+import static com.demo.demo.utils.Utils.resolvePageable;
+import static com.demo.demo.utils.EntityResolver.resolveGenres;
+import static com.demo.demo.utils.EntityResolver.resolveInstrument;
+import static com.demo.demo.utils.EntityResolver.resolveInstruments;
+import static com.demo.demo.utils.EntityResolver.resolveSongLessons;
+import static com.demo.demo.utils.EntityResolver.findSong;
 
 /**
  * Default implementation of {@link SongService}.
@@ -26,30 +33,33 @@ import java.util.stream.Collectors;
 @Slf4j
 @Service
 @RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class SongServiceImpl implements SongService {
 
     private final SongRepository songRepository;
     private final GenreRepository genreRepository;
     private final InstrumentRepository instrumentRepository;
-    private final SongLessonRepository songLessonRepository;
     private final ChordRepository chordRepository;
+    private final UserRepository userRepository;
+    private final ItemListRepository itemListRepository;
+    private final DtoMapper dtoMapper;
 
     @Override
-    public List<SongDTO> getAllSongs() {
+    public List<SongDTO> findAll() {
         return songRepository.findAll().stream()
-                .map(this::toDto)
+                .map(dtoMapper::songToSongDto)
                 .collect(Collectors.toList());
     }
 
     @Override
-    public Optional<SongDTO> getSongById(Long id) {
-        return songRepository.findById(id)
-                .map(this::toDto);
+    public Optional<SongDTO> findById(Long id) {
+        return findSong(id)
+                .map(dtoMapper::songToSongDto);
     }
 
     @Override
     @Transactional
-    public SongDTO createSong(SongDTO dto) {
+    public SongDTO create(SongDTO dto) {
         Song song = new Song();
 
         // 1. IDs y campos básicos (Item)
@@ -79,16 +89,11 @@ public class SongServiceImpl implements SongService {
                 lesson.setVideoUrl(lDto.getVideoUrl());
 
                 // Instrumento de la lección
-                lesson.setInstrument(Optional.ofNullable(lDto.getInstrumentId())
-                        .flatMap(instrumentRepository::findById)
-                        .orElseThrow(() -> new IllegalArgumentException(
-                                lDto.getInstrumentId() == null
-                                        ? "Instrument id is required"
-                                        : "Instrument not found: " + lDto.getInstrumentId())));
+                lesson.setInstrument(resolveInstrument(lDto.getInstrumentId()));
 
                 // Chords (ManyToMany)
                 if (lDto.getChordIds() != null) {
-                    lesson.setChords(chordRepository.findAllById(lDto.getChordIds()));
+                    lesson.setChords(new LinkedHashSet<>(chordRepository.findAllById(lDto.getChordIds())));
                 }
 
                 // CASCADA NIVEL 2: TabSections
@@ -112,19 +117,21 @@ public class SongServiceImpl implements SongService {
 
         Song saved = songRepository.saveAndFlush(song);
         log.info("Canción '{}' (ID: {}) cargada con sus lecciones y tabs", saved.getTitle(), saved.getId());
-        return toDto(saved);
+        return dtoMapper.songToSongDto(saved);
     }
 
     @Override
-    public Optional<SongDTO> updateSong(Long id, SongDTO dto) {
-        return songRepository.findById(id).map(existing -> {
+    @Transactional
+    public Optional<SongDTO> update(Long id, SongDTO dto) {
+        return findSong(id).map(existing -> {
             updateSongFromDto(existing, dto);
-            return toDto(songRepository.save(existing));
+            return dtoMapper.songToSongDto(songRepository.save(existing));
         });
     }
 
     @Override
-    public boolean deleteSong(Long id) {
+    @Transactional
+    public boolean delete(Long id) {
         if (!songRepository.existsById(id)) {
             return false;
         }
@@ -133,170 +140,65 @@ public class SongServiceImpl implements SongService {
     }
 
     @Override
-    public List<SongDTO> getSongsByDecade(String decade) {
+    public List<SongDTO> findByDecade(String decade) {
         return songRepository.findByDecade(decade).stream()
-                .map(this::toDto)
+                .map(dtoMapper::songToSongDto)
                 .collect(Collectors.toList());
     }
 
     @Override
-    public List<SongDTO> getPopularSongs() {
-        return songRepository.findAll().stream()
-                .filter(Song::isPopular)
-                .map(this::toDto)
+    public List<SongDTO> findPopular(Integer limit) {
+        return songRepository.findByPopularTrue(resolvePageable(limit)).stream()
+                .map(dtoMapper::songToSongDto)
                 .collect(Collectors.toList());
     }
 
     @Override
-    public List<Long> getPopularSongsWithLimit(int limit) {
-        return songRepository.findPopular(PageRequest.of(0, limit)).stream()
-                .map(Song::getId)
+    public List<SongDTO> findNew(Integer limit) {
+        return songRepository.findByGenreNewTrue(resolvePageable(limit)).stream()
+                .map(dtoMapper::songToSongDto)
                 .collect(Collectors.toList());
     }
 
     @Override
-    public List<SongDTO> getPopularSongsByGenre(Long genreId) {
-        return songRepository.findAll().stream()
-                .filter(song -> song.getGenres().stream().anyMatch(genre -> genre.getId().equals(genreId)) && song.isGenrePopular())
-                .map(this::toDto)
+    public List<SongDTO> findPopularForGenre(Long genreId) {
+        return songRepository.findDistinctByGenresIdAndGenrePopularTrue(genreId).stream()
+                .map(dtoMapper::songToSongDto)
                 .collect(Collectors.toList());
     }
 
     @Override
-    public List<SongDTO> getClassicSongsByGenre(Long genreId) {
-        return songRepository.findAll().stream()
-                .filter(song -> song.getGenres().stream().anyMatch(genre -> genre.getId().equals(genreId)) && song.isGenreClassic())
-                .map(this::toDto)
+    public List<SongDTO> findClassicForGenre(Long genreId) {
+        return songRepository.findDistinctByGenresIdAndGenreClassicTrue(genreId).stream()
+                .map(dtoMapper::songToSongDto)
                 .collect(Collectors.toList());
     }
 
     @Override
-    public List<SongDTO> getNewSongsByGenre(Long genreId) {
-        return songRepository.findAll().stream()
-                .filter(song -> song.getGenres().stream().anyMatch(genre -> genre.getId().equals(genreId)) && song.isGenreNew())
-                .map(this::toDto)
-                .collect(Collectors.toList());
-    }
-
-    @Override
-    public List<SongDTO> getPopularByGenreId(Long genreId) {
-        return songRepository.findGenrePopularByGenreId(genreId).stream()
-                .map(this::toDto)
-                .collect(Collectors.toList());
-    }
-
-    @Override
-    public List<SongDTO> getClassicByGenreId(Long genreId) {
-        return songRepository.findGenreClassicByGenreId(genreId).stream()
-                .map(this::toDto)
-                .collect(Collectors.toList());
-    }
-
-    @Override
-    public List<SongDTO> getNewByGenreId(Long genreId) {
-        return songRepository.findGenreNewByGenreId(genreId).stream()
-                .map(this::toDto)
+    public List<SongDTO> findNewForGenre(Long genreId) {
+        return songRepository.findDistinctByGenresIdAndGenreNewTrue(genreId).stream()
+                .map(dtoMapper::songToSongDto)
                 .collect(Collectors.toList());
     }
 
 
     // -------- DTO Mapping --------
 
-    private SongDTO toDto(Song song) {
-        SongDTO dto = new SongDTO();
-        dto.setId(song.getId());
-        dto.setTitle(song.getTitle());
-        dto.setArtist(song.getArtist());
-        dto.setGenreIds(song.getGenres().stream().map(Genre::getId).collect(Collectors.toList()));
-        dto.setInstrumentIds(song.getInstruments().stream().map(Instrument::getId).collect(Collectors.toList()));
-        dto.setLessonIds(song.getLessons().stream().map(SongLesson::getId).collect(Collectors.toList()));
-        return dto;
-    }
-
-    private Song toEntity(SongDTO dto) {
-        Song song = new Song();
-        song.setId(dto.getId());
-        song.setTitle(dto.getTitle());
-        song.setArtist(dto.getArtist());
-        song.setGenres(resolveGenres(dto.getGenreIds()));
-        song.setInstruments(resolveInstruments(dto.getInstrumentIds()));
-        song.setLessons(resolveLessons(dto.getLessonIds()));
-        return song;
-    }
-
     private void updateSongFromDto(Song song, SongDTO dto) {
         song.setTitle(dto.getTitle());
         song.setArtist(dto.getArtist());
         song.setGenres(resolveGenres(dto.getGenreIds()));
         song.setInstruments(resolveInstruments(dto.getInstrumentIds()));
-        song.setLessons(resolveLessons(dto.getLessonIds()));
-    }
-
-    private Set<Genre> resolveGenres(List<Long> ids) {
-        if (ids == null || ids.isEmpty()) {
-            return new HashSet<>();
-        }
-        return ids.stream()
-                .map(id -> genreRepository.findById(id)
-                        .orElseThrow(() -> new IllegalArgumentException("Genre not found: " + id)))
-                .collect(Collectors.toSet());
-    }
-
-    private Set<Instrument> resolveInstruments(List<Long> ids) {
-        if (ids == null || ids.isEmpty()) {
-            return new HashSet<>();
-        }
-        return ids.stream()
-                .map(id -> instrumentRepository.findById(id)
-                        .orElseThrow(() -> new IllegalArgumentException("Instrument not found: " + id)))
-                .collect(Collectors.toSet());
+        song.setLessons(resolveSongLessons(dto.getLessonIds()));
     }
 
     @Override
-    public List<SongDTO> getSongsByIds(List<Long> ids) {
+    public List<SongDTO> findByIds(List<Long> ids) {
         if (ids == null || ids.isEmpty()) {
             return new ArrayList<>();
         }
         return songRepository.findAllById(ids).stream()
-                .map(this::toDto)
-                .collect(Collectors.toList());
-    }
-
-    private List<SongLesson> resolveLessons(List<Long> ids) {
-        if (ids == null || ids.isEmpty()) {
-            return new ArrayList<>();
-        }
-        return ids.stream()
-                .map(id -> songLessonRepository.findById(id)
-                        .orElseThrow(() -> new IllegalArgumentException("Lesson not found: " + id)))
-                .collect(Collectors.toList());
-    }
-
-    @Override
-    public List<SongDTO> getHomeSongsPopular() {
-        return songRepository.findHomeSongsPopular().stream()
-                .map(this::toDto)
-                .collect(Collectors.toList());
-    }
-
-    @Override
-    public List<SongDTO> getHomeSongsNew() {
-        return songRepository.findHomeSongsNew().stream()
-                .map(this::toDto)
-                .collect(Collectors.toList());
-    }
-
-    @Override
-    public List<SongDTO> getHomeSongsRecommended() {
-        return songRepository.findHomeSongsRecommended().stream()
-                .map(this::toDto)
-                .collect(Collectors.toList());
-    }
-
-    @Override
-    public List<SongDTO> getHomeSongsFromSpotify() {
-        return songRepository.findHomeSongsFromSpotify().stream()
-                .map(this::toDto)
+                .map(dtoMapper::songToSongDto)
                 .collect(Collectors.toList());
     }
 }

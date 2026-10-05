@@ -37,18 +37,19 @@ export const deleteLesson = async (id: string): Promise<void> => {
   await axios.delete(API_ENDPOINTS.LESSONS.BY_ID(id));
 };
 
-export const getPopular = async (): Promise<LessonDTO[]> => {
-  const response = await axios.get(API_ENDPOINTS.LESSONS.HOME_POPULAR);
+// --- Feeds de carrusel: solo IDs (se resuelven contra el catálogo de items) ---
+
+export const getPopularIds = async (): Promise<string[]> => {
+  const response = await axios.get(API_ENDPOINTS.LESSONS.POPULAR_IDS);
   return response.data;
 };
 
-export const getNew = async (): Promise<LessonDTO[]> => {
-  const response = await axios.get(API_ENDPOINTS.LESSONS.HOME_NEW);
+export const getNewIds = async (): Promise<string[]> => {
+  const response = await axios.get(API_ENDPOINTS.LESSONS.NEW_IDS);
   return response.data;
 };
 
-export const getRecommended = async (): Promise<LessonDTO[]> => {
-  const response = await axios.get(API_ENDPOINTS.LESSONS.HOME_RECOMMENDED);
+export const getRecommendedIds = async (): Promise<string[]> => {
+  const response = await axios.get(API_ENDPOINTS.LESSONS.RECOMMENDED_IDS);
   return response.data;
 };
-

@@ -26,18 +26,17 @@ import lombok.*;
  * @since 2025-06-06
  */
 @Entity
+@Table(name = "spotify_users")
 @Getter
 @Setter
-@AllArgsConstructor
 @NoArgsConstructor
-@Table(name = "spotify_users")
+@AllArgsConstructor
 public class SpotifyUser {
 
     /**
      * Unique identifier for the Spotify user record in the database.
      */
     @Id
-    @Column(name = "id")
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 

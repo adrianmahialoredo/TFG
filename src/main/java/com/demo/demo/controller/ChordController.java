@@ -2,30 +2,34 @@ package com.demo.demo.controller;
 
 import com.demo.demo.dto.ChordDto;
 import com.demo.demo.service.ChordService;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
-import java.util.*;
+import com.demo.demo.dto.validation.OnCreate;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.validation.annotation.Validated;
+
+import java.util.List;
 
 /**
- * Controller class for managing chords.
- * 
- * Provides endpoints to create, retrieve, update, and delete chords.
- * 
- * This controller interacts with the ChordService to perform operations
- * and returns appropriate HTTP responses.
- * 
+ * REST controller for chords.
+ *
+ * Base path: {@code /api/chords}
+ *
  * Endpoints:
- * - GET /chords: Retrieve all chords
- * - GET /chords/{id}: Retrieve a specific chord by ID
- * - POST /chords: Create a new chord
- * - PUT /chords/{id}: Update an existing chord by ID
- * - DELETE /chords/{id}: Delete a chord by ID
- * 
- * This controller is annotated with @RestController to handle RESTful requests
- * and @RequestMapping to define the base path for all endpoints.
- * 
+ * - GET    /api/chords                                  Retrieve all chords
+ * - POST   /api/chords/by-ids                           Retrieve the chords with the given IDs (IDs in the body)
+ * - GET    /api/chords/{id}                             Retrieve a chord by ID
+ * - GET    /api/chords/by-song-lesson/{songLessonId}/ids Retrieve the IDs of the chords of a song lesson
+ * - POST   /api/chords                                  Create a chord
+ * - PUT    /api/chords/{id}                             Update a chord
+ * - DELETE /api/chords/{id}                             Delete a chord
+ *
+ * Responses: 200 OK, 201 Created (create), 204 No Content (delete) and 404 Not Found
+ * when the chord does not exist. Other errors are translated by
+ * {@link com.demo.demo.exception.GlobalExceptionHandler}.
+ *
  * @author Adrián Mahía
  * @version 1.0
  * @since 2025-06-06
@@ -40,84 +44,77 @@ public class ChordController {
     /**
      * Retrieves all chords.
      *
-     * @return A list of ChordDto representing all chords.
+     * @return 200 OK with the list of chords
      */
     @GetMapping
-    public List<ChordDto> getAllChords() {
-        return chordService.getAllChords();
+    public ResponseEntity<List<ChordDto>> getAll() {
+        return ResponseEntity.ok(chordService.findAll());
     }
 
     /**
-     * Retrieves all chords by a list of IDs.
+     * Retrieves the chords with the given IDs. IDs that do not exist are ignored.
      *
-     * @param ids The list of chord IDs to retrieve.
-     * @return A list of ChordDto representing all chords with the provided IDs.
+     * @param ids the IDs of the chords
+     * @return 200 OK with the chords found
      */
-    @GetMapping("/by-ids")
-    public List<ChordDto> getAllChordsByIds(@RequestParam List<Long> ids) {
-        return chordService.getAllChordsByIds(ids);
-    }
-
-    /**
-     * Retrieves all chord IDs associated with a specific song lesson.
-     *
-     * @param songLessonId The ID of the song lesson.
-     * @return A list of chord IDs associated with the song lesson.
-     */
-    @GetMapping("/by-song-lesson/{songLessonId}")
-    public List<Long> getChordsBySongLessonId(@PathVariable Long songLessonId) {
-        return chordService.getChordsBySongLessonId(songLessonId);
+    @PostMapping("/by-ids")
+    public ResponseEntity<List<ChordDto>> getByIds(@RequestBody List<Long> ids) {
+        return ResponseEntity.ok(chordService.findByIds(ids));
     }
 
     /**
      * Retrieves a chord by its ID.
      *
-     * @param id The ID of the chord to retrieve.
-     * @return A ResponseEntity containing the ChordDto if found, otherwise a 404 Not Found response.
+     * @param id the ID of the chord
+     * @return 200 OK with the chord, or 404 Not Found
      */
     @GetMapping("/{id}")
-    public ResponseEntity<ChordDto> getChordById(@PathVariable Long id) {
-        return chordService.getChordById(id)
-                .map(ResponseEntity::ok)
-                .orElseGet(() -> ResponseEntity.notFound().build());
+    public ResponseEntity<ChordDto> getById(@PathVariable Long id) {
+        return ResponseEntity.of(chordService.findById(id));
     }
 
     /**
-     * Creates a new chord.
+     * Retrieves the IDs of the chords used in a song lesson.
      *
-     * @param chordDto The ChordDto containing the details of the chord to create.
-     * @return A ResponseEntity containing the created ChordDto with a 201 Created status.
+     * @param songLessonId the ID of the song lesson
+     * @return 200 OK with the chord IDs
+     */
+    @GetMapping("/by-song-lesson/{songLessonId}/ids")
+    public ResponseEntity<List<Long>> getIdsForSongLesson(@PathVariable Long songLessonId) {
+        return ResponseEntity.ok(chordService.findIdsForSongLesson(songLessonId));
+    }
+
+    /**
+     * Creates a chord.
+     *
+     * @param dto the chord to create
+     * @return 201 Created with the created chord
      */
     @PostMapping
-    public ResponseEntity<ChordDto> createChord(@RequestBody ChordDto chordDto) {
-        ChordDto created = chordService.createChord(chordDto);
-        return ResponseEntity.status(HttpStatus.CREATED).body(created);
+    public ResponseEntity<ChordDto> create(@Validated(OnCreate.class) @RequestBody ChordDto dto) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(chordService.create(dto));
     }
 
     /**
-     * Updates an existing chord.
+     * Updates a chord.
      *
-     * @param id The ID of the chord to update.
-     * @param chordDto The ChordDto containing the updated details.
-     * @return A ResponseEntity containing the updated ChordDto if found, otherwise a 404 Not Found response.
+     * @param id  the ID of the chord
+     * @param dto the new data of the chord
+     * @return 200 OK with the updated chord, or 404 Not Found
      */
     @PutMapping("/{id}")
-    public ResponseEntity<ChordDto> updateChord(@PathVariable Long id, @RequestBody ChordDto chordDto) {
-        return chordService.updateChord(id, chordDto)
-                .map(ResponseEntity::ok)
-                .orElseGet(() -> ResponseEntity.notFound().build());
+    public ResponseEntity<ChordDto> update(@PathVariable Long id, @Valid @RequestBody ChordDto dto) {
+        return ResponseEntity.of(chordService.update(id, dto));
     }
 
     /**
-     * Deletes a chord by its ID.
+     * Deletes a chord.
      *
-     * @param id The ID of the chord to delete.
+     * @param id the ID of the chord
+     * @return 204 No Content, or 404 Not Found
      */
     @DeleteMapping("/{id}")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void deleteChord(@PathVariable Long id) {
-        chordService.deleteChord(id);
+    public ResponseEntity<Void> delete(@PathVariable Long id) {
+        return chordService.delete(id) ? ResponseEntity.noContent().build() : ResponseEntity.notFound().build();
     }
-
 }
-

@@ -35,7 +35,7 @@ export default function InstrumentGenreLessonScreen({ route, navigation }: any) 
                         {activeLesson.title}
                     </Text>
                     <Text className="text-secondary text-sm mb-6 uppercase">
-                        {instrumentGenre.name}
+                        {instrumentGenre.title}
                     </Text>
 
                     {activeLesson.imageUrl && (

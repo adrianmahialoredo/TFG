@@ -13,17 +13,24 @@ type ToolButtonProps = {
   icon: React.ReactNode;
   label: string;
   onPress?: () => void;
+  buttonMarginRight?: number;
+  labelMarginRight?: number;
 };
 
-export const ToolButton: React.FC<ToolButtonProps> = ({ icon, label, onPress }) => {
+export const ToolButton: React.FC<ToolButtonProps> = ({
+  icon,
+  label,
+  onPress,
+  buttonMarginRight = 8,
+  labelMarginRight = 10,
+}) => {
   return (
-    <View>
+    <View style={{ width: buttonSize, alignItems: 'center', marginRight: buttonMarginRight }}>
       <TouchableOpacity
         onPress={onPress}
         style={{
           width: buttonSize,
           height: buttonSize,
-          marginRight: 8,
           backgroundColor: '#C1853C', // bg-primary
           borderRadius: 6,
           justifyContent: 'center',
@@ -32,7 +39,11 @@ export const ToolButton: React.FC<ToolButtonProps> = ({ icon, label, onPress }) 
       >
         {icon}
       </TouchableOpacity>
-      <Text className="text-secondary text-xl font-semibold text-center mt-2 mr-2.5">
+      <Text
+        className="text-secondary text-sm font-semibold text-center mt-2"
+        style={{ marginRight: labelMarginRight, width: '100%' }}
+        numberOfLines={1}
+      >
         {label}
       </Text>
     </View>

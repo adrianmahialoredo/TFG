@@ -4,11 +4,29 @@ import { TouchableOpacity, View, Image, Text } from "react-native";
 import { RootStackParamList } from "../types";
 import {useAuth} from "../hooks/useAuth";
 
-export default function ProfileHeader({ title }: { title: string }) {
+type ProfileHeaderProps = {
+    title: string;
+    compact?: boolean;
+};
+
+export default function ProfileHeader({ title, compact = false }: ProfileHeaderProps) {
     const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
     // Como ya hemos arreglado el Provider, useAuth() ya devuelve el usuario real
     const { user } = useAuth();
+
+    if (compact) {
+        return (
+            <View className="justify-center mr-4">
+                <TouchableOpacity onPress={() => navigation.navigate('ProfileScreen')}>
+                    <Image
+                        source={{ uri: user?.profileImageUrl || 'https://via.placeholder.com/150' }}
+                        className="w-12 h-12 rounded-full border border-primary/30"
+                    />
+                </TouchableOpacity>
+            </View>
+        );
+    }
 
     return (
         <View className="flex-row items-center mt-6 mb-7">

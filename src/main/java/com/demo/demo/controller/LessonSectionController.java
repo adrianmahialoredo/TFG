@@ -2,97 +2,119 @@ package com.demo.demo.controller;
 
 import com.demo.demo.dto.LessonSectionDTO;
 import com.demo.demo.service.LessonSectionService;
+import com.demo.demo.dto.validation.OnCreate;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.validation.annotation.Validated;
 
 import java.util.List;
 
 /**
- * Controller for managing lesson sections.
+ * REST controller for the sections of a lesson.
  *
- * Provides endpoints to create, retrieve, update, and delete lesson sections,
- * as well as to retrieve lesson sections by their associated lesson ID.
+ * Base path: {@code /api/lesson-sections}
  *
  * Endpoints:
- * - POST /lesson-sections: Create a new lesson section
- * - GET /lesson-sections/{id}: Retrieve a lesson section by ID
- * - GET /lesson-sections/by-lesson/{lessonId}: Retrieve lesson sections by lesson ID
- * - PUT /lesson-sections/{id}: Update an existing lesson section by ID
- * - DELETE /lesson-sections/{id}: Delete a lesson section by ID
+ * - GET    /api/lesson-sections                      Retrieve all lesson sections
+ * - POST   /api/lesson-sections/by-ids               Retrieve the lesson sections with the given IDs (IDs in the body)
+ * - GET    /api/lesson-sections/{id}                 Retrieve a lesson section by ID
+ * - GET    /api/lesson-sections/by-lesson/{lessonId} Retrieve the sections of a lesson
+ * - POST   /api/lesson-sections                      Create a lesson section
+ * - PUT    /api/lesson-sections/{id}                 Update a lesson section
+ * - DELETE /api/lesson-sections/{id}                 Delete a lesson section
  *
- * @author Adrian Mahia
+ * Responses: 200 OK, 201 Created (create), 204 No Content (delete) and 404 Not Found
+ * when the lesson section does not exist. Other errors are translated by
+ * {@link com.demo.demo.exception.GlobalExceptionHandler}.
+ *
+ * @author Adrián Mahía
  * @version 1.0
  * @since 2025-06-06
  */
 @RestController
+@RequestMapping("/api/lesson-sections")
 @RequiredArgsConstructor
-@RequestMapping("/lesson-sections")
 public class LessonSectionController {
 
     private final LessonSectionService lessonSectionService;
 
     /**
-     * Creates a new lesson section.
+     * Retrieves all lesson sections.
      *
-     * @param dto The LessonSectionDTO containing the details of the section to create
-     * @return ResponseEntity with the created LessonSectionDTO and HTTP status 201 (Created)
+     * @return 200 OK with the list of lesson sections
      */
-    @PostMapping
-    public ResponseEntity<LessonSectionDTO> create(@RequestBody LessonSectionDTO dto) {
-        LessonSectionDTO created = lessonSectionService.createLessonSection(dto);
-        return ResponseEntity.status(HttpStatus.CREATED).body(created);
+    @GetMapping
+    public ResponseEntity<List<LessonSectionDTO>> getAll() {
+        return ResponseEntity.ok(lessonSectionService.findAll());
+    }
+
+    /**
+     * Retrieves the lesson sections with the given IDs. IDs that do not exist are ignored.
+     *
+     * @param ids the IDs of the lesson sections
+     * @return 200 OK with the lesson sections found
+     */
+    @PostMapping("/by-ids")
+    public ResponseEntity<List<LessonSectionDTO>> getByIds(@RequestBody List<Long> ids) {
+        return ResponseEntity.ok(lessonSectionService.findByIds(ids));
     }
 
     /**
      * Retrieves a lesson section by its ID.
      *
-     * @param id The ID of the LessonSection to retrieve
-     * @return ResponseEntity with the LessonSectionDTO if found, or HTTP status 404 (Not Found) if not found
+     * @param id the ID of the lesson section
+     * @return 200 OK with the lesson section, or 404 Not Found
      */
     @GetMapping("/{id}")
     public ResponseEntity<LessonSectionDTO> getById(@PathVariable Long id) {
-        return lessonSectionService.getLessonSectionById(id)
-                .map(ResponseEntity::ok)
-                .orElseGet(() -> ResponseEntity.notFound().build());
+        return ResponseEntity.of(lessonSectionService.findById(id));
     }
 
     /**
-     * Retrieves all lesson sections associated with a specific lesson ID.
+     * Retrieves the sections of a lesson.
      *
-     * @param lessonId The ID of the lesson to retrieve sections for
-     * @return A list of LessonSectionDTOs associated with the given lesson ID
+     * @param lessonId the ID of the lesson
+     * @return 200 OK with the sections of the lesson
      */
     @GetMapping("/by-lesson/{lessonId}")
-    public List<LessonSectionDTO> getByLessonId(@PathVariable Long lessonId) {
-        return lessonSectionService.getLessonSectionsByLessonId(lessonId);
+    public ResponseEntity<List<LessonSectionDTO>> getForLesson(@PathVariable Long lessonId) {
+        return ResponseEntity.ok(lessonSectionService.findForLesson(lessonId));
     }
 
     /**
-     * Updates an existing lesson section.
+     * Creates a lesson section.
      *
-     * @param id The ID of the LessonSection to update
-     * @param dto The LessonSectionDTO containing the updated details
-     * @return ResponseEntity with the updated LessonSectionDTO if found, or HTTP status 404 (Not Found) if not found
+     * @param dto the lesson section to create
+     * @return 201 Created with the created lesson section
+     */
+    @PostMapping
+    public ResponseEntity<LessonSectionDTO> create(@Validated(OnCreate.class) @RequestBody LessonSectionDTO dto) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(lessonSectionService.create(dto));
+    }
+
+    /**
+     * Updates a lesson section.
+     *
+     * @param id  the ID of the lesson section
+     * @param dto the new data of the lesson section
+     * @return 200 OK with the updated lesson section, or 404 Not Found
      */
     @PutMapping("/{id}")
-    public ResponseEntity<LessonSectionDTO> update(@PathVariable Long id, @RequestBody LessonSectionDTO dto) {
-        return lessonSectionService.updateLessonSection(id, dto)
-                .map(ResponseEntity::ok)
-                .orElseGet(() -> ResponseEntity.notFound().build());
+    public ResponseEntity<LessonSectionDTO> update(@PathVariable Long id, @Valid @RequestBody LessonSectionDTO dto) {
+        return ResponseEntity.of(lessonSectionService.update(id, dto));
     }
 
     /**
-     * Deletes a lesson section by its ID.
+     * Deletes a lesson section.
      *
-     * @param id The ID of the LessonSection to delete
-     * @return ResponseEntity with HTTP status 204 (No Content) if deleted, or HTTP status 404 (Not Found) if not found
+     * @param id the ID of the lesson section
+     * @return 204 No Content, or 404 Not Found
      */
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
-        boolean deleted = lessonSectionService.deleteLessonSection(id);
-        return deleted ? ResponseEntity.noContent().build() : ResponseEntity.notFound().build();
+        return lessonSectionService.delete(id) ? ResponseEntity.noContent().build() : ResponseEntity.notFound().build();
     }
 }
-

@@ -1,5 +1,8 @@
 package com.demo.demo.service;
 
+import com.demo.demo.dto.ItemDTO;
+import com.demo.demo.dto.SongDTO;
+
 import java.util.List;
 import java.util.Map;
 
@@ -15,11 +18,7 @@ import java.util.Map;
  */
 public interface SpotifyRecommendationService {
 
-    /**
-     * Retrieves music recommendations from Spotify based on the user's top artists.
-     *
-     * @param spotifyUserId The unique identifier of the Spotify user
-     * @return A list of maps containing song recommendation data from Spotify
-     */
-    List<Map<String, Object>> getRecommendations(String spotifyUserId);
+    List<ItemDTO> findItemsForUser(Long id);
+
+    List<SongDTO> findSongsForUser(Long id, int limit);
 }

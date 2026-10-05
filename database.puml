@@ -1,0 +1,289 @@
+@startuml "Diagrama Entidad-Relación - Sistema de Aprendizaje de Música"
+
+' =====================================================================
+' Esquema físico de la base de datos PostgreSQL "demo".
+' Generado por Hibernate (spring.jpa.hibernate.ddl-auto=update) a partir
+' de las entidades de com.demo.demo.model, con la estrategia de nombres
+' por defecto de Spring (camelCase -> snake_case).
+'
+' Leyenda:
+'   PK  clave primaria        FK  clave foránea
+'   NN  NOT NULL explícito    UQ  UNIQUE
+'   Los campos primitivos (int, boolean) son siempre NOT NULL.
+' =====================================================================
+
+hide circle
+skinparam linetype ortho
+skinparam roundcorner 6
+skinparam class {
+    BackgroundColor<<join>> #F3F3F3
+    BackgroundColor<<item>> #FFF4E0
+}
+
+' ---------------------------------------------------------------------
+' Usuarios
+' ---------------------------------------------------------------------
+
+entity "users" as users {
+    * id : bigserial <<PK>>
+    --
+    * email : varchar <<NN, UQ>>
+    * username : varchar <<NN, UQ>>
+    * password : varchar <<NN>>
+    * name : varchar <<NN>>
+    profile_image_url : varchar
+    * role : varchar <<NN>> {ADMIN, USER}
+    * difficulty_level : int <<NN>>
+    spotify_user_id : bigint <<FK, UQ>>
+    created_at : timestamp
+    updated_at : timestamp
+}
+
+entity "preferences" as preferences {
+    * user_id : bigint <<PK, FK>>
+    --
+    * difficulty_level : int <<NN>>
+}
+
+entity "spotify_users" as spotify_users {
+    * id : bigserial <<PK>>
+    --
+    * spotify_user_id : varchar <<NN, UQ>>
+    access_token : varchar
+    refresh_token : varchar
+    token_expiration : timestamptz
+}
+
+entity "settings" as settings {
+    * id : bigserial <<PK>>
+    --
+    * notifications : boolean
+    * sound : boolean
+}
+
+entity "user_favorite_genres" as user_favorite_genres <<join>> {
+    * user_id : bigint <<PK, FK>>
+    * genre_id : bigint <<PK, FK>>
+}
+
+entity "user_favorite_instruments" as user_favorite_instruments <<join>> {
+    * user_id : bigint <<PK, FK>>
+    * instrument_id : bigint <<PK, FK>>
+}
+
+entity "item_lists" as item_lists {
+    * id : bigserial <<PK>>
+    --
+    * name : varchar <<NN>>
+    image_url : varchar
+    * user_id : bigint <<FK, NN>>
+}
+
+entity "itemlist_items" as itemlist_items <<join>> {
+    * itemlist_id : bigint <<FK>>
+    * item_id : bigint <<FK>>
+}
+
+' ---------------------------------------------------------------------
+' Jerarquía Item (herencia JOINED, discriminador dtype)
+' ---------------------------------------------------------------------
+
+entity "item" as item <<item>> {
+    * id : bigint <<PK>>
+    --
+    * dtype : varchar(31) <<NN>> {SONG, LESSON, GENRE, INSTRUMENT_GENRE}
+    * type : varchar <<NN>> {Song, Lesson, Genre, InstrumentGenre}
+    * title : varchar <<NN>>
+    image_url : varchar
+    * level : int
+    created_at : timestamp
+    last_time_accessed : timestamp
+}
+
+entity "songs" as songs <<item>> {
+    * id : bigint <<PK, FK>>
+    --
+    * artist : varchar <<NN>>
+    decade : varchar
+    * popular : boolean
+    * new_song : boolean
+    * genre_classic : boolean
+    * genre_popular : boolean
+    * genre_new : boolean
+}
+
+entity "genres" as genres <<item>> {
+    * id : bigint <<PK, FK>>
+    --
+    * description : text <<NN>>
+    banner_url : varchar
+    * welcome_intro_video : varchar <<NN>>
+    * welcome_song_video : varchar <<NN>>
+}
+
+entity "lessons" as lessons <<item>> {
+    * id : bigint <<PK, FK>>
+    --
+    * belongs_to_genre : boolean
+    * belongs_to_instrument_genre : boolean = false
+    * index_in_instrument_genre : int = 0
+    * popular : boolean
+    genre_id : bigint <<FK>>
+    instrument_genre_id : bigint <<FK>>
+}
+
+entity "instrument_genres" as instrument_genres <<item>> {
+    * id : bigint <<PK, FK>>
+    --
+    instrument_id : bigint <<FK>>
+    genre_id : bigint <<FK>>
+}
+
+' ---------------------------------------------------------------------
+' Contenido
+' ---------------------------------------------------------------------
+
+entity "instruments" as instruments {
+    * id : bigint <<PK>>
+    --
+    * name : varchar <<NN, UQ>>
+    * image_url : varchar <<NN>>
+}
+
+entity "song_genre" as song_genre <<join>> {
+    * song_id : bigint <<PK, FK>>
+    * genre_id : bigint <<PK, FK>>
+}
+
+entity "songs_instruments" as songs_instruments <<join>> {
+    * song_id : bigint <<PK, FK>>
+    * instruments_id : bigint <<PK, FK>>
+}
+
+entity "song_lessons" as song_lessons {
+    * id : bigint <<PK>>
+    --
+    difficulty : varchar {EASY, MEDIUM, ORIGINAL}
+    chorded_lyrics : oid <<LOB>>
+    video_url : varchar
+    song_id : bigint <<FK>>
+    instrument_id : bigint <<FK>>
+}
+
+entity "song_chords" as song_chords <<join>> {
+    * song_lesson_id : bigint <<PK, FK>>
+    * chord_id : bigint <<PK, FK>>
+}
+
+entity "tab_sections" as tab_sections {
+    * id : bigserial <<PK>>
+    --
+    identifier : varchar
+    content : oid <<LOB>>
+    song_lesson_id : bigint <<FK>>
+}
+
+entity "chords" as chords {
+    * id : bigint <<PK>>
+    --
+    * name : varchar <<NN, UQ>>
+    * image_url : varchar <<NN>>
+    * open : boolean
+    * barre : boolean
+    * power_chord : boolean
+    * minor : boolean
+    * major : boolean
+    * seventh : boolean
+    * capo : boolean
+    * capo_fret : int
+}
+
+entity "chord_notes" as chord_notes <<join>> {
+    * chord_id : bigint <<FK>>
+    note : varchar
+}
+
+entity "lesson_sections" as lesson_sections {
+    * id : bigserial <<PK>>
+    --
+    title : varchar
+    html_content : text
+    * order_index : int
+    lesson_id : bigint <<FK>>
+}
+
+' ---------------------------------------------------------------------
+' Relaciones
+' ---------------------------------------------------------------------
+
+' Usuarios
+users |o--o| spotify_users : spotify_user_id
+users ||--|| preferences : user_id
+users ||--o{ item_lists : user_id
+
+preferences ||--o{ user_favorite_genres
+user_favorite_genres }o--|| genres
+preferences ||--o{ user_favorite_instruments
+user_favorite_instruments }o--|| instruments
+
+item_lists ||--o{ itemlist_items
+itemlist_items }o--|| item
+
+' Herencia (PK compartida con item.id)
+item ||--o| songs
+item ||--o| genres
+item ||--o| lessons
+item ||--o| instrument_genres
+
+' Canciones
+songs ||--o{ song_genre
+song_genre }o--|| genres
+songs ||--o{ songs_instruments
+songs_instruments }o--|| instruments
+songs |o--o{ song_lessons : song_id
+instruments |o--o{ song_lessons : instrument_id
+
+song_lessons ||--o{ song_chords
+song_chords }o--|| chords
+song_lessons |o--o{ tab_sections : song_lesson_id
+chords ||--o{ chord_notes
+
+' Lecciones
+genres |o--o{ lessons : genre_id
+instrument_genres |o--o{ lessons : instrument_genre_id
+lessons |o--o{ lesson_sections : lesson_id
+
+instruments |o--o{ instrument_genres : instrument_id
+genres |o--o{ instrument_genres : genre_id
+
+' ---------------------------------------------------------------------
+' Notas
+' ---------------------------------------------------------------------
+
+note top of item
+    Tabla raíz de la herencia JOINED.
+    Cada subtipo (songs, genres, lessons,
+    instrument_genres) comparte su id con item.id.
+    dtype es el discriminador de Hibernate;
+    type es el subtipo expuesto en la API.
+end note
+
+note bottom of preferences
+    PK compartida con users.id (@MapsId).
+    Las tablas de favoritos referencian
+    preferences.user_id.
+end note
+
+note bottom of lessons
+    Una lección pertenece a un género
+    (genre_id) y/o a un instrumento-género
+    (instrument_genre_id), ordenada por
+    index_in_instrument_genre.
+end note
+
+note bottom of settings
+    Entidad sin relaciones
+    con el resto del modelo.
+end note
+
+@enduml

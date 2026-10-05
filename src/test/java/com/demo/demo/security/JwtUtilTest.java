@@ -3,6 +3,8 @@ package com.demo.demo.security;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
+import java.util.Optional;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -56,17 +58,18 @@ class JwtUtilTest {
     @Test
     void testExtractUsername_Success() {
         // Act
-        String username = jwtUtil.extractUsername(testToken);
+        Optional<String> username = jwtUtil.extractUsername(testToken);
 
         // Assert
-        assertEquals(testUsername, username);
+        assertTrue(username.isPresent());
+        assertEquals(testUsername, username.get());
     }
 
     @Test
     void testExtractUsername_InvalidToken() {
         // Act & Assert
-        String result = jwtUtil.extractUsername("invalid-token");
-        assertNull(result);
+        Optional<String> result = jwtUtil.extractUsername("invalid-token");
+        assertTrue(result.isEmpty());
     }
 
     @Test

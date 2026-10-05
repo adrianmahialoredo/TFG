@@ -8,6 +8,7 @@ import ProfileHeader from '../components/ProfileHeader';
 import {ChordDTO, RootStackParamList, TabSectionDTO} from '../types';
 import { useSong } from '../hooks/useSong';
 import { DifficultyLevel } from '../types';
+import {COLORS} from "../constants/Theme";
 
 type SongScreenRouteProp = RouteProp<RootStackParamList, 'SongScreen'>;
 
@@ -25,6 +26,8 @@ export default function SongScreen() {
     changeDifficulty,
     parsedLyrics,
   } = useSong(songId);
+
+  const filledStars = Math.max(0, Math.min(5, Math.round(song?.level ?? 0)));
 
   if (loading) {
     return (
@@ -79,9 +82,9 @@ export default function SongScreen() {
             {[...Array(5)].map((_, i) => (
               <Ionicons
                 key={i}
-                name={i < 3 ? 'star' : 'star-outline'}
+                name={i < filledStars ? 'star' : 'star-outline'}
                 size={18}
-                color="#facc15"
+                color={COLORS.primary}
               />
             ))}
           </View>

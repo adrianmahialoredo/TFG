@@ -1,16 +1,27 @@
 import { TouchableOpacity, Text, StyleSheet } from 'react-native';
-import { useState } from 'react';
 
 const styles = StyleSheet.create({
   buttonNormal: {
     borderColor: '#C1853C',
-    backgroundColor: '#000000',
-    color: '#C1853C'
+    backgroundColor: 'transparent',
   },
   buttonPressed: {
     borderColor: '#C1853C',
     backgroundColor: '#C1853C',
+  },
+  textNormal: {
+    color: '#C1853C',
+  },
+  textPressed: {
     color: '#FFFFFF',
+  },
+  baseButton: {
+    borderColor: '#C1853C',
+    borderWidth: 1,
+    borderRadius: 999,
+    height: 44,
+    paddingHorizontal: 12,
+    justifyContent: 'center',
   },
 });
 
@@ -24,15 +35,13 @@ export default function TopButton({ name, isSelected, onPress }: TopButtonProps)
 
   return (
     <TouchableOpacity 
-      className="h-11 px-3 border rounded-full justify-center"
-      style={[
-        isSelected ? styles.buttonPressed : styles.buttonNormal // Usa isSelected
-      ]}
-      onPress={onPress} // Cambia el estado al tocar
+      style={[styles.baseButton, isSelected ? styles.buttonPressed : styles.buttonNormal]}
+      onPress={onPress}
+      activeOpacity={1}
     >
       <Text 
         className="text-sm text-center"
-        style={isSelected ? styles.buttonPressed : styles.buttonNormal}
+        style={isSelected ? styles.textPressed : styles.textNormal}
       >
         {name}
       </Text>

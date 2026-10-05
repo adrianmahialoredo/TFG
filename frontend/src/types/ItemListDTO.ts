@@ -7,7 +7,18 @@ export interface ItemListDTO {
   userId: string;
   name: string;
   imageUrl?: string;
-  description: string;
+  description?: string;
   itemIds: string[];
+}
+
+/**
+ * Payload mínimo para crear una lista en backend.
+ * El backend genera el id y devuelve el objeto completo.
+ */
+export interface CreateItemListDTO {
+  userId: string;
+  name: string;
+  imageUrl?: string;
+  itemIds?: string[];
 }
 

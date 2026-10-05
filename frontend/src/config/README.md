@@ -19,20 +19,20 @@ Toda la configuración de endpoints de API está centralizada en `apiConfig.ts` 
 Estructura jerárquica de todos los endpoints disponibles:
 
 ```typescript
-API_ENDPOINTS.AUTH.LOGIN        // POST /api/auth/login
-API_ENDPOINTS.AUTH.REGISTER     // POST /api/auth/register
+API_ENDPOINTS.AUTH.LOGIN                  // POST /api/auth/login
+API_ENDPOINTS.AUTH.REGISTER               // POST /api/auth/register
 
-API_ENDPOINTS.USERS.BASE        // Base: /api/users
-API_ENDPOINTS.USERS.PROFILE(id) // GET/PUT /api/users/:id
+API_ENDPOINTS.GENRES.BASE                 // GET (todos) / POST (crear) /api/genres
+API_ENDPOINTS.GENRES.BY_ID(id)            // GET / PUT / DELETE /api/genres/:id
+API_ENDPOINTS.GENRES.BY_IDS               // POST /api/genres/by-ids  (body: array de IDs)
 
-API_ENDPOINTS.GENRES.BASE       // GET /genres
-API_ENDPOINTS.GENRES.BY_ID(id)  // GET /genres/:id
-
-API_ENDPOINTS.SONGS.BASE        // GET /songs
-API_ENDPOINTS.SONGS.BY_ID(id)   // GET /songs/:id
-API_ENDPOINTS.SONGS.BY_GENRE(genreId)  // GET /songs/genre/:genreId
-API_ENDPOINTS.SONGS.BATCH       // POST /songs/batch
+API_ENDPOINTS.SONGS.POPULAR_BY_GENRE(id)  // GET /api/songs/by-genre/:id/popular
+API_ENDPOINTS.ITEM_LISTS.ITEM(l, i)       // POST (añadir) / DELETE (quitar) /api/item-lists/:l/items/:i
 ```
+
+Todos los recursos siguen las mismas convenciones (ver cabecera de `apiConfig.ts`):
+`BASE`, `BY_ID`, `BY_IDS` (siempre POST con los IDs en el body) y filtros `BY_<RELACIÓN>`.
+Los filtros que devuelven IDs en lugar de objetos se llaman `IDS_BY_<RELACIÓN>`.
 
 ## Cómo usar
 
@@ -49,8 +49,8 @@ export const login = async (email: string, password: string) => {
 ### Para funciones con parámetros
 ```typescript
 // Endpoints con parámetros usan funciones
-API_ENDPOINTS.USERS.PROFILE(userId)  // Retorna: http://192.168.0.22:8080/api/users/123
-API_ENDPOINTS.GENRES.BY_ID(genreId)  // Retorna: http://192.168.0.22:8080/genres/456
+API_ENDPOINTS.USERS.BY_ID(userId)    // Retorna: http://192.168.0.22:8080/api/users/123
+API_ENDPOINTS.GENRES.BY_ID(genreId)  // Retorna: http://192.168.0.22:8080/api/genres/456
 ```
 
 ## Archivos actualizados
@@ -75,8 +75,9 @@ Si necesitas agregar un nuevo endpoint:
 ```typescript
 // En apiConfig.ts
 INSTRUMENTS: {
-  BASE: `${BASE_URL}/instruments`,
-  BY_ID: (id: string) => `${BASE_URL}/instruments/${id}`,
+  BASE: `${API_URL}/instruments`,
+  BY_ID: (id: string) => `${API_URL}/instruments/${id}`,
+  BY_IDS: `${API_URL}/instruments/by-ids`,
 }
 
 // En instrumentService.ts

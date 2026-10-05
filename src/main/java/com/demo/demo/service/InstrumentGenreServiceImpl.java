@@ -1,13 +1,20 @@
 package com.demo.demo.service;
 
 import com.demo.demo.dto.InstrumentGenreDTO;
+import com.demo.demo.utils.mapper.DtoMapper;
+import com.demo.demo.utils.mapper.EntityMapper;
 import com.demo.demo.model.*;
 import com.demo.demo.repository.*;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import java.util.*;
 import java.util.stream.Collectors;
+
+import static com.demo.demo.utils.EntityResolver.resolveGenre;
+import static com.demo.demo.utils.EntityResolver.resolveInstrument;
+import static com.demo.demo.utils.EntityResolver.resolveLessons;
+import static com.demo.demo.utils.EntityResolver.findInstrumentGenre;
 
 /**
  * Default implementation of {@link InstrumentGenreService}.
@@ -19,60 +26,85 @@ import java.util.stream.Collectors;
  * @version 1.0
  * @since 2025-06-06
  */
-@Slf4j
 @Service
 @RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class InstrumentGenreServiceImpl implements InstrumentGenreService {
 
     private final InstrumentGenreRepository instrumentGenreRepository;
-    private final InstrumentRepository instrumentRepository;
-    private final GenreRepository genreRepository;
-    private final LessonRepository lessonRepository;
+    private final DtoMapper dtoMapper;
+    private final EntityMapper entityMapper;
 
     @Override
-    public List<InstrumentGenreDTO> getAllInstrumentGenres() {
+    public List<InstrumentGenreDTO> findAll() {
         return instrumentGenreRepository.findAll().stream()
-                .map(this::toDTO)
+                .map(dtoMapper::instrumentGenreToInstrumentGenreDto)
                 .collect(Collectors.toList());
     }
 
     @Override
-    public Optional<InstrumentGenreDTO> getInstrumentGenreById(Long id) {
-        return instrumentGenreRepository.findById(id)
-                .map(this::toDTO);
+    public List<InstrumentGenreDTO> findByIds(List<Long> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return List.of();
+        }
+        return instrumentGenreRepository.findAllById(ids).stream()
+                .map(dtoMapper::instrumentGenreToInstrumentGenreDto)
+                .collect(Collectors.toList());
     }
 
     @Override
-    public InstrumentGenreDTO createInstrumentGenre(InstrumentGenreDTO dto) {
-        InstrumentGenre ig = toEntity(dto);
-        return toDTO(instrumentGenreRepository.save(ig));
+    public Optional<InstrumentGenreDTO> findById(Long id) {
+        return findInstrumentGenre(id)
+                .map(dtoMapper::instrumentGenreToInstrumentGenreDto);
+    }
+
+    /**
+     * Lessons own the relationship (lessons.instrument_genre_id), so they are linked to the saved
+     * (managed) InstrumentGenre inside the transaction and their changes are flushed on commit.
+     */
+    @Override
+    @Transactional
+    public InstrumentGenreDTO create(InstrumentGenreDTO dto) {
+        InstrumentGenre ig = entityMapper.instrumentGenreDtoToInstrumentGenre(
+                dto,
+                resolveInstrument(dto.getInstrumentId()),
+                resolveGenre(dto.getGenreId())
+        );
+        InstrumentGenre saved = instrumentGenreRepository.save(ig);
+        saved.setLessons(resolveLessons(dto.getLessonIds()));
+        return dtoMapper.instrumentGenreToInstrumentGenreDto(saved);
     }
 
     @Override
-    public Optional<InstrumentGenreDTO> updateInstrumentGenre(Long id, InstrumentGenreDTO dto) {
-        return instrumentGenreRepository.findById(id).map(existing -> {
-            return toDTO(instrumentGenreRepository.save(updateInstrumentGenre(existing, dto)));
+    @Transactional
+    public Optional<InstrumentGenreDTO> update(Long id, InstrumentGenreDTO dto) {
+        return findInstrumentGenre(id).map(existing -> {
+            return dtoMapper.instrumentGenreToInstrumentGenreDto(instrumentGenreRepository.save(updateFromDto(existing, dto)));
         });
     }
 
     @Override
-    public boolean deleteInstrumentGenre(Long id) {
-        if (!instrumentGenreRepository.existsById(id)) return false;
-        instrumentGenreRepository.deleteById(id);
-        return true;
+    @Transactional
+    public boolean delete(Long id) {
+        return findInstrumentGenre(id).map(ig -> {
+            // Las lecciones apuntan al InstrumentGenre con una FK: se desvinculan antes de borrarlo
+            ig.setLessons(Set.of());
+            instrumentGenreRepository.delete(ig);
+            return true;
+        }).orElse(false);
     }
 
     @Override
-    public List<InstrumentGenreDTO> findByGenreId(Long genreId) {
+    public List<InstrumentGenreDTO> findForGenre(Long genreId) {
         return instrumentGenreRepository.findByGenreId(genreId).stream()
-                .map(this::toDTO)
+                .map(dtoMapper::instrumentGenreToInstrumentGenreDto)
                 .collect(Collectors.toList());
     }
 
     @Override
-    public List<InstrumentGenreDTO> findByInstrumentId(Long instrumentId) {
+    public List<InstrumentGenreDTO> findForInstrument(Long instrumentId) {
         return instrumentGenreRepository.findByInstrumentId(instrumentId).stream()
-                .map(this::toDTO)
+                .map(dtoMapper::instrumentGenreToInstrumentGenreDto)
                 .collect(Collectors.toList());
     }
 
@@ -80,51 +112,16 @@ public class InstrumentGenreServiceImpl implements InstrumentGenreService {
     // Mapping Methods
     // -----------------------
 
-    private InstrumentGenreDTO toDTO(InstrumentGenre ig) {
-        InstrumentGenreDTO dto = new InstrumentGenreDTO();
-        dto.setId(ig.getId());
-        dto.setInstrumentId(ig.getInstrument().getId());
-        dto.setGenreId(ig.getGenre().getId());
-        dto.setLessonIds(ig.getLessons().stream()
-                .map(Lesson::getId)
-                .collect(Collectors.toList()));
-        return dto;
-    }
 
-    private InstrumentGenre toEntity(InstrumentGenreDTO dto) {
-        InstrumentGenre ig = new InstrumentGenre();
-        ig.setId(dto.getId());
-        ig.setInstrument(resolveInstrument(dto.getInstrumentId()));
-        ig.setGenre(resolveGenre(dto.getGenreId()));
-        ig.setLessons(resolveLessons(dto.getLessonIds()));
-        return ig;
-    }
-
-    private InstrumentGenre updateInstrumentGenre(InstrumentGenre existing, InstrumentGenreDTO dto) {
+    private InstrumentGenre updateFromDto(InstrumentGenre existing, InstrumentGenreDTO dto) {
+        existing.setTitle(dto.getTitle());
+        existing.setImageUrl(dto.getImageUrl());
+        existing.setLevel(dto.getLevel());
+        existing.setType(Item.Type.InstrumentGenre);
         existing.setInstrument(resolveInstrument(dto.getInstrumentId()));
         existing.setGenre(resolveGenre(dto.getGenreId()));
         existing.setLessons(resolveLessons(dto.getLessonIds()));
         return existing;
-    }
-
-    private Instrument resolveInstrument(Long id) {
-        return instrumentRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Instrument not found: " + id));
-    }
-
-    private Genre resolveGenre(Long id) {
-        return genreRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Genre not found: " + id));
-    }
-
-    private Set<Lesson> resolveLessons(List<Long> lessonIds) {
-        if (lessonIds == null || lessonIds.isEmpty()) {
-            return new HashSet<>();
-        }
-        return lessonIds.stream()
-                .map(id -> lessonRepository.findById(id)
-                        .orElseThrow(() -> new IllegalArgumentException("Lesson not found: " + id)))
-                .collect(Collectors.toSet());
     }
 
 }

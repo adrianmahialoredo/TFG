@@ -1,6 +1,7 @@
 package com.demo.demo.service;
 
 import com.demo.demo.dto.ItemListDTO;
+import com.demo.demo.dto.ItemSummaryDTO;
 
 import java.util.List;
 import java.util.Optional;
@@ -22,7 +23,7 @@ public interface ItemListService {
      *
      * @return A list of ItemListDTOs representing all item lists.
      */
-    List<ItemListDTO> getAllItemLists();
+    List<ItemListDTO> findAll();
 
     /**
      * Retrieves all item list IDs associated with a specific user.
@@ -30,7 +31,7 @@ public interface ItemListService {
      * @param userId The ID of the user.
      * @return A list of item list IDs for the user.
      */
-    List<Long> getAllItemListIdsByUserId(Long userId);
+    List<Long> findIdsForUser(Long userId);
 
     /**
      * Retrieves all item lists by a list of IDs and converts them to DTOs.
@@ -38,7 +39,7 @@ public interface ItemListService {
      * @param ids The list of item list IDs to retrieve.
      * @return A list of ItemListDTOs representing all item lists with the provided IDs.
      */
-    List<ItemListDTO> getAllItemListsByIds(List<Long> ids);
+    List<ItemListDTO> findByIds(List<Long> ids);
 
     /**
      * Retrieves an item list by its ID and converts it to a DTO.
@@ -46,7 +47,7 @@ public interface ItemListService {
      * @param id The ID of the item list to retrieve.
      * @return An Optional containing the ItemListDTO if found, otherwise empty.
      */
-    Optional<ItemListDTO> getItemListById(Long id);
+    Optional<ItemListDTO> findById(Long id);
 
     /**
      * Creates a new item list from the provided DTO and saves it to the repository.
@@ -54,7 +55,7 @@ public interface ItemListService {
      * @param dto The ItemListDTO containing the details of the list to create.
      * @return The created ItemListDTO.
      */
-    ItemListDTO createItemList(ItemListDTO dto);
+    ItemListDTO create(ItemListDTO dto);
 
     /**
      * Updates an existing item list with the provided DTO.
@@ -63,7 +64,7 @@ public interface ItemListService {
      * @param dto The ItemListDTO containing the updated details.
      * @return An Optional containing the updated ItemListDTO if found, otherwise empty.
      */
-    Optional<ItemListDTO> updateItemList(Long id, ItemListDTO dto);
+    Optional<ItemListDTO> update(Long id, ItemListDTO dto);
 
     /**
      * Deletes an item list by its ID.
@@ -71,7 +72,7 @@ public interface ItemListService {
      * @param id The ID of the item list to delete.
      * @return true if the item list was deleted, false if it did not exist.
      */
-    boolean deleteItemList(Long id);
+    boolean delete(Long id);
 
     /**
      * Adds an item to an existing item list.
@@ -80,7 +81,7 @@ public interface ItemListService {
      * @param itemId The ID of the item to add.
      * @return An Optional containing the updated ItemListDTO if successful, otherwise empty.
      */
-    Optional<ItemListDTO> addItemToList(Long listId, Long itemId);
+    Optional<ItemListDTO> addItem(Long listId, Long itemId);
 
     /**
      * Removes an item from an existing item list.
@@ -89,5 +90,5 @@ public interface ItemListService {
      * @param itemId The ID of the item to remove.
      * @return An Optional containing the updated ItemListDTO if successful, otherwise empty.
      */
-    Optional<ItemListDTO> removeItemFromList(Long listId, Long itemId);
+    Optional<ItemListDTO> removeItem(Long listId, Long itemId);
 }

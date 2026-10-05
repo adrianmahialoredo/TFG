@@ -1,6 +1,7 @@
 package com.demo.demo.service;
 
-import com.demo.demo.model.Item;
+import com.demo.demo.dto.ItemDTO;
+import com.demo.demo.dto.ItemSummaryDTO;
 
 import java.util.List;
 import java.util.Optional;
@@ -17,17 +18,17 @@ import java.util.Optional;
  */
 public interface ItemService {
 
-    Optional<Item> getItemById(Long id);
+    List<ItemSummaryDTO> findAll();
 
-    List<Item> getItemsByIds(List<Long> ids);
+    Optional<ItemSummaryDTO> findById(Long id);
 
-    List<Item> searchItems(String query);
+    List<ItemSummaryDTO> findByIds(List<Long> ids);
 
-    List<Item> getRecommendedItems();
+    List<ItemSummaryDTO> search(String query);
 
-    List<Item> getRecentItems();
+    List<ItemSummaryDTO> findRecommendedForItemList(Long itemListId);
 
-    List<Item> getRecommendations();
+    List<ItemDTO> findRecent();
 
-    Optional<Item> markAsAccessed(Long id);
+    Optional<ItemSummaryDTO> markAsAccessed(Long id);
 }

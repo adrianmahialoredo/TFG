@@ -9,7 +9,7 @@ import java.util.Optional;
  * Service contract for managing songs.
  *
  * Provides methods to create, read, update, and delete songs, plus several
- * read queries used to build the genre and Home screens.
+ * read queries used to build global and genre song categories.
  *
  * @author Adrián Mahía
  * @version 1.0
@@ -17,41 +17,27 @@ import java.util.Optional;
  */
 public interface SongService {
 
-    List<SongDTO> getAllSongs();
+    List<SongDTO> findAll();
 
-    Optional<SongDTO> getSongById(Long id);
+    Optional<SongDTO> findById(Long id);
 
-    SongDTO createSong(SongDTO dto);
+    SongDTO create(SongDTO dto);
 
-    Optional<SongDTO> updateSong(Long id, SongDTO dto);
+    Optional<SongDTO> update(Long id, SongDTO dto);
 
-    boolean deleteSong(Long id);
+    boolean delete(Long id);
 
-    List<SongDTO> getSongsByDecade(String decade);
+    List<SongDTO> findByDecade(String decade);
 
-    List<SongDTO> getPopularSongs();
+    List<SongDTO> findPopular(Integer limit);
 
-    List<Long> getPopularSongsWithLimit(int limit);
+    List<SongDTO> findNew(Integer limit);
 
-    List<SongDTO> getPopularSongsByGenre(Long genreId);
+    List<SongDTO> findPopularForGenre(Long genreId);
 
-    List<SongDTO> getClassicSongsByGenre(Long genreId);
+    List<SongDTO> findClassicForGenre(Long genreId);
 
-    List<SongDTO> getNewSongsByGenre(Long genreId);
+    List<SongDTO> findNewForGenre(Long genreId);
 
-    List<SongDTO> getPopularByGenreId(Long genreId);
-
-    List<SongDTO> getClassicByGenreId(Long genreId);
-
-    List<SongDTO> getNewByGenreId(Long genreId);
-
-    List<SongDTO> getSongsByIds(List<Long> ids);
-
-    List<SongDTO> getHomeSongsPopular();
-
-    List<SongDTO> getHomeSongsNew();
-
-    List<SongDTO> getHomeSongsRecommended();
-
-    List<SongDTO> getHomeSongsFromSpotify();
+    List<SongDTO> findByIds(List<Long> ids);
 }

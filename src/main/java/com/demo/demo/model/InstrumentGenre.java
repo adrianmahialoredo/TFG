@@ -1,8 +1,12 @@
 package com.demo.demo.model;
 
-import java.util.HashSet;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Set;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
@@ -13,7 +17,7 @@ import lombok.*;
  * 
  * The InstrumentGenreScreen entity is used to store information about the relationship
  * between a musical instrument and its associated genres. It supports many-to-one
- * relationships with both the Instrument and Genre entities, as well as a many-to-many
+ * relationships with both the Instrument and Genre entities, as well as an ordered one-to-many
  * relationship with the Lesson entity.
  * 
  * An InstrumentGenreScreen can be associated with one Instrument and one Genre,
@@ -32,8 +36,8 @@ import lombok.*;
 @DiscriminatorValue("INSTRUMENT_GENRE")
 @Getter
 @Setter
-@AllArgsConstructor
 @NoArgsConstructor
+@AllArgsConstructor
 public class InstrumentGenre extends Item {
 
     /**
@@ -55,15 +59,41 @@ public class InstrumentGenre extends Item {
     private Genre genre;
 
     /**
-     * Relation InstrumentGenreScreen - Lesson
-     * This is a many-to-many relationship, meaning that many InstrumentGenres can be associated with many Lessons.
-     * An InstrumentGenreScreen can have multiple Lessons, and a Lesson can be associated with multiple InstrumentGenres.
+     * Relation InstrumentGenre - Lesson
+     * This is a one-to-many relationship, meaning that an InstrumentGenre can have many Lessons,
+     * and a Lesson belongs to at most one InstrumentGenre ({@link Lesson#getInstrumentGenre()} owns the relationship).
+     * Lessons are ordered by their position inside the InstrumentGenre.
      */
-    @ManyToMany
-    @JoinTable(
-        name = "instrument_genre_lesson",
-        joinColumns = @JoinColumn(name = "instrument_genre_id"),
-        inverseJoinColumns = @JoinColumn(name = "lesson_id")
-    )
-    private Set<Lesson> lessons = new HashSet<>();
+    @OneToMany(mappedBy = "instrumentGenre")
+    @OrderBy("indexInInstrumentGenre ASC")
+    @JsonIgnore
+    private Set<Lesson> lessons = new LinkedHashSet<>();
+
+    /**
+     * Replaces the lessons of the InstrumentGenre keeping both sides of the relationship in sync:
+     * the given lessons join this InstrumentGenre in the given order (their index is their position)
+     * and the lessons that are no longer included leave it.
+     *
+     * @param newLessons the lessons of the InstrumentGenre, in order
+     */
+    public void setLessons(Collection<Lesson> newLessons) {
+        List<Lesson> ordered = newLessons == null ? List.of() : new ArrayList<>(new LinkedHashSet<>(newLessons));
+
+        for (Lesson previous : lessons) {
+            if (!ordered.contains(previous)) {
+                previous.leaveInstrumentGenre();
+            }
+        }
+        lessons.clear();
+
+        int index = 0;
+        for (Lesson lesson : ordered) {
+            InstrumentGenre current = lesson.getInstrumentGenre();
+            if (current != null && current != this) {
+                current.getLessons().remove(lesson);
+            }
+            lesson.joinInstrumentGenre(this, index++);
+            lessons.add(lesson);
+        }
+    }
 }

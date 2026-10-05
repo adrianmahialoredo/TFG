@@ -1,14 +1,20 @@
 import React from 'react';
-import { ScrollView, TouchableOpacity, View, Text, Image, ActivityIndicator} from "react-native";
+import { ScrollView, TouchableOpacity, View, Text, Image, ActivityIndicator, Modal, Pressable } from "react-native";
 import {useRoute, RouteProp, useNavigation, NavigationProp, useFocusEffect} from '@react-navigation/native';
-import { CirclePlus } from "lucide-react-native";
+import { Pencil } from 'lucide-react-native';
+import * as ImagePicker from 'expo-image-picker';
 import AppLayout from "../components/AppLayout";
 import ProfileHeader from "../components/ProfileHeader";
 import ListItem from "../components/ListItem";
 import { COLORS } from "../constants/Theme";
-import { RootStackParamList, AnyItemDTO, ItemType, SongDTO } from '../types';
+import { RootStackParamList, ItemSummaryDTO, ItemType } from '../types';
 import { useItemListDetail } from '../hooks/useItemListDetail';
 import { navigateToItem } from '../utils/navigation.utils';
+import RoundedSquarePlus from '../components/icons/RoundedSquarePlus';
+import { PhotoOptionsModal } from '../components/PhotoOptionsModal';
+import { uploadProfileImageToCloudinary } from '../services';
+import { useAppAlert } from '../context/AlertModalContext';
+import CreateListMiniModal from '../components/CreateListMiniModal';
 
 type ListScreenRouteProp = RouteProp<RootStackParamList, 'ListScreen'>;
 
@@ -17,7 +23,17 @@ export default function ListScreen() {
   const route = useRoute<ListScreenRouteProp>();
   const { itemListId } = route.params;
 
-  const { list, items, loading, error, refresh } = useItemListDetail(itemListId);
+  const { list, items, loading, error, refresh, updateList } = useItemListDetail(itemListId);
+  const { showAlert } = useAppAlert();
+
+  const [editingPhoto, setEditingPhoto] = React.useState(false);
+  const [viewImageModal, setViewImageModal] = React.useState(false);
+  const [savingImage, setSavingImage] = React.useState(false);
+
+  const [renameVisible, setRenameVisible] = React.useState(false);
+  const [newName, setNewName] = React.useState('');
+  const [renameError, setRenameError] = React.useState<string | null>(null);
+  const [renaming, setRenaming] = React.useState(false);
 
   // Refresca la lista al volver a esta pantalla (p. ej. tras añadir un item),
   // omitiendo el primer foco porque el hook ya carga en el montaje.
@@ -36,10 +52,10 @@ export default function ListScreen() {
   /**
    * Determina qué texto mostrar como descripción según el tipo de item
    */
-  const getItemDescription = (item: AnyItemDTO): string => {
+  const getItemDescription = (item: ItemSummaryDTO): string => {
     switch (item.type) {
       case ItemType.SONG:
-        return (item as SongDTO).artist || 'Artista desconocido';
+        return item.artist || 'Artista desconocido';
       case ItemType.LESSON:
         return 'Lección práctica';
       case ItemType.GENRE:
@@ -54,8 +70,66 @@ export default function ListScreen() {
   /**
    * Maneja la navegación según el tipo de item pulsado
    */
-  const handlePress = (item: AnyItemDTO) => {
+  const handlePress = (item: ItemSummaryDTO) => {
     navigateToItem(navigation, item);
+  };
+
+  const handleOpenRename = () => {
+    setNewName(list?.name || '');
+    setRenameError(null);
+    setRenameVisible(true);
+  };
+
+  const handleRename = async () => {
+    const trimmed = newName.trim();
+    if (trimmed.length < 2) {
+      setRenameError('El nombre debe tener al menos 2 caracteres');
+      return;
+    }
+
+    try {
+      setRenaming(true);
+      const updated = await updateList({ name: trimmed });
+      if (!updated) {
+        setRenameError('No se pudo actualizar el nombre');
+        return;
+      }
+      setRenameVisible(false);
+      setRenameError(null);
+    } catch (e) {
+      setRenameError('No se pudo actualizar el nombre');
+    } finally {
+      setRenaming(false);
+    }
+  };
+
+  const handlePickImage = async () => {
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.6,
+      });
+
+      if (result.canceled || !result.assets[0]?.uri) {
+        return;
+      }
+
+      setSavingImage(true);
+      const uploadedUrl = await uploadProfileImageToCloudinary(result.assets[0].uri);
+      const updated = await updateList({ imageUrl: uploadedUrl });
+
+      if (!updated) {
+        showAlert({ title: 'Error', message: 'No se pudo actualizar la foto de la lista' });
+        return;
+      }
+
+      setEditingPhoto(false);
+    } catch (e) {
+      showAlert({ title: 'Error', message: 'No se pudo actualizar la foto de la lista' });
+    } finally {
+      setSavingImage(false);
+    }
   };
 
   // Estado de Carga
@@ -95,21 +169,32 @@ export default function ListScreen() {
             {/* Cabecera con Info de la Lista */}
             <View className="items-center mt-6 mb-8 px-4">
               {list.imageUrl ? (
-                  <Image
-                      source={{ uri: list.imageUrl }}
-                      className="w-40 h-40 rounded-3xl mb-4 shadow-lg"
-                      resizeMode="cover"
-                  />
+                  <TouchableOpacity onPress={() => setEditingPhoto(true)} activeOpacity={0.85}>
+                    <Image
+                        source={{ uri: list.imageUrl }}
+                        className="w-40 h-40 rounded-3xl mb-4 shadow-lg"
+                        resizeMode="cover"
+                    />
+                  </TouchableOpacity>
               ) : (
-                  <View className="w-40 h-40 bg-secondary rounded-3xl mb-4 items-center justify-center">
+                  <TouchableOpacity
+                    className="w-40 h-40 bg-secondary rounded-3xl mb-4 items-center justify-center"
+                    onPress={() => setEditingPhoto(true)}
+                    activeOpacity={0.85}
+                  >
                     <Text className="text-primary text-4xl font-bold">
-                      {list.name.charAt(0)}
+                      {list.name.charAt(0).toUpperCase()}
                     </Text>
-                  </View>
+                  </TouchableOpacity>
               )}
-              <Text className="text-secondary text-2xl font-bold text-center">
-                {list.name}
-              </Text>
+              <View className="flex-row items-center gap-2">
+                <Text className="text-secondary text-2xl font-bold text-center">
+                  {list.name}
+                </Text>
+                <TouchableOpacity onPress={handleOpenRename} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                  <Pencil size={18} color={COLORS.secondary} />
+                </TouchableOpacity>
+              </View>
               {list.description && (
                   <Text className="text-secondary opacity-60 text-sm text-center mt-1">
                     {list.description}
@@ -120,7 +205,7 @@ export default function ListScreen() {
             {/* Listado de Items Polimórficos */}
             <View className="flex-column gap-3 mb-7 px-4">
               {items.length > 0 ? (
-                  items.map((item) => (
+                  items.map((item, index) => (
                       <ListItem
                           key={item.id}
                           item={{
@@ -130,6 +215,7 @@ export default function ListScreen() {
                             imageUrl: item.imageUrl,
                             info: `${item.type}${item.level ? ` • Lvl ${item.level}` : ''}`,
                           }}
+                          inverted={index % 2 !== 0}
                           onPress={() => handlePress(item)}
                       />
                   ))
@@ -150,11 +236,57 @@ export default function ListScreen() {
                 <Text className="text-xl font-semibold text-primary">
                   Añadir a la lista
                 </Text>
-                <CirclePlus size={26} color={COLORS.primary} />
+                <RoundedSquarePlus size={26} color={COLORS.primary} />
               </TouchableOpacity>
             </View>
           </ScrollView>
         </View>
+
+        <PhotoOptionsModal
+          visible={editingPhoto}
+          onClose={() => setEditingPhoto(false)}
+          onViewImage={() => {
+            if (!list.imageUrl) {
+              showAlert({ title: 'Info', message: 'Esta lista aún no tiene foto' });
+              return;
+            }
+            setEditingPhoto(false);
+            setViewImageModal(true);
+          }}
+          onPickImage={handlePickImage}
+          isLoading={savingImage}
+        />
+
+        <Modal visible={viewImageModal} transparent animationType="fade" onRequestClose={() => setViewImageModal(false)}>
+          <Pressable className="flex-1 bg-black justify-center items-center" onPress={() => setViewImageModal(false)}>
+            {list.imageUrl ? (
+              <Image
+                source={{ uri: list.imageUrl }}
+                className="w-full h-full"
+                resizeMode="contain"
+              />
+            ) : null}
+          </Pressable>
+        </Modal>
+
+        <CreateListMiniModal
+          visible={renameVisible}
+          name={newName}
+          error={renameError}
+          creating={renaming}
+          title="Editar nombre"
+          placeholder="Nuevo nombre de la lista"
+          submitLabel="Guardar"
+          onChangeName={(value) => {
+            setNewName(value);
+            if (renameError) setRenameError(null);
+          }}
+          onSubmit={handleRename}
+          onClose={() => {
+            setRenameVisible(false);
+            setRenameError(null);
+          }}
+        />
       </AppLayout>
   );
 }

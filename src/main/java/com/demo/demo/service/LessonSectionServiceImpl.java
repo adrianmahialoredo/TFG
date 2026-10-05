@@ -1,17 +1,20 @@
 package com.demo.demo.service;
 
 import com.demo.demo.dto.LessonSectionDTO;
-import com.demo.demo.model.Lesson;
+import com.demo.demo.utils.mapper.DtoMapper;
+import com.demo.demo.utils.mapper.EntityMapper;
 import com.demo.demo.model.LessonSection;
-import com.demo.demo.repository.LessonRepository;
 import com.demo.demo.repository.LessonSectionRepository;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
+
+import static com.demo.demo.utils.EntityResolver.resolveLesson;
+import static com.demo.demo.utils.EntityResolver.findLessonSection;
 
 /**
  * Default implementation of {@link LessonSectionService}.
@@ -23,43 +26,64 @@ import java.util.stream.Collectors;
  * @version 1.0
  * @since 2025-06-06
  */
-@Slf4j
 @Service
 @RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class LessonSectionServiceImpl implements LessonSectionService {
 
     private final LessonSectionRepository lessonSectionRepository;
-    private final LessonRepository lessonRepository;
+    private final DtoMapper dtoMapper;
+    private final EntityMapper entityMapper;
 
     @Override
-    public LessonSectionDTO createLessonSection(LessonSectionDTO dto) {
-        LessonSection section = toEntity(dto);
-        return toDTO(lessonSectionRepository.save(section));
+    @Transactional
+    public LessonSectionDTO create(LessonSectionDTO dto) {
+        LessonSection section = entityMapper.lessonSectionDtoToLessonSection(dto, resolveLesson(dto.getLessonId()));
+        return dtoMapper.lessonSectionToLessonSectionDto(lessonSectionRepository.save(section));
     }
 
     @Override
-    public Optional<LessonSectionDTO> getLessonSectionById(Long id) {
-        return lessonSectionRepository.findById(id).map(this::toDTO);
-    }
-
-    @Override
-    public List<LessonSectionDTO> getLessonSectionsByLessonId(Long lessonId) {
-        return lessonSectionRepository.findByLessonId(lessonId)
-                .stream()
-                .map(this::toDTO)
+    public List<LessonSectionDTO> findAll() {
+        return lessonSectionRepository.findAll().stream()
+                .map(dtoMapper::lessonSectionToLessonSectionDto)
                 .collect(Collectors.toList());
     }
 
     @Override
-    public Optional<LessonSectionDTO> updateLessonSection(Long id, LessonSectionDTO dto) {
-        return lessonSectionRepository.findById(id).map(existing -> {
+    public List<LessonSectionDTO> findByIds(List<Long> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return List.of();
+        }
+        return lessonSectionRepository.findAllById(ids).stream()
+                .map(dtoMapper::lessonSectionToLessonSectionDto)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public Optional<LessonSectionDTO> findById(Long id) {
+        return findLessonSection(id).map(dtoMapper::lessonSectionToLessonSectionDto);
+    }
+
+    @Override
+    public List<LessonSectionDTO> findForLesson(Long lessonId) {
+        return lessonSectionRepository.findByLessonId(lessonId)
+                .stream()
+                .map(dtoMapper::lessonSectionToLessonSectionDto)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional
+    public Optional<LessonSectionDTO> update(Long id, LessonSectionDTO dto) {
+        return findLessonSection(id).map(existing -> {
             updateEntity(existing, dto);
-            return toDTO(lessonSectionRepository.save(existing));
+            return dtoMapper.lessonSectionToLessonSectionDto(lessonSectionRepository.save(existing));
         });
     }
 
     @Override
-    public boolean deleteLessonSection(Long id) {
+    @Transactional
+    public boolean delete(Long id) {
         if (!lessonSectionRepository.existsById(id)) {
             return false;
         }
@@ -69,25 +93,6 @@ public class LessonSectionServiceImpl implements LessonSectionService {
 
     // ------------- Mapping -------------
 
-    private LessonSectionDTO toDTO(LessonSection section) {
-        LessonSectionDTO dto = new LessonSectionDTO();
-        dto.setId(section.getId());
-        dto.setTitle(section.getTitle());
-        dto.setHtmlContent(section.getHtmlContent());
-        dto.setOrderIndex(section.getOrderIndex());
-        dto.setLessonId(section.getLesson().getId());
-        return dto;
-    }
-
-    private LessonSection toEntity(LessonSectionDTO dto) {
-        LessonSection section = new LessonSection();
-        section.setId(dto.getId());
-        section.setTitle(dto.getTitle());
-        section.setHtmlContent(dto.getHtmlContent());
-        section.setOrderIndex(dto.getOrderIndex());
-        section.setLesson(resolveLesson(dto.getLessonId()));
-        return section;
-    }
 
     private void updateEntity(LessonSection section, LessonSectionDTO dto) {
         section.setTitle(dto.getTitle());
@@ -97,11 +102,6 @@ public class LessonSectionServiceImpl implements LessonSectionService {
         if (!section.getLesson().getId().equals(dto.getLessonId())) {
             section.setLesson(resolveLesson(dto.getLessonId()));
         }
-    }
-
-    private Lesson resolveLesson(Long id) {
-        return lessonRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Lesson not found: " + id));
     }
 }
 

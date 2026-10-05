@@ -2,7 +2,7 @@
 import { View, Text, TouchableOpacity } from "react-native";
 import { CirclePlus } from "lucide-react-native";
 import { COLORS } from "../constants/Theme";
-import { useInstrumentEntitiesStore } from "../stores/entities";
+import { useInstrumentsByIds } from "../hooks/useInstruments";
 
 type Props = {
     ids: (string | number)[]; // Recibe la lista de IDs de cualquier usuario
@@ -10,13 +10,8 @@ type Props = {
 };
 
 export default function InstrumentViewer({ ids, label = "Toco:" }: Props) {
-    // Acceso directo a la RAM (O(1))
-    const instrumentsMap = useInstrumentEntitiesStore(state => state.instruments);
-
-    // Mapeo instantáneo: IDs -> Objetos reales
-    const instruments = ids.map(id => instrumentsMap[id]).filter(Boolean);
-
-    if (instruments.length === 0) return null;
+    // IDs -> Objetos (el hook trae de Disco/API los que no estén en RAM)
+    const instruments = useInstrumentsByIds(ids);
 
     return (
         <View className="mb-5">

@@ -1,13 +1,21 @@
 package com.demo.demo.service;
 
+import com.demo.demo.utils.mapper.DtoMapper;
+import com.demo.demo.utils.mapper.EntityMapper;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import com.demo.demo.dto.ItemListDTO;
 import com.demo.demo.model.*;
 import com.demo.demo.repository.*;
 import java.util.*;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+
+import static com.demo.demo.utils.EntityResolver.resolveItem;
+import static com.demo.demo.utils.EntityResolver.resolveItems;
+import static com.demo.demo.utils.EntityResolver.resolveUser;
+import static com.demo.demo.utils.EntityResolver.findItemList;
+import static com.demo.demo.utils.EntityResolver.findUser;
 
 /**
  * Default implementation of {@link ItemListService}.
@@ -19,55 +27,63 @@ import lombok.extern.slf4j.Slf4j;
  * @version 1.0
  * @since 2025-06-06
  */
-@Slf4j
 @Service
 @RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class ItemListServiceImpl implements ItemListService {
 
     private final ItemListRepository itemListRepository;
-    private final ItemRepository itemRepository;
-    private final UserRepository userRepository;
+    private final SongService songService;
+    private final DtoMapper dtoMapper;
+    private final EntityMapper entityMapper;
 
     @Override
-    public List<ItemListDTO> getAllItemLists() {
+    public List<ItemListDTO> findAll() {
         return itemListRepository.findAll().stream()
-                .map(this::toDTO)
+                .map(dtoMapper::itemListToItemListDto)
                 .collect(Collectors.toList());
     }
 
     @Override
-    public List<Long> getAllItemListIdsByUserId(Long userId) {
-        return itemListRepository.findIdsByUserId(userId);
+    public List<Long> findIdsForUser(Long userId) {
+        return findUser(userId)
+                .map(user -> user.getItemLists().stream()
+                        .map(ItemList::getId)
+                        .collect(Collectors.toList()))
+                .orElseGet(List::of);
     }
 
     @Override
-    public List<ItemListDTO> getAllItemListsByIds(List<Long> ids) {
+    public List<ItemListDTO> findByIds(List<Long> ids) {
         return itemListRepository.findAllById(ids).stream()
-                .map(this::toDTO)
+                .map(dtoMapper::itemListToItemListDto)
                 .collect(Collectors.toList());
     }
 
     @Override
-    public Optional<ItemListDTO> getItemListById(Long id) {
-        return itemListRepository.findById(id)
-                .map(this::toDTO);
+    public Optional<ItemListDTO> findById(Long id) {
+        return findItemList(id)
+                .map(dtoMapper::itemListToItemListDto);
     }
 
     @Override
-    public ItemListDTO createItemList(ItemListDTO dto) {
-        ItemList list = toEntity(dto);
-        return toDTO(itemListRepository.save(list));
+    @Transactional
+    public ItemListDTO create(ItemListDTO dto) {
+        ItemList list = entityMapper.itemListDtoToItemList(dto, resolveUser(dto.getUserId()), resolveItems(dto.getItemIds()));
+        return dtoMapper.itemListToItemListDto(itemListRepository.save(list));
     }
 
     @Override
-    public Optional<ItemListDTO> updateItemList(Long id, ItemListDTO dto) {
-        return itemListRepository.findById(id).map(
-                existing -> toDTO(itemListRepository.save(updateItemListFromDto(existing, dto)))
+    @Transactional
+    public Optional<ItemListDTO> update(Long id, ItemListDTO dto) {
+        return findItemList(id).map(
+                existing -> dtoMapper.itemListToItemListDto(itemListRepository.save(updateItemListFromDto(existing, dto)))
         );
     }
 
     @Override
-    public boolean deleteItemList(Long id) {
+    @Transactional
+    public boolean delete(Long id) {
         if (!itemListRepository.existsById(id)) {
             return false;
         }
@@ -76,52 +92,22 @@ public class ItemListServiceImpl implements ItemListService {
     }
 
     @Override
-    public Optional<ItemListDTO> addItemToList(Long listId, Long itemId) {
-        return itemListRepository.findById(listId).map(list -> {
-            Item item = itemRepository.findById(itemId)
-                    .orElseThrow(() -> new IllegalArgumentException("Item not found: " + itemId));
-            // Evitamos duplicados en la tabla intermedia itemlist_items
-            boolean alreadyPresent = list.getItems().stream()
-                    .anyMatch(existing -> existing.getId().equals(itemId));
-            if (!alreadyPresent) {
-                list.addItem(item);
-            }
-            return toDTO(itemListRepository.save(list));
+    @Transactional
+    public Optional<ItemListDTO> addItem(Long listId, Long itemId) {
+        return findItemList(listId).map(list -> {
+            // ItemList.addItem ignora el item si ya está en la lista (sin duplicados en itemlist_items)
+            list.addItem(resolveItem(itemId));
+            return dtoMapper.itemListToItemListDto(itemListRepository.save(list));
         });
     }
 
     @Override
-    public Optional<ItemListDTO> removeItemFromList(Long listId, Long itemId) {
-        return itemListRepository.findById(listId).map(list -> {
+    @Transactional
+    public Optional<ItemListDTO> removeItem(Long listId, Long itemId) {
+        return findItemList(listId).map(list -> {
             list.getItems().removeIf(item -> item.getId().equals(itemId));
-            return toDTO(itemListRepository.save(list));
+            return dtoMapper.itemListToItemListDto(itemListRepository.save(list));
         });
-    }
-
-    // ------------
-    // DTO MAPPING
-    // ------------
-
-    private ItemListDTO toDTO(ItemList entity) {
-        ItemListDTO dto = new ItemListDTO();
-        dto.setId(entity.getId());
-        dto.setName(entity.getName());
-        dto.setImageUrl(entity.getImageUrl());
-        dto.setUserId(entity.getUser().getId());
-        dto.setItemIds(entity.getItems().stream()
-                .map(Item::getId)
-                .collect(Collectors.toList()));
-        return dto;
-    }
-
-    private ItemList toEntity(ItemListDTO dto) {
-        ItemList list = new ItemList();
-        list.setId(dto.getId());
-        list.setName(dto.getName());
-        list.setImageUrl(dto.getImageUrl());
-        list.setUser(resolveUser(dto.getUserId()));
-        list.setItems(resolveItems(dto.getItemIds()));
-        return list;
     }
 
     private ItemList updateItemListFromDto(ItemList existing, ItemListDTO dto) {
@@ -130,21 +116,6 @@ public class ItemListServiceImpl implements ItemListService {
         existing.setUser(resolveUser(dto.getUserId()));
         existing.setItems(resolveItems(dto.getItemIds()));
         return existing;
-    }
-
-    private List<Item> resolveItems(List<Long> itemIds) {
-        if (itemIds == null) return new ArrayList<>();
-        return itemIds.stream()
-                .map(id -> itemRepository.findById(id)
-                        .orElseThrow(() -> new IllegalArgumentException("Item not found: " + id)))
-                .collect(Collectors.toList());
-    }
-
-    private User resolveUser(Long userId) {
-        return Optional.ofNullable(userId)
-                .flatMap(userRepository::findById)
-                .orElseThrow(() -> new IllegalArgumentException(
-                        userId == null ? "User id is required" : "User not found: " + userId));
     }
 
 }

@@ -19,8 +19,6 @@ export interface ItemDTO {
   imageUrl: string;
   level?: number; // entre 1 y 5 estrellas
   createdAt?: string;
-  /** Fecha ISO del último acceso al item. Alimenta la sección "Recientes". */
-  lasttimeaccess?: string;
   type: ItemType;
 }
 

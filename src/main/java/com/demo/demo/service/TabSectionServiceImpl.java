@@ -1,13 +1,18 @@
 package com.demo.demo.service;
 
 import com.demo.demo.dto.TabSectionDTO;
+import com.demo.demo.utils.mapper.DtoMapper;
+import com.demo.demo.utils.mapper.EntityMapper;
 import com.demo.demo.model.*;
 import com.demo.demo.repository.*;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import java.util.*;
 import java.util.stream.Collectors;
+
+import static com.demo.demo.utils.EntityResolver.resolveSongLesson;
+import static com.demo.demo.utils.EntityResolver.findTabSection;
 
 /**
  * Default implementation of {@link TabSectionService}.
@@ -19,43 +24,64 @@ import java.util.stream.Collectors;
  * @version 1.0
  * @since 2025-06-06
  */
-@Slf4j
 @Service
 @RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class TabSectionServiceImpl implements TabSectionService {
 
     private final TabSectionRepository tabSectionRepository;
-    private final SongLessonRepository songLessonRepository;
+    private final DtoMapper dtoMapper;
+    private final EntityMapper entityMapper;
 
     @Override
-    public TabSectionDTO createTabSection(TabSectionDTO dto) {
-        TabSection section = toEntity(dto);
-        return toDTO(tabSectionRepository.save(section));
+    @Transactional
+    public TabSectionDTO create(TabSectionDTO dto) {
+        TabSection section = entityMapper.tabSectionDtoToTabSection(dto, resolveSongLesson(dto.getSongLessonId()));
+        return dtoMapper.tabSectionToTabSectionDto(tabSectionRepository.save(section));
     }
 
     @Override
-    public Optional<TabSectionDTO> getTabSectionById(Long id) {
-        return tabSectionRepository.findById(id).map(this::toDTO);
-    }
-
-    @Override
-    public List<TabSectionDTO> getTabSectionsBySongLessonId(Long lessonId) {
-        return tabSectionRepository.findBySongLessonId(lessonId)
-                .stream()
-                .map(this::toDTO)
+    public List<TabSectionDTO> findAll() {
+        return tabSectionRepository.findAll().stream()
+                .map(dtoMapper::tabSectionToTabSectionDto)
                 .collect(Collectors.toList());
     }
 
     @Override
-    public Optional<TabSectionDTO> updateTabSection(Long id, TabSectionDTO dto) {
-        return tabSectionRepository.findById(id).map(existing -> {
+    public List<TabSectionDTO> findByIds(List<Long> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return List.of();
+        }
+        return tabSectionRepository.findAllById(ids).stream()
+                .map(dtoMapper::tabSectionToTabSectionDto)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public Optional<TabSectionDTO> findById(Long id) {
+        return findTabSection(id).map(dtoMapper::tabSectionToTabSectionDto);
+    }
+
+    @Override
+    public List<TabSectionDTO> findForSongLesson(Long lessonId) {
+        return tabSectionRepository.findBySongLessonId(lessonId)
+                .stream()
+                .map(dtoMapper::tabSectionToTabSectionDto)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional
+    public Optional<TabSectionDTO> update(Long id, TabSectionDTO dto) {
+        return findTabSection(id).map(existing -> {
             updateEntity(existing, dto);
-            return toDTO(tabSectionRepository.save(existing));
+            return dtoMapper.tabSectionToTabSectionDto(tabSectionRepository.save(existing));
         });
     }
 
     @Override
-    public boolean deleteTabSection(Long id) {
+    @Transactional
+    public boolean delete(Long id) {
         if (!tabSectionRepository.existsById(id)) return false;
         tabSectionRepository.deleteById(id);
         return true;
@@ -63,23 +89,6 @@ public class TabSectionServiceImpl implements TabSectionService {
 
     // ------------- Mapping -------------
 
-    private TabSectionDTO toDTO(TabSection section) {
-        TabSectionDTO dto = new TabSectionDTO();
-        dto.setId(section.getId());
-        dto.setIdentifier(section.getIdentifier());
-        dto.setContent(section.getContent());
-        dto.setSongLessonId(section.getSongLesson().getId());
-        return dto;
-    }
-
-    private TabSection toEntity(TabSectionDTO dto) {
-        TabSection section = new TabSection();
-        section.setId(dto.getId());
-        section.setIdentifier(dto.getIdentifier());
-        section.setContent(dto.getContent());
-        section.setSongLesson(resolveSongLesson(dto.getSongLessonId()));
-        return section;
-    }
 
     private void updateEntity(TabSection section, TabSectionDTO dto) {
         section.setIdentifier(dto.getIdentifier());
@@ -88,11 +97,6 @@ public class TabSectionServiceImpl implements TabSectionService {
         if (!section.getSongLesson().getId().equals(dto.getSongLessonId())) {
             section.setSongLesson(resolveSongLesson(dto.getSongLessonId()));
         }
-    }
-
-    private SongLesson resolveSongLesson(Long id) {
-        return songLessonRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("SongLesson not found: " + id));
     }
 
 }

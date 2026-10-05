@@ -1,5 +1,6 @@
 package com.demo.demo.model;
 
+import com.demo.demo.utils.Identifiable;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import jakarta.persistence.*;
@@ -30,10 +31,6 @@ import java.time.LocalDateTime;
 @Entity
 @Inheritance(strategy = InheritanceType.JOINED)
 @DiscriminatorColumn(name = "dtype")
-@Getter
-@Setter
-@AllArgsConstructor
-@NoArgsConstructor
 @JsonTypeInfo(
         use = JsonTypeInfo.Id.NAME,
         include = JsonTypeInfo.As.EXISTING_PROPERTY,
@@ -46,7 +43,11 @@ import java.time.LocalDateTime;
         @JsonSubTypes.Type(value = Genre.class, name = "Genre"),
         @JsonSubTypes.Type(value = InstrumentGenre.class, name = "InstrumentGenre")
 })
-public abstract class Item {
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+public abstract class Item implements Identifiable<Long> {
 
     /**
      * Unique identifier for the item.
@@ -105,5 +106,22 @@ public abstract class Item {
      */
     public enum Type {
         Song, Lesson, Genre, InstrumentGenre
+    }
+
+    /**
+     * Two Items are equal when they have the same id, so collections (e.g. {@link java.util.Set})
+     * never hold the same Item twice even if it was loaded in different places or is a Hibernate proxy.
+     * Ids are assigned manually before the entity is added to any collection, so the hash is stable.
+     */
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof Item other)) return false;
+        return getId() != null && getId().equals(other.getId());
+    }
+
+    @Override
+    public int hashCode() {
+        return java.util.Objects.hashCode(getId());
     }
 }

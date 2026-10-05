@@ -33,6 +33,9 @@ interface GenreInstrumentsProps {
   genreId: string;
 }
 
+// Ajustar este valor para controlar el gap horizontal entre los 2 botones por fila.
+const TOOL_BUTTON_GAP = 24;
+
 export default function GenreInstrumentsScreen({ genreId }: GenreInstrumentsProps) {
 
   // Nivel 6: El hook se encarga de la lógica de selección y filtrado
@@ -73,14 +76,20 @@ export default function GenreInstrumentsScreen({ genreId }: GenreInstrumentsProp
         {/* Listado de Instrumentos del Género */}
         <View className="px-4 mb-8">
           {chunkArray(instrumentGenres, 2).map((pair, rowIndex) => (
-              <View key={rowIndex} className="flex-row justify-center gap-4 mb-4">
-                {pair.map((ig: InstrumentGenreDTO) => (
-                    <ToolButton
+              <View key={rowIndex} className="flex-row justify-center mb-4">
+                {pair.map((ig: InstrumentGenreDTO, index: number) => (
+                    <View
                         key={ig.id}
-                        label={ig.title ?? "S/N"}
-                        icon={getIconForName(ig.title)}
-                        onPress={() => selectInstrument(ig.id)}
-                    />
+                        style={{ marginRight: index < pair.length - 1 ? TOOL_BUTTON_GAP : 0 }}
+                    >
+                      <ToolButton
+                          label={ig.title ?? "S/N"}
+                          icon={getIconForName(ig.title)}
+                          buttonMarginRight={0}
+                          labelMarginRight={0}
+                          onPress={() => selectInstrument(ig.id)}
+                      />
+                    </View>
                 ))}
               </View>
           ))}
@@ -89,7 +98,7 @@ export default function GenreInstrumentsScreen({ genreId }: GenreInstrumentsProp
         {/* Carrusel de Lecciones: Ahora el carrusel es autónomo y usa el genreId */}
         <View className="mt-2">
           <GenreLessonsCarousel
-              title="Conceptos de este Género"
+              title="Recomendaciones"
               genreId={genreId}
           />
         </View>

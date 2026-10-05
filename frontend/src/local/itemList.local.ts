@@ -126,3 +126,20 @@ export const saveBatchWithUserIndex = async (itemLists: ItemListDTO[]): Promise<
   }
 };
 
+/**
+ * Borra todas las listas, sus índices y los índices por usuario del Disco.
+ * Se usa en el logout: las listas son datos privados del usuario.
+ */
+export const clearAll = async (): Promise<void> => {
+  try {
+    const allKeys = await AsyncStorage.getAllKeys();
+    const keys = allKeys.filter(key =>
+        key.startsWith(ITEM_LIST_CACHE_PREFIX) ||
+        key.startsWith(INDEX_CACHE_PREFIX) ||
+        key.startsWith(USER_INDEX_PREFIX)
+    );
+    if (keys.length > 0) await AsyncStorage.multiRemove(keys);
+  } catch (e) {
+    console.error("[ItemListLocal] Error en clearAll:", e);
+  }
+};

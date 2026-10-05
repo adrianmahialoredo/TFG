@@ -22,6 +22,7 @@ export default function InstrumentGenreScreen(props: InstrumentGenreProps) {
     // Lógica Híbrida: Prioridad a Props, si no, a Route
     const instrumentGenreId = props.instrumentGenreId || route.params?.instrumentGenreId;
     const instrumentName = props.instrumentName || route.params?.instrumentName;
+    const instrumentGenreIdStr = instrumentGenreId?.toString() || '';
 
     // Si hay onBack en props lo usamos, si no, usamos el goBack de la navegación
     const handleBack = () => {
@@ -32,7 +33,7 @@ export default function InstrumentGenreScreen(props: InstrumentGenreProps) {
         }
     };
 
-    const { instrumentGenre, lessons } = useInstrumentGenre(instrumentGenreId || '');
+    const { instrumentGenre, lessons } = useInstrumentGenre(instrumentGenreIdStr);
 
     if (!instrumentGenre) return null;
 
@@ -74,7 +75,7 @@ export default function InstrumentGenreScreen(props: InstrumentGenreProps) {
                 <View className="px-4 mb-10">
                     <TouchableOpacity
                         onPress={() => navigation.navigate('InstrumentGenreLesson', {
-                            instrumentGenreId,
+                            instrumentGenreId: instrumentGenreIdStr,
                             instrumentName
                         })}
                         className="bg-primary flex-row h-16 items-center justify-center rounded-2xl shadow-lg"

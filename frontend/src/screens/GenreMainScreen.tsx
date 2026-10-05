@@ -40,8 +40,8 @@ export default function GenreMainScreen() {
         {genre && (
             <View className="flex-1 bg-background pt-2">
 
-              <View className="flex-row gap-2 px-4 mb-4 mt-6">
-                <ProfileHeader title="" />
+              <View className="flex-row items-center gap-2 px-4 mb-10 mt-6">
+                <ProfileHeader title="" compact />
 
                 {['Instrumentos', 'Canciones', 'Género'].map((tab) => (
                     <TopButton

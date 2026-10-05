@@ -62,14 +62,12 @@ export const useProfile = () => {
                 quality: 0.5, // Comprimimos para no saturar el servidor
             });
 
-            if (!result.canceled && result.assets[0].uri) {
+            if (!result.canceled && result.assets[0].uri && currentUserId) {
                 setIsLoading(true);
-                // Aquí llamarías a un servicio de Cloudinary o similar si fuera necesario
-                // Por ahora, actualizamos la propiedad en el perfil
-                await updateProfileData({ profileImageUrl: result.assets[0].uri });
+                await userRepository.updateProfileImage(currentUserId, result.assets[0].uri);
             }
         } catch (err) {
-            setError('No se pudo acceder a la galería');
+            setError('No se pudo actualizar la foto de perfil');
         } finally {
             setIsLoading(false);
         }

@@ -1,13 +1,22 @@
 package com.demo.demo.service;
 
-import com.demo.demo.model.Item;
+import com.demo.demo.dto.ItemDTO;
+import com.demo.demo.dto.ItemSummaryDTO;
+import com.demo.demo.utils.mapper.DtoMapper;
+import com.demo.demo.model.ItemList;
 import com.demo.demo.repository.ItemRepository;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
+
+import static com.demo.demo.utils.EntityResolver.resolveItemList;
+import static com.demo.demo.utils.EntityResolver.findItem;
 
 /**
  * Default implementation of {@link ItemService}.
@@ -17,6 +26,8 @@ import java.util.Optional;
  * @since 2025-06-06
  */
 @Service
+@RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class ItemServiceImpl implements ItemService {
 
     /**
@@ -26,49 +37,59 @@ public class ItemServiceImpl implements ItemService {
     public static final int HOME_ITEMS_COUNT = 12;
 
     private final ItemRepository itemRepository;
+    private final DtoMapper dtoMapper;
 
-    @Autowired
-    public ItemServiceImpl(ItemRepository itemRepository) {
-        this.itemRepository = itemRepository;
+    @Override
+    public List<ItemSummaryDTO> findAll() {
+        return dtoMapper.itemsToItemSummaryDTOs(itemRepository.findAll());
     }
 
     @Override
-    public Optional<Item> getItemById(Long id) {
-        return itemRepository.findById(id);
+    public Optional<ItemSummaryDTO> findById(Long id) {
+        return findItem(id).map(dtoMapper::itemToItemSummaryDto);
     }
 
     @Override
-    public List<Item> getItemsByIds(List<Long> ids) {
-        return itemRepository.findAllById(ids);
+    public List<ItemSummaryDTO> findByIds(List<Long> ids) {
+        return itemRepository.findAllById(ids).stream()
+                .map(dtoMapper::itemToItemSummaryDto)
+                .collect(Collectors.toList());
     }
 
     @Override
-    public List<Item> searchItems(String query) {
-        return itemRepository.findByTitleContainingIgnoreCase(query);
+    public List<ItemSummaryDTO> search(String query) {
+        return itemRepository.findByTitleContainingIgnoreCase(query).stream()
+                .map(dtoMapper::itemToItemSummaryDto)
+                .collect(Collectors.toList());
     }
 
     @Override
-    public List<Item> getRecommendedItems() {
-        return itemRepository.findTop20ByOrderByCreatedAtDesc();
+    public List<ItemSummaryDTO> findRecommendedForItemList(Long id) {
+
+        ItemList list = resolveItemList(id);
+
+
+        return itemRepository.findTop20ByOrderByCreatedAtDesc().stream()
+                .map(dtoMapper::itemToItemSummaryDto)
+                .collect(Collectors.toList());
     }
 
     @Override
-    public List<Item> getRecentItems() {
-        return itemRepository.findRecentItems(HOME_ITEMS_COUNT);
+    public List<ItemDTO> findRecent() {
+        return itemRepository.findByLastTimeAccessedIsNotNullOrderByLastTimeAccessedDesc(PageRequest.of(0, HOME_ITEMS_COUNT)).stream()
+                .map(dtoMapper::itemToItemDto)
+                .collect(Collectors.toList());
     }
 
     @Override
-    public List<Item> getRecommendations() {
-        return itemRepository.findRecommendations(HOME_ITEMS_COUNT);
-    }
-
-    @Override
-    public Optional<Item> markAsAccessed(Long id) {
-        return itemRepository.findById(id)
+    @Transactional
+    public Optional<ItemSummaryDTO> markAsAccessed(Long id) {
+        return findItem(id)
                 .map(item -> {
                     item.setLastTimeAccessed(LocalDateTime.now());
                     return itemRepository.save(item);
-                });
+                })
+                .map(dtoMapper::itemToItemSummaryDto);
     }
 }
 

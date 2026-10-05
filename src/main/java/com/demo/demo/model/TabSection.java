@@ -1,5 +1,6 @@
 package com.demo.demo.model;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
 import lombok.*;
@@ -23,8 +24,8 @@ import lombok.*;
 @Table(name = "tab_sections")
 @Getter
 @Setter
-@AllArgsConstructor
 @NoArgsConstructor
+@AllArgsConstructor
 public class TabSection {
     
     /**
@@ -58,6 +59,7 @@ public class TabSection {
     @NotNull(message = "Song lesson cannot be null")
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "song_lesson_id")
+    @JsonBackReference(value = "songLesson-tabSections")
     private SongLesson songLesson;
 
 }

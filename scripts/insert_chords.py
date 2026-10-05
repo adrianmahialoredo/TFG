@@ -3,6 +3,10 @@ import requests
 import os
 from pathlib import Path
 
+from console_utils import configure_console
+
+configure_console()
+
 # Configuration
 API_URL = 'http://localhost:8080/api/chords'
 DATA_FILE = Path(__file__).parent.parent / 'data' / 'chords.json'
@@ -60,5 +64,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
-

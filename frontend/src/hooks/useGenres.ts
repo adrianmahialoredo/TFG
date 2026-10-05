@@ -29,3 +29,24 @@ export const useGenres = (query: string = "") => {
 
     return { genres, loading };
 };
+
+/**
+ * Resuelve una lista de IDs de géneros contra la Entity Store,
+ * trayendo los que falten vía Repository (Disco -> API).
+ */
+export const useGenresByIds = (ids: (string | number)[]) => {
+    const genresMap = useGenreEntitiesStore(state => state.genres);
+    const key = ids.map(String).join(',');
+
+    useEffect(() => {
+        const missing = ids.map(String).filter(id => !genresMap[id]);
+        if (missing.length > 0) genreRepository.getAllById(missing).catch(console.error);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [key]);
+
+    return useMemo(
+        () => ids.map(id => genresMap[String(id)]).filter(Boolean),
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+        [key, genresMap]
+    );
+};

@@ -1,7 +1,11 @@
 package com.demo.demo.repository;
 
+import com.demo.demo.model.Genre;
+import com.demo.demo.model.Instrument;
 import org.springframework.stereotype.Repository;
 import java.util.List;
+import java.util.Optional;
+
 import org.springframework.data.jpa.repository.JpaRepository;
 import com.demo.demo.model.InstrumentGenre;
 
@@ -35,5 +39,6 @@ public interface InstrumentGenreRepository extends JpaRepository<InstrumentGenre
      * @return a list of InstrumentGenreScreen entities associated with the given instrumentId
      */
     List<InstrumentGenre> findByInstrumentId(Long instrumentId);
-    
+
+    Optional<InstrumentGenre> findByGenreIdAndInstrumentId(Long genreId, Long instrumentId);
 }

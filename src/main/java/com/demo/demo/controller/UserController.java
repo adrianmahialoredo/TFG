@@ -2,126 +2,121 @@ package com.demo.demo.controller;
 
 import com.demo.demo.dto.UserDto;
 import com.demo.demo.service.UserService;
+import com.demo.demo.dto.validation.OnCreate;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.*;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.validation.annotation.Validated;
+
 import java.util.List;
 
 /**
- * Controller for managing users.
- * 
- * Provides endpoints to create, read, update, and delete users.
- * Also allows retrieval of all users or a specific user by ID.
- * 
- * This controller uses the UserService to handle business logic
- * and convert entities to DTOs for API responses.
- * 
+ * REST controller for users.
+ *
+ * Base path: {@code /api/users}
+ *
  * Endpoints:
- * - GET /users: Fetch all users
- * - GET /users/{id}: Fetch a specific user by ID
- * - POST /users: Create a new user
- * - PUT /users/{id}: Update an existing user by ID
- * - DELETE /users/{id}: Delete a user by ID
- * 
- * This controller is annotated with @RestController to handle RESTful requests
- * and @RequestMapping to define the base path for all endpoints.
- * 
+ * - GET    /api/users                      Retrieve all users
+ * - POST   /api/users/by-ids               Retrieve the users with the given IDs (IDs in the body)
+ * - GET    /api/users/{id}                 Retrieve a user by ID
+ * - GET    /api/users/{id}/favorite-genres Retrieve the IDs of the favourite genres of a user
+ * - POST   /api/users                      Create a user
+ * - PUT    /api/users/{id}                 Update a user
+ * - DELETE /api/users/{id}                 Delete a user
+ *
+ * Registration and login live in {@link AuthController}.
+ *
+ * Responses: 200 OK, 201 Created (create), 204 No Content (delete) and 404 Not Found
+ * when the user does not exist. Other errors are translated by
+ * {@link com.demo.demo.exception.GlobalExceptionHandler}.
+ *
  * @author Adrián Mahía
  * @version 1.0
  * @since 2025-06-06
  */
 @RestController
+@RequestMapping("/api/users")
 @RequiredArgsConstructor
-@RequestMapping("/users")
 public class UserController {
 
     private final UserService userService;
 
     /**
-     * Endpoint to retrieve all users.
+     * Retrieves all users.
      *
-     * @return List of UserDto
+     * @return 200 OK with the list of users
      */
     @GetMapping
-    public List<UserDto> getAllUsers() {
-        return userService.getAllUsers();
+    public ResponseEntity<List<UserDto>> getAll() {
+        return ResponseEntity.ok(userService.findAll());
     }
 
     /**
-     * Retrieves all favorite genre IDs associated with a specific user.
+     * Retrieves the users with the given IDs. IDs that do not exist are ignored.
      *
-     * @param userId The ID of the user.
-     * @return A list of favorite genre IDs for the user, or 404 if user not found.
+     * @param ids the IDs of the users
+     * @return 200 OK with the users found
      */
-    @GetMapping("/{userId}/favorite-genres")
-    public ResponseEntity<List<Long>> getFavoriteGenreIdsByUserId(@PathVariable Long userId) {
-        return userService.getFavoriteGenreIdsByUserId(userId)
-                .map(ResponseEntity::ok)
-                .orElseGet(() -> ResponseEntity.notFound().build());
+    @PostMapping("/by-ids")
+    public ResponseEntity<List<UserDto>> getByIds(@RequestBody List<Long> ids) {
+        return ResponseEntity.ok(userService.findByIds(ids));
     }
 
     /**
-     * Retrieves all users by a list of IDs.
-     *
-     * @param ids The list of user IDs to retrieve.
-     * @return A list of UserDTOs representing all users with the provided IDs.
-     */
-    @GetMapping("/by-ids")
-    public List<UserDto> getAllUsersByIds(@RequestParam List<Long> ids) {
-        return userService.getAllUsersByIds(ids);
-    }
-
-    /**
-     * Endpoint to retrieve a user by its ID.
+     * Retrieves a user by its ID.
      *
      * @param id the ID of the user
-     * @return ResponseEntity containing UserDto or 404 if not found
+     * @return 200 OK with the user, or 404 Not Found
      */
     @GetMapping("/{id}")
-    public ResponseEntity<UserDto> getUserById(@PathVariable Long id) {
-        return userService.getUserById(id)
-                .map(ResponseEntity::ok)
-                .orElseGet(() -> ResponseEntity.notFound().build());
+    public ResponseEntity<UserDto> getById(@PathVariable Long id) {
+        return ResponseEntity.of(userService.findById(id));
     }
 
     /**
-     * Endpoint to create a new user.
+     * Retrieves the IDs of the favourite genres of a user.
      *
-     * @param userDto the DTO containing user details
-     * @return ResponseEntity containing the created UserDto
+     * @param id the ID of the user
+     * @return 200 OK with the genre IDs, or 404 Not Found if the user does not exist
+     */
+    @GetMapping("/{id}/favorite-genres")
+    public ResponseEntity<List<Long>> getFavoriteGenreIdsForUser(@PathVariable Long id) {
+        return ResponseEntity.of(userService.findFavoriteGenreIdsForUser(id));
+    }
+
+    /**
+     * Creates a user.
+     *
+     * @param dto the user to create
+     * @return 201 Created with the created user
      */
     @PostMapping
-    public ResponseEntity<UserDto> createUser(@RequestBody UserDto userDto) {
-        UserDto created = userService.createUser(userDto);
-        return ResponseEntity.status(HttpStatus.CREATED).body(created);
+    public ResponseEntity<UserDto> create(@Validated(OnCreate.class) @RequestBody UserDto dto) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(userService.create(dto));
     }
 
     /**
-     * Endpoint to update an existing user.
+     * Updates a user.
      *
-     * @param id the ID of the user to update
-     * @param updatedUser the DTO containing updated user details
-     * @return ResponseEntity containing the updated UserDto or 404 if not found
+     * @param id  the ID of the user
+     * @param dto the new data of the user
+     * @return 200 OK with the updated user, or 404 Not Found
      */
     @PutMapping("/{id}")
-    public ResponseEntity<UserDto> updateUser(@PathVariable Long id, @RequestBody UserDto updatedUser) {
-        return userService.updateUser(id, updatedUser)
-                .map(ResponseEntity::ok)
-                .orElseGet(() -> ResponseEntity.notFound().build());
+    public ResponseEntity<UserDto> update(@PathVariable Long id, @Valid @RequestBody UserDto dto) {
+        return ResponseEntity.of(userService.update(id, dto));
     }
 
     /**
-     * Endpoint to delete a user by its ID.
+     * Deletes a user.
      *
-     * @param id the ID of the user to delete
-     * @return ResponseEntity with no content if deleted, or 404 if not found
+     * @param id the ID of the user
+     * @return 204 No Content, or 404 Not Found
      */
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteUser(@PathVariable Long id) {
-        boolean deleted = userService.deleteUser(id);
-        if (deleted) {
-            return ResponseEntity.noContent().build();
-        }
-        return ResponseEntity.notFound().build();
+    public ResponseEntity<Void> delete(@PathVariable Long id) {
+        return userService.delete(id) ? ResponseEntity.noContent().build() : ResponseEntity.notFound().build();
     }
 }

@@ -2,101 +2,119 @@ package com.demo.demo.controller;
 
 import com.demo.demo.dto.SongLessonDTO;
 import com.demo.demo.service.SongLessonService;
+import com.demo.demo.dto.validation.OnCreate;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.*;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.validation.annotation.Validated;
+
 import java.util.List;
 
 /**
- * Controller for managing song lessons.
+ * REST controller for song lessons (a song taught for an instrument and difficulty).
  *
- * Provides endpoints to create, read, update, and delete song lessons,
- * as well as to fetch all lessons associated with a specific song.
- *
- * This controller uses the SongLessonService to handle business logic
- * and convert entities to DTOs for API responses.
+ * Base path: {@code /api/song-lessons}
  *
  * Endpoints:
- * - POST /song-lessons: Create a new song lesson
- * - GET /song-lessons/{id}: Retrieve a specific song lesson by ID
- * - GET /song-lessons/by-song/{songId}: Retrieve all lessons for a specific song ID
- * - PUT /song-lessons/{id}: Update an existing song lesson by ID
- * - DELETE /song-lessons/{id}: Delete a song lesson by ID
+ * - GET    /api/song-lessons                  Retrieve all song lessons
+ * - POST   /api/song-lessons/by-ids           Retrieve the song lessons with the given IDs (IDs in the body)
+ * - GET    /api/song-lessons/{id}             Retrieve a song lesson by ID
+ * - GET    /api/song-lessons/by-song/{songId} Retrieve the lessons of a song
+ * - POST   /api/song-lessons                  Create a song lesson
+ * - PUT    /api/song-lessons/{id}             Update a song lesson
+ * - DELETE /api/song-lessons/{id}             Delete a song lesson
  *
- * This controller is annotated with @RestController to handle RESTful requests
- * and @RequestMapping to define the base path for all endpoints.
+ * Responses: 200 OK, 201 Created (create), 204 No Content (delete) and 404 Not Found
+ * when the song lesson does not exist. Other errors are translated by
+ * {@link com.demo.demo.exception.GlobalExceptionHandler}.
  *
  * @author Adrián Mahía
  * @version 1.0
  * @since 2025-06-06
  */
 @RestController
+@RequestMapping("/api/song-lessons")
 @RequiredArgsConstructor
-@RequestMapping("/song-lessons")
 public class SongLessonController {
 
     private final SongLessonService songLessonService;
 
     /**
-     * Creates a new song lesson.
+     * Retrieves all song lessons.
      *
-     * @param dto The SongLessonDTO containing the details of the lesson to create.
-     * @return ResponseEntity with the created SongLessonDTO and HTTP status 201 Created.
+     * @return 200 OK with the list of song lessons
      */
-    @PostMapping
-    public ResponseEntity<SongLessonDTO> createSongLesson(@RequestBody SongLessonDTO dto) {
-        SongLessonDTO created = songLessonService.createSongLesson(dto);
-        return ResponseEntity.status(HttpStatus.CREATED).body(created);
+    @GetMapping
+    public ResponseEntity<List<SongLessonDTO>> getAll() {
+        return ResponseEntity.ok(songLessonService.findAll());
+    }
+
+    /**
+     * Retrieves the song lessons with the given IDs. IDs that do not exist are ignored.
+     *
+     * @param ids the IDs of the song lessons
+     * @return 200 OK with the song lessons found
+     */
+    @PostMapping("/by-ids")
+    public ResponseEntity<List<SongLessonDTO>> getByIds(@RequestBody List<Long> ids) {
+        return ResponseEntity.ok(songLessonService.findByIds(ids));
     }
 
     /**
      * Retrieves a song lesson by its ID.
      *
-     * @param id The ID of the song lesson to retrieve.
-     * @return ResponseEntity with the SongLessonDTO if found, or 404 Not Found if not found.
+     * @param id the ID of the song lesson
+     * @return 200 OK with the song lesson, or 404 Not Found
      */
     @GetMapping("/{id}")
-    public ResponseEntity<SongLessonDTO> getSongLessonById(@PathVariable Long id) {
-        return songLessonService.getSongLessonById(id)
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
+    public ResponseEntity<SongLessonDTO> getById(@PathVariable Long id) {
+        return ResponseEntity.of(songLessonService.findById(id));
     }
 
     /**
-     * Retrieves all song lessons associated with a specific song ID.
+     * Retrieves the lessons of a song.
      *
-     * @param songId The ID of the song to find lessons for.
-     * @return List of SongLessonDTOs associated with the given song ID.
+     * @param songId the ID of the song
+     * @return 200 OK with the lessons of the song
      */
     @GetMapping("/by-song/{songId}")
-    public List<SongLessonDTO> getLessonsBySongId(@PathVariable Long songId) {
-        return songLessonService.getLessonsBySongId(songId);
+    public ResponseEntity<List<SongLessonDTO>> getForSong(@PathVariable Long songId) {
+        return ResponseEntity.ok(songLessonService.findForSong(songId));
     }
 
     /**
-     * Updates an existing song lesson identified by its ID.
+     * Creates a song lesson.
      *
-     * @param id The ID of the song lesson to update.
-     * @param dto The SongLessonDTO containing the updated details of the lesson.
-     * @return ResponseEntity with the updated SongLessonDTO if successful, or 404 Not Found if not found.
+     * @param dto the song lesson to create
+     * @return 201 Created with the created song lesson
+     */
+    @PostMapping
+    public ResponseEntity<SongLessonDTO> create(@Validated(OnCreate.class) @RequestBody SongLessonDTO dto) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(songLessonService.create(dto));
+    }
+
+    /**
+     * Updates a song lesson.
+     *
+     * @param id  the ID of the song lesson
+     * @param dto the new data of the song lesson
+     * @return 200 OK with the updated song lesson, or 404 Not Found
      */
     @PutMapping("/{id}")
-    public ResponseEntity<SongLessonDTO> updateSongLesson(@PathVariable Long id, @RequestBody SongLessonDTO dto) {
-        return songLessonService.updateSongLesson(id, dto)
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
+    public ResponseEntity<SongLessonDTO> update(@PathVariable Long id, @Valid @RequestBody SongLessonDTO dto) {
+        return ResponseEntity.of(songLessonService.update(id, dto));
     }
 
     /**
-     * Deletes a song lesson identified by its ID.
+     * Deletes a song lesson.
      *
-     * @param id The ID of the song lesson to delete.
-     * @return ResponseEntity with HTTP status 204 No Content if deleted, or 404 Not Found if not found.
+     * @param id the ID of the song lesson
+     * @return 204 No Content, or 404 Not Found
      */
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteSongLesson(@PathVariable Long id) {
-        boolean deleted = songLessonService.deleteSongLesson(id);
-        return deleted ? ResponseEntity.noContent().build() : ResponseEntity.notFound().build();
+    public ResponseEntity<Void> delete(@PathVariable Long id) {
+        return songLessonService.delete(id) ? ResponseEntity.noContent().build() : ResponseEntity.notFound().build();
     }
-
 }

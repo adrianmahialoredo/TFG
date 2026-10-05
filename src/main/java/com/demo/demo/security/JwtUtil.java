@@ -2,8 +2,7 @@ package com.demo.demo.security;
 
 import org.springframework.stereotype.Component;
 import org.springframework.beans.factory.annotation.Value;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 
 import java.security.Key;
 import java.util.Date;
@@ -23,10 +22,9 @@ import io.jsonwebtoken.security.Keys;
  * @version 1.0
  * @since 2025-06-06
  */
+@Slf4j
 @Component
 public class JwtUtil {
-
-    private static final Logger logger = LoggerFactory.getLogger(JwtUtil.class);
 
     /**
      * Secret key used for signing and validating JWT tokens.
@@ -52,11 +50,11 @@ public class JwtUtil {
     @PostConstruct
     public void init() {
         if (secretKey == null || secretKey.isEmpty()) {
-            logger.warn("WARNING: JWT secret key is not configured. Using default insecure key. Configure 'jwt.secret-key' in application.properties for production.");
+            log.warn("WARNING: JWT secret key is not configured. Using default insecure key. Configure 'jwt.secret-key' in application.properties for production.");
             secretKey = "cambiarPorUnaClaveSeguraEnProduccion1234567890";
         }
         if (secretKey.length() < 32) {
-            logger.warn("WARNING: JWT secret key is too short. Minimum recommended length is 32 characters.");
+            log.warn("WARNING: JWT secret key is too short. Minimum recommended length is 32 characters.");
         }
         this.key = Keys.hmacShaKeyFor(secretKey.getBytes());
     }
@@ -90,10 +88,10 @@ public class JwtUtil {
                     .getBody()
                     .getSubject());
         } catch (JwtException e) {
-            logger.error("JWT exception while extracting username: {}", e.getMessage());
+            log.error("JWT exception while extracting username: {}", e.getMessage());
             return Optional.empty();
         } catch (IllegalArgumentException e) {
-            logger.error("Illegal argument while extracting username from JWT: {}", e.getMessage());
+            log.error("Illegal argument while extracting username from JWT: {}", e.getMessage());
             return Optional.empty();
         }
     }
@@ -115,7 +113,7 @@ public class JwtUtil {
                     .filter(extractedUsername -> !isTokenExpired(token))
                     .isPresent();
         } catch (Exception e) {
-            logger.error("Error validating token: {}", e.getMessage());
+            log.error("Error validating token: {}", e.getMessage());
             return false;
         }
     }
@@ -136,7 +134,7 @@ public class JwtUtil {
                     .getExpiration()
                     .before(new Date());
         } catch (JwtException e) {
-            logger.error("JWT exception while checking expiration: {}", e.getMessage());
+            log.error("JWT exception while checking expiration: {}", e.getMessage());
             return true;
         }
     }

@@ -1,126 +1,132 @@
 package com.demo.demo.controller;
 
-import java.util.List;
-import org.springframework.web.bind.annotation.*;
 import com.demo.demo.dto.InstrumentGenreDTO;
 import com.demo.demo.service.InstrumentGenreService;
+import jakarta.validation.Valid;
+import com.demo.demo.dto.validation.OnCreate;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.validation.annotation.Validated;
+
+import java.util.List;
 
 /**
- * Controller for managing instrument-genres.
- * 
- * Provides endpoints to create, read, update, and delete instrument-genres.
- * Also allows retrieval of instrument-genres by instrument ID or genre ID.
- * 
- * This controller uses the InstrumentGenreService to handle business logic
- * and convert entities to DTOs for API responses.
- * 
+ * REST controller for instrument-genres (an instrument applied to a music genre).
+ *
+ * Base path: {@code /api/instrument-genres}
+ *
  * Endpoints:
- * - GET /instrument-genres: Fetch all instrument-genres
- * - GET /instrument-genres/{id}: Fetch a specific instrument-genre by ID
- * - GET /instrument-genres/by-genre/{genreId}: Fetch instrument-genres by genre ID
- * - GET /instrument-genres/by-instrument/{instrumentId}: Fetch instrument-genres by instrument ID
- * - POST /instrument-genres: Create a new instrument-genre
- * - PUT /instrument-genres/{id}: Update an existing instrument-genre by ID
- * - DELETE /instrument-genres/{id}: Delete an instrument-genre by ID
- * 
- * This controller is annotated with @RestController to handle RESTful requests
- * and @RequestMapping to define the base path for all endpoints.
- * 
+ * - GET    /api/instrument-genres                              Retrieve all instrument-genres
+ * - POST   /api/instrument-genres/by-ids                       Retrieve the instrument-genres with the given IDs (IDs in the body)
+ * - GET    /api/instrument-genres/{id}                         Retrieve an instrument-genre by ID
+ * - GET    /api/instrument-genres/by-genre/{genreId}           Retrieve the instrument-genres of a genre
+ * - GET    /api/instrument-genres/by-instrument/{instrumentId} Retrieve the instrument-genres of an instrument
+ * - POST   /api/instrument-genres                              Create an instrument-genre
+ * - PUT    /api/instrument-genres/{id}                         Update an instrument-genre
+ * - DELETE /api/instrument-genres/{id}                         Delete an instrument-genre
+ *
+ * Responses: 200 OK, 201 Created (create), 204 No Content (delete) and 404 Not Found
+ * when the instrument-genre does not exist. Other errors are translated by
+ * {@link com.demo.demo.exception.GlobalExceptionHandler}.
+ *
  * @author Adrián Mahía
  * @version 1.0
  * @since 2025-06-06
  */
 @RestController
+@RequestMapping("/api/instrument-genres")
 @RequiredArgsConstructor
-@RequestMapping("/instrument-genres")
 public class InstrumentGenreController {
 
     private final InstrumentGenreService instrumentGenreService;
 
     /**
-     * Endpoint to retrieve all instrument-genres.
+     * Retrieves all instrument-genres.
      *
-     * @return List of InstrumentGenreDTO
+     * @return 200 OK with the list of instrument-genres
      */
     @GetMapping
-    public List<InstrumentGenreDTO> getAllInstrumentGenres() {
-        return instrumentGenreService.getAllInstrumentGenres();
+    public ResponseEntity<List<InstrumentGenreDTO>> getAll() {
+        return ResponseEntity.ok(instrumentGenreService.findAll());
     }
 
     /**
-     * Endpoint to retrieve an instrument-genre by its ID.
+     * Retrieves the instrument-genres with the given IDs. IDs that do not exist are ignored.
+     *
+     * @param ids the IDs of the instrument-genres
+     * @return 200 OK with the instrument-genres found
+     */
+    @PostMapping("/by-ids")
+    public ResponseEntity<List<InstrumentGenreDTO>> getByIds(@RequestBody List<Long> ids) {
+        return ResponseEntity.ok(instrumentGenreService.findByIds(ids));
+    }
+
+    /**
+     * Retrieves an instrument-genre by its ID.
      *
      * @param id the ID of the instrument-genre
-     * @return ResponseEntity containing InstrumentGenreDTO or 404 if not found
+     * @return 200 OK with the instrument-genre, or 404 Not Found
      */
     @GetMapping("/{id}")
-    public ResponseEntity<InstrumentGenreDTO> getInstrumentGenreById(@PathVariable Long id) {
-        return instrumentGenreService.getInstrumentGenreById(id)
-                .map(ResponseEntity::ok)
-                .orElseGet(() -> ResponseEntity.notFound().build());
+    public ResponseEntity<InstrumentGenreDTO> getById(@PathVariable Long id) {
+        return ResponseEntity.of(instrumentGenreService.findById(id));
     }
 
     /**
-     * Endpoint to create a new instrument-genre.
+     * Retrieves the instrument-genres of a genre.
      *
-     * @param dto the DTO containing instrument-genre details
-     * @return ResponseEntity containing the created InstrumentGenreDTO
-     */
-    @PostMapping
-    public ResponseEntity<InstrumentGenreDTO> createInstrumentGenre(@RequestBody InstrumentGenreDTO dto) {
-        InstrumentGenreDTO created = instrumentGenreService.createInstrumentGenre(dto);
-        return ResponseEntity.status(HttpStatus.CREATED).body(created);
-    }
-
-    /**
-     * Endpoint to update an existing instrument-genre.
-     *
-     * @param id the ID of the instrument-genre to update
-     * @param dto the DTO containing updated instrument-genre details
-     * @return ResponseEntity containing the updated InstrumentGenreDTO or 404 if not found
-     */
-    @PutMapping("/{id}")
-    public ResponseEntity<InstrumentGenreDTO> updateInstrumentGenre(@PathVariable Long id, @RequestBody InstrumentGenreDTO dto) {
-        return instrumentGenreService.updateInstrumentGenre(id, dto)
-                .map(ResponseEntity::ok)
-                .orElseGet(() -> ResponseEntity.notFound().build());
-    }
-
-    /**
-     * Endpoint to delete an instrument-genre by its ID.
-     *
-     * @param id the ID of the instrument-genre to delete
-     * @return ResponseEntity with no content if deleted, or 404 if not found
-     */
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteInstrumentGenre(@PathVariable Long id) {
-        boolean deleted = instrumentGenreService.deleteInstrumentGenre(id);
-        return deleted ? ResponseEntity.noContent().build() : ResponseEntity.notFound().build();
-    }
-
-    /**
-     * Endpoint to retrieve instrument-genres by instrument ID.
-     *
-     * @param instrumentId the ID of the instrument
-     * @return List of InstrumentGenreDTO
+     * @param genreId the ID of the genre
+     * @return 200 OK with the instrument-genres of the genre
      */
     @GetMapping("/by-genre/{genreId}")
-    public List<InstrumentGenreDTO> findByGenreId(@PathVariable Long genreId) {
-        return instrumentGenreService.findByGenreId(genreId);
+    public ResponseEntity<List<InstrumentGenreDTO>> getForGenre(@PathVariable Long genreId) {
+        return ResponseEntity.ok(instrumentGenreService.findForGenre(genreId));
     }
 
     /**
-     * Endpoint to retrieve instrument-genres by genre ID.
+     * Retrieves the instrument-genres of an instrument.
      *
      * @param instrumentId the ID of the instrument
-     * @return List of InstrumentGenreDTO
+     * @return 200 OK with the instrument-genres of the instrument
      */
     @GetMapping("/by-instrument/{instrumentId}")
-    public List<InstrumentGenreDTO> findByInstrumentId(@PathVariable Long instrumentId) {
-        return instrumentGenreService.findByInstrumentId(instrumentId);
+    public ResponseEntity<List<InstrumentGenreDTO>> getForInstrument(@PathVariable Long instrumentId) {
+        return ResponseEntity.ok(instrumentGenreService.findForInstrument(instrumentId));
     }
 
+    /**
+     * Creates an instrument-genre.
+     *
+     * @param dto the instrument-genre to create
+     * @return 201 Created with the created instrument-genre
+     */
+    @PostMapping
+    public ResponseEntity<InstrumentGenreDTO> create(@Validated(OnCreate.class) @RequestBody InstrumentGenreDTO dto) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(instrumentGenreService.create(dto));
+    }
+
+    /**
+     * Updates an instrument-genre.
+     *
+     * @param id  the ID of the instrument-genre
+     * @param dto the new data of the instrument-genre
+     * @return 200 OK with the updated instrument-genre, or 404 Not Found
+     */
+    @PutMapping("/{id}")
+    public ResponseEntity<InstrumentGenreDTO> update(@PathVariable Long id, @Valid @RequestBody InstrumentGenreDTO dto) {
+        return ResponseEntity.of(instrumentGenreService.update(id, dto));
+    }
+
+    /**
+     * Deletes an instrument-genre.
+     *
+     * @param id the ID of the instrument-genre
+     * @return 204 No Content, or 404 Not Found
+     */
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> delete(@PathVariable Long id) {
+        return instrumentGenreService.delete(id) ? ResponseEntity.noContent().build() : ResponseEntity.notFound().build();
+    }
 }

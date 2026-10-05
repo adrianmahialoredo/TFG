@@ -8,6 +8,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.*;
 import java.util.List;
 import java.util.Set;
@@ -26,10 +27,10 @@ import java.util.HashSet;
  */
 @Entity
 @Table(name = "users")
-@Getter 
+@Getter
 @Setter
-@AllArgsConstructor
 @NoArgsConstructor
+@AllArgsConstructor
 public class User implements UserDetails {
 
     @Id
@@ -37,6 +38,7 @@ public class User implements UserDetails {
     private Long id;
 
     @Column(nullable = false, unique = true)
+    @NotBlank(message = "Email cannot be blank")
     @Email(message = "Email must be valid")
     private String email;
 
@@ -68,21 +70,13 @@ public class User implements UserDetails {
     @Max(value = 100, message = "Difficulty level must be at most 100")
     private int difficultyLevel = 0;    // Between 0 and 100
 
-    @ManyToMany
-    @JoinTable(
-        name = "user_favorite_genres",
-        joinColumns = @JoinColumn(name = "user_id"),
-        inverseJoinColumns = @JoinColumn(name = "genre_id")
-    )
-    private Set<Genre> favoriteGenres = new HashSet<>();
-
-    @ManyToMany
-    @JoinTable(
-        name = "user_favorite_instruments",
-        joinColumns = @JoinColumn(name = "user_id"),
-        inverseJoinColumns = @JoinColumn(name = "instrument_id")
-    )
-    private Set<Instrument> favoriteInstruments = new HashSet<>();
+    /**
+     * Musical preferences (favourite genres, favourite instruments and
+     * difficulty level) owned by this user.
+     */
+    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
+    @Valid
+    private Preferences preferences = new Preferences();
 
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     @JsonIgnore
@@ -105,13 +99,31 @@ public class User implements UserDetails {
         return List.of(new SimpleGrantedAuthority(role.name()));
     }
 
-    @Override
-    public String getPassword() {
-        return password;
+    /**
+     * Returns the user's preferences, creating them lazily if they do not exist yet.
+     *
+     * The preferences are never {@code null}, so callers do not need to perform
+     * null checks before accessing the favourite genres or instruments.
+     *
+     * @return the preferences owned by this user
+     */
+    public Preferences getPreferences() {
+        if (preferences == null) {
+            preferences = new Preferences();
+        }
+        if (preferences.getUser() != this) {
+            preferences.setUser(this);
+        }
+        return preferences;
     }
 
-    @Override
-    public String getUsername() {
-        return username;
+    /**
+     * Sets the user's preferences, keeping the bidirectional relationship consistent.
+     *
+     * @param preferences the preferences to associate with this user, may be {@code null}
+     */
+    public void setPreferences(Preferences preferences) {
+        this.preferences = preferences == null ? new Preferences() : preferences;
+        this.preferences.setUser(this);
     }
 }
