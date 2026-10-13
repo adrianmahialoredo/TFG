@@ -1,8 +1,7 @@
 import React from "react";
 import { TouchableOpacity, View, Text, Image } from "react-native";
-import { CircleCheck } from "lucide-react-native";
 import { COLORS } from "../constants/Theme";
-import RoundedSquarePlus from "./icons/RoundedSquarePlus";
+import AddButton from "./iconbuttons/AddButton";
 
 type ItemProps = {
   item: {
@@ -27,10 +26,7 @@ export default function AddListItem({ item, onPress, added = false, inverted = f
   const iconColor = inverted ? COLORS.secondary : COLORS.primary;
 
   return (
-    <View
-      className={cardClassName}
-      style={{ opacity: added ? 0.5 : 1 }}
-    >
+    <View className={cardClassName}>
         <Image
           source={{ uri: item.imageUrl }} // Placeholder image
           className="h-24 w-24 rounded-l-xl"
@@ -39,11 +35,7 @@ export default function AddListItem({ item, onPress, added = false, inverted = f
           <Text className={infoClassName}>{item.info}</Text>
         </View>
         <TouchableOpacity onPress={onPress} disabled={added} className="p-4 items-center justify-center">
-          {added ? (
-            <CircleCheck size={36} color={iconColor} />
-          ) : (
-            <RoundedSquarePlus size={36} color={iconColor} />
-          )}
+          <AddButton size={36} color={iconColor} checked={added} />
         </TouchableOpacity>
     </View>
   );
