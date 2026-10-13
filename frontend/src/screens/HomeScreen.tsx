@@ -1,6 +1,6 @@
 // src/screens/HomeScreen.tsx
 
-import { View, Text, TouchableOpacity, Image, ScrollView, ActivityIndicator } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
 import { useNavigation, NavigationProp } from '@react-navigation/native';
 import { useCallback } from 'react';
 import { Activity, CircleCheckBig, Headphones } from 'lucide-react-native';
@@ -11,6 +11,7 @@ import { RootStackParamList } from '../types';
 import { useAuth } from '../hooks/useAuth';
 import { useHomeItems } from '../hooks/useHomeItems';
 import { navigateToItem } from '../utils/navigation.utils';
+import UserAvatar from "../components/UserAvatar";
 
 export default function HomeScreen() {
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
@@ -40,10 +41,7 @@ export default function HomeScreen() {
           {/* Icono de perfil */}
           <View className="flex-row justify-center my-7">
             <TouchableOpacity onPress={() => navigation.navigate('ProfileScreen')}>
-              <Image
-                source={{ uri: user?.profileImageUrl || 'https://via.placeholder.com/150' }}
-                className="w-20 h-20 rounded-full border"
-              />
+              <UserAvatar user={user} size={80} className="border" />
             </TouchableOpacity>
           </View>
 
@@ -62,11 +60,12 @@ export default function HomeScreen() {
             <Text className="text-red-500 text-center mb-6 px-4">{error}</Text>
           )}
 
-          {/* Carrusel: Recientes (se auto-oculta si no hay items) */}
+          {/* Carrusel: Recientes (sin items, p.ej. la primera vez, muestra una card invitando a explorar) */}
           <HorizontalItemsCarousel
             title="Recientes"
             data={recentItems}
             onItemPress={handleItemPress}
+            emptyMessage={loading ? undefined : 'Explora la app y empieza a aprender para que se muestren tus recientes'}
           />
 
           {/* Botones de herramientas */}
@@ -80,11 +79,12 @@ export default function HomeScreen() {
             <ToolButton icon={<Headphones size={75} color="white" strokeWidth={1} />} label="Identificador" />
           </View>
 
-          {/* Carrusel: Recomendaciones (esqueleto en backend; se auto-oculta si está vacío) */}
+          {/* Carrusel: Recomendaciones (sin items muestra una card invitando a explorar) */}
           <HorizontalItemsCarousel
             title="Recomendaciones"
             data={recommendations}
             onItemPress={handleItemPress}
+            emptyMessage={loading ? undefined : 'Explora la app y empieza a aprender para que se muestren tus recomendaciones'}
           />
         </View>
       </ScrollView>

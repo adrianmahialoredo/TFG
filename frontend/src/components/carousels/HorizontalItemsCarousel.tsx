@@ -5,6 +5,7 @@ type HorizontalItemsCarouselProps = {
   title: string;
   data: CarouselItemDTO[];
   onItemPress?: (itemId: string) => void;
+  emptyMessage?: string;
 };
 
 /**
@@ -15,6 +16,7 @@ export default function HorizontalItemsCarousel({
   title,
   data,
   onItemPress,
+  emptyMessage,
 }: HorizontalItemsCarouselProps) {
   return (
     <GenericCarousel
@@ -24,6 +26,7 @@ export default function HorizontalItemsCarousel({
       showArtist={false}
       onItemPress={onItemPress}
       borderSquare={true}
+      emptyMessage={emptyMessage}
     />
   );
 }

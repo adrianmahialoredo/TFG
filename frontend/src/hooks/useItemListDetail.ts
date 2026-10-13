@@ -55,5 +55,13 @@ export const useItemListDetail = (itemListId: string) => {
         return updated;
     };
 
-    return { list: list || null, items, loading, error, refresh: load, updateList };
+    const updateImage = async (localUri: string) => {
+        const updated = await itemListRepository.updateItemListImage(itemListId, localUri);
+        if (!updated) {
+            throw new Error('No se pudo actualizar la foto de la lista');
+        }
+        return updated;
+    };
+
+    return { list: list || null, items, loading, error, refresh: load, updateList, updateImage };
 };

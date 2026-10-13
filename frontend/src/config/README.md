@@ -20,7 +20,8 @@ Estructura jerárquica de todos los endpoints disponibles:
 
 ```typescript
 API_ENDPOINTS.AUTH.LOGIN                  // POST /api/auth/login
-API_ENDPOINTS.AUTH.REGISTER               // POST /api/auth/register
+API_ENDPOINTS.AUTH.REGISTER               // POST /api/auth/register (con verificationCode)
+API_ENDPOINTS.AUTH.VERIFICATION_CODE      // POST /api/auth/verification-code (body: { email })
 
 API_ENDPOINTS.GENRES.BASE                 // GET (todos) / POST (crear) /api/genres
 API_ENDPOINTS.GENRES.BY_ID(id)            // GET / PUT / DELETE /api/genres/:id

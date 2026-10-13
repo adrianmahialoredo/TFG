@@ -1,15 +1,15 @@
 // components/InstrumentViewer.tsx
-import { View, Text, TouchableOpacity } from "react-native";
-import { CirclePlus } from "lucide-react-native";
-import { COLORS } from "../constants/Theme";
+import { View, Text } from "react-native";
+import EditButton from "./iconbuttons/EditButton";
 import { useInstrumentsByIds } from "../hooks/useInstruments";
 
 type Props = {
     ids: (string | number)[]; // Recibe la lista de IDs de cualquier usuario
     label?: string;           // Opcional para cambiar "Toco:" por "Quiere aprender:"
+    onAddPress?: () => void;  // Sin él no se muestra el botón de añadir
 };
 
-export default function InstrumentViewer({ ids, label = "Toco:" }: Props) {
+export default function InstrumentViewer({ ids, label = "Toco:", onAddPress }: Props) {
     // IDs -> Objetos (el hook trae de Disco/API los que no estén en RAM)
     const instruments = useInstrumentsByIds(ids);
 
@@ -29,10 +29,9 @@ export default function InstrumentViewer({ ids, label = "Toco:" }: Props) {
                         <Text className="text-secondary text-base">{instrument.name}</Text>
                     </View>
                 ))}
-                {/* El Plus solo debería estar aquí si es modo edición, pero lo mantenemos por estética */}
-                <TouchableOpacity className="py-1">
-                    <CirclePlus size={20} color={COLORS.primary} strokeWidth={1} />
-                </TouchableOpacity>
+                {onAddPress && (
+                    <EditButton onPress={onAddPress} />
+                )}
             </View>
         </View>
     );

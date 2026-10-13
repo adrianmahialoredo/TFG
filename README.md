@@ -5,7 +5,7 @@
 Este es el backend de la aplicación TFG, desarrollado con **Spring Boot 3.4.3** y **Java 23**. Proporciona una API RESTful completa para gestionar géneros musicales, canciones, lecciones, acordes, instrumentos y más.
 
 La aplicación utiliza:
-- **Base de datos**: JPA/Hibernate para ORM
+- **Base de datos**: PostgreSQL con Spring Data JPA (Hibernate 6)
 - **Seguridad**: JWT (JSON Web Tokens) para autenticación
 - **API REST**: Spring Web
 - **Integración Spotify**: Para recomendaciones musicales
@@ -18,7 +18,7 @@ La aplicación utiliza:
 ### Requisitos Previos
 - Java 23 o superior
 - Maven 3.9+
-- Base de datos (configurada en `application.properties`)
+- PostgreSQL 14+ con una base de datos `demo` creada (`CREATE DATABASE demo;`)
 
 ### Instalación
 
@@ -26,6 +26,9 @@ La aplicación utiliza:
 # Clonar el repositorio
 git clone <repository-url>
 cd TFG
+
+# Crear el fichero de variables locales y rellenar las credenciales
+cp .env.example .env
 
 # Compilar el proyecto
 ./mvnw clean install
@@ -44,8 +47,24 @@ El servidor estará disponible en: `http://192.168.0.22:8080`
 
 | Método | Endpoint | Descripción |
 |--------|----------|-------------|
-| `POST` | `/api/auth/register` | Registrar nuevo usuario |
+| `POST` | `/api/auth/verification-code` | Enviar un código de verificación al email de un registro (`204`; `429` si se pide otro antes de 60 s) |
+| `POST` | `/api/auth/register` | Registrar nuevo usuario con ese código (`verificationCode` en el body) y devolver el JWT |
 | `POST` | `/api/auth/login` | Iniciar sesión (retorna JWT token) |
+
+**Registro con verificación de email:**
+```json
+POST /api/auth/verification-code
+{ "email": "user@example.com" }
+
+POST /api/auth/register
+{
+  "email": "user@example.com",
+  "name": "...", "username": "...", "password": "...",
+  "favouriteGenresIds": [1, 2], "favouriteInstrumentsIds": [3, 4],
+  "verificationCode": "482913"
+}
+```
+El código tiene 6 dígitos, caduca a los 10 minutos y se descarta tras 5 intentos fallidos. Detalle en [`architecture.md`](architecture.md) §9.
 
 **Ejemplo Login:**
 ```json
@@ -83,8 +102,13 @@ Todos los controladores siguen la misma estructura:
 | `POST` | `/api/users/by-ids` | Obtener varios usuarios por ID (array de IDs en el body) |
 | `GET` | `/api/users/{id}` | Obtener usuario por ID |
 | `GET` | `/api/users/{id}/favorite-genres` | IDs de los géneros favoritos del usuario |
+| `POST` | `/api/users/{id}/favorite-genres/{genreId}` | Añadir un género a los favoritos del usuario |
+| `DELETE` | `/api/users/{id}/favorite-genres/{genreId}` | Quitar un género de los favoritos del usuario |
+| `GET` | `/api/users/{id}/favorite-instruments` | IDs de los instrumentos favoritos del usuario |
+| `POST` | `/api/users/{id}/favorite-instruments/{instrumentId}` | Añadir un instrumento a los favoritos del usuario |
+| `DELETE` | `/api/users/{id}/favorite-instruments/{instrumentId}` | Quitar un instrumento de los favoritos del usuario |
 | `POST` | `/api/users` | Crear usuario |
-| `PUT` | `/api/users/{id}` | Actualizar usuario |
+| `PUT` | `/api/users/{id}` | Actualizar usuario (el email no se cambia: se ignora el del body) |
 | `DELETE` | `/api/users/{id}` | Eliminar usuario |
 
 ---
@@ -272,7 +296,7 @@ Todos los controladores siguen la misma estructura:
 
 ### 🗂️ Elementos (`/api/items`)
 
-Devuelven `ItemSummaryDTO` (`id`, `title`, `imageUrl`, `type`, `level`, `artist`), salvo las rutas `/ids` (solo IDs) y `/recent` (DTO completo de cada subtipo, con `type`).
+Devuelven `ItemSummaryDTO` (`id`, `title`, `imageUrl`, `type`, `level`, `artist`), salvo las rutas `/ids` (solo IDs).
 
 | Método | Endpoint | Descripción |
 |--------|----------|-------------|
@@ -280,7 +304,6 @@ Devuelven `ItemSummaryDTO` (`id`, `title`, `imageUrl`, `type`, `level`, `artist`
 | `POST` | `/api/items/by-ids` | Obtener varios elementos por ID (array de IDs en el body) |
 | `GET` | `/api/items/{id}` | Obtener elemento por ID |
 | `GET` | `/api/items/search?q={texto}` | Buscar elementos por título |
-| `GET` | `/api/items/recent` | Elementos accedidos más recientemente (DTO completo de cada subtipo) |
 | `GET` | `/api/items/recommended/ids` | IDs de los elementos recomendados para el usuario (**pendiente**: aún sin implementar) |
 | `GET` | `/api/items/recommended/by-item-list/{itemListId}` | Elementos recomendados para una lista (marcador: los 20 más nuevos) |
 | `PUT` | `/api/items/{id}/access` | Marcar un elemento como accedido |
@@ -317,18 +340,27 @@ Authorization: Bearer <jwt-token>
 
 ### Flujo de Autenticación
 
-1. Usuario se registra con email y contraseña
-2. Usuario hace login
+1. Usuario pide un código de verificación para su email y se registra con él
+2. Usuario hace login (el registro ya devuelve el token)
 3. Backend devuelve JWT token
 4. Cliente incluye token en todos los requests
 5. Backend valida token con `JwtAuthenticationFilter`
+
+### Control de acceso
+
+- **Públicas:** `/api/auth/**`, `/api/spotify/callback`, `/actuator/health` y las listas `GET /api/genres` y `GET /api/instruments` (el formulario de registro las necesita antes de tener token; el detalle por id sigue protegido). Todo lo demás exige JWT (sin token: `401`).
+- **Solo `ADMIN`:** crear, editar y borrar contenido del catálogo (géneros, canciones, lecciones, acordes, instrumentos…) `GET`/`POST /api/users` y `GET /api/item-lists` (todas las listas).
+- **Solo el propio usuario (o un `ADMIN`):** leer y modificar su perfil y sus favoritos, sus listas y sus items, y pedir sus recomendaciones (las personales y las de Spotify). Si no es suyo: `403`.
+- **Administrador inicial:** se crea al arrancar con `ADMIN_EMAIL` y `ADMIN_PASSWORD` del `.env`. Los scripts de carga de datos (`scripts/insert_*.py`) inician sesión con él.
+
+Detalle en [`architecture.md`](architecture.md) §9.
 
 ---
 
 ## 📁 Estructura del Proyecto
 
 ```
-src/main/java/com/demo/demo/
+src/main/java/com/uo289390/toco/
 ├── controller/          # Controladores REST
 │   ├── AuthController
 │   ├── UserController
@@ -340,7 +372,7 @@ src/main/java/com/demo/demo/
 │   ├── UserService
 │   ├── GenreService
 │   └── ...
-├── repository/         # Acceso a datos (JPA)
+├── repository/         # Acceso a datos (Spring Data JPA)
 │   ├── UserRepository
 │   ├── GenreRepository
 │   ├── SongRepository
@@ -367,24 +399,57 @@ src/main/java/com/demo/demo/
 
 ### `application.properties`
 
+No contiene secretos: las contraseñas y credenciales se leen de variables con `${...}`.
+
 ```properties
 # Server
+server.address=0.0.0.0
 server.port=8080
 
-# Database
-spring.datasource.url=jdbc:mysql://localhost:3306/tfg
-spring.datasource.username=root
-spring.datasource.password=password
+# Variables locales desde .env (si existe)
+spring.config.import=optional:file:.env[.properties]
+
+# PostgreSQL
+spring.datasource.url=jdbc:postgresql://localhost:5432/demo
+spring.datasource.username=postgres
+spring.datasource.password=${DB_PASSWORD}
+spring.jpa.database-platform=org.hibernate.dialect.PostgreSQLDialect
 spring.jpa.hibernate.ddl-auto=update
 
-# JWT
-jwt.secret=your-secret-key-here
-jwt.expiration=86400000  # 24 hours
-
 # Spotify
-spotify.client-id=your-client-id
-spotify.client-secret=your-client-secret
+spotify.client-id=${SPOTIFY_CLIENT_ID}
+spotify.client-secret=${SPOTIFY_CLIENT_SECRET}
+spotify.redirect-uri=${SPOTIFY_REDIRECT_URI:http://127.0.0.1:8080/api/spotify/callback}
+
+# Email (código de verificación del registro)
+spring.mail.host=${MAIL_HOST:}
+spring.mail.port=${MAIL_PORT:587}
+spring.mail.username=${MAIL_USERNAME:}
+spring.mail.password=${MAIL_PASSWORD:}
+app.mail.from=${MAIL_FROM:TOCO <${MAIL_USERNAME:no-reply@toco.app}>}
 ```
+
+### `.env`
+
+Fichero local en la raíz del proyecto, **ignorado por git**. Se crea copiando la plantilla `.env.example`:
+
+```properties
+DB_PASSWORD=<contraseña de PostgreSQL>
+SPOTIFY_CLIENT_ID=<client id de la app de Spotify>
+SPOTIFY_CLIENT_SECRET=<client secret de la app de Spotify>
+ADMIN_EMAIL=<email del administrador inicial>
+ADMIN_PASSWORD=<contraseña del administrador inicial>
+# Opcional: túnel HTTPS para probar el login de Spotify desde el móvil
+# SPOTIFY_REDIRECT_URI=https://<dominio>.ngrok-free.dev/api/spotify/callback
+# SMTP para el código de verificación (Gmail: smtp.gmail.com y una contraseña de aplicación)
+MAIL_HOST=smtp.gmail.com
+MAIL_PORT=587
+MAIL_USERNAME=<cuenta de Gmail>
+MAIL_PASSWORD=<contraseña de aplicación de 16 letras>
+# MAIL_FROM=TOCO <...>   (por defecto, TOCO <MAIL_USERNAME>)
+```
+
+Spring lo importa al arrancar y los scripts de `scripts/` (`clean_db.py`, `migrate_*.py`) también lo leen (`scripts/env_utils.py`). Las variables de entorno reales tienen prioridad sobre el `.env`.
 
 ---
 
@@ -394,10 +459,10 @@ spotify.client-secret=your-client-secret
 |-----------|---------|----------|
 | Spring Boot | 3.4.3 | Framework principal |
 | Java | 23 | Lenguaje de programación |
-| Spring Data JPA | Latest | ORM |
-| Spring Security | Latest | Autenticación/Autorización |
-| JWT | Latest | Token-based auth |
-| MySQL | 8+ | Base de datos |
+| Spring Data JPA (Hibernate 6) | 3.4.3 (Boot) | ORM |
+| Spring Security | 3.4.3 (Boot) | Autenticación/Autorización |
+| JWT (jjwt) | 0.11.5 | Token-based auth |
+| PostgreSQL | 14+ | Base de datos |
 | Maven | 3.9+ | Gestor de dependencias |
 | Lombok | Latest | Reducción de boilerplate |
 | Spotify API | Latest | Integración Spotify |
@@ -419,18 +484,38 @@ spotify.client-secret=your-client-secret
 ## 🐛 Troubleshooting
 
 ### Error: Base de datos no conecta
-- Verificar `application.properties`
-- Asegurarse de que MySQL está corriendo
-- Verificar credenciales de base de datos
+- Asegurarse de que PostgreSQL está corriendo en `localhost:5432` y que existe la base de datos `demo`
+- Comprobar que `.env` existe y que `DB_PASSWORD` es correcta
+- `Could not resolve placeholder 'DB_PASSWORD'` (o `SPOTIFY_*`): falta la variable en `.env`
 
 ### Error: JWT token inválido
 - El token ha expirado
 - Token incorrecto o corrupto
-- Verificar `jwt.secret` en properties
+- Verificar `jwt.secret-key` (si no se define, se usa una clave por defecto)
 
 ### Error: CORS
 - Configurar CORS en `WebConfig`
 - Agregar anotación `@CrossOrigin` en controladores
+
+### Error: no llega el código de verificación
+- `Couldn't connect to host, port: localhost, 587`: `MAIL_HOST` está vacío o comentado en `.env`. Con la propiedad vacía Spring crea igualmente el cliente de correo y apunta a `localhost`.
+- `535 Authentication failed` (Gmail): `MAIL_PASSWORD` tiene que ser una contraseña de aplicación (https://myaccount.google.com/apppasswords, requiere verificación en dos pasos), no la contraseña de la cuenta.
+- Tras cambiar `.env` hay que reiniciar el backend: solo se lee al arrancar.
+
+---
+
+## ✉️ Plantillas de email (React Email)
+
+Las plantillas se escriben en React con [React Email](https://react.email) en la carpeta `emails/` (proyecto Node aparte: el backend Java no puede renderizar React).
+
+```bash
+cd emails
+npm install
+npm run dev      # vista previa en el navegador
+npm run export   # genera src/main/resources/templates/email/<plantilla>.html y .txt
+```
+
+`export` deja marcadores `{{code}}`, `{{minutes}}` que `EmailServiceImpl` sustituye al enviar. Hay que volver a ejecutarlo tras cambiar una plantilla y subir los ficheros generados.
 
 ---
 
@@ -445,13 +530,19 @@ java -jar target/demo-0.0.1-SNAPSHOT.jar
 
 ### Variables de entorno necesarias
 
+Las mismas que en `.env` (en producción, como variables de entorno reales):
+
 ```bash
-DATABASE_URL=
-DATABASE_USER=
-DATABASE_PASSWORD=
-JWT_SECRET=
+DB_PASSWORD=
 SPOTIFY_CLIENT_ID=
 SPOTIFY_CLIENT_SECRET=
+SPOTIFY_REDIRECT_URI=
+ADMIN_EMAIL=
+ADMIN_PASSWORD=
+MAIL_HOST=
+MAIL_PORT=
+MAIL_USERNAME=
+MAIL_PASSWORD=
 ```
 
 ---

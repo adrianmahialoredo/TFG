@@ -56,46 +56,17 @@ export const getById = async (id: string): Promise<InstrumentDTO | null> => {
  */
 export const getAllById = cache.getAllById;
 
+/** Clave del índice con el catálogo completo (distinto de los instrumentos sueltos ya cacheados). */
+const ALL_KEY = 'all';
+
 /**
  * Obtiene todos los instrumentos
- * Cache first, backend fallback
+ * Cache-First sobre el índice del catálogo completo: devuelve lo guardado al instante y lo
+ * refresca en segundo plano (la Store se actualiza sola). Sin índice, espera a la API.
  * @returns Array de InstrumentDTO
  */
 export const getAll = async (): Promise<InstrumentDTO[]> => {
-    try {
-        // 1. INTENTAR LOCAL
-        const localInstruments: InstrumentDTO[] = (await instrumentLocal.getAll()) || [];
-
-        // 2. SI HAY DATOS EN LOCAL, LOS POSICIONAMOS EN RAM Y RETORNAMOS
-        if (localInstruments.length > 0) {
-            useInstrumentEntitiesStore.getState().setInstruments(localInstruments);
-
-            // OPCIONAL: Lanzar actualización en segundo plano (Background Sync)
-            instrumentService.getAllInstruments().then(fresh => {
-                if (fresh.length > 0) {
-                    instrumentLocal.saveBatch(fresh);
-                    useInstrumentEntitiesStore.getState().setInstruments(fresh);
-                }
-            }).catch(() => {});
-
-            return localInstruments;
-        }
-
-        // 3. SI LOCAL ESTÁ VACÍO, IR A LA API
-        const remoteInstruments = await instrumentService.getAllInstruments();
-
-        if (remoteInstruments.length > 0) {
-            // Guardar en RAM
-            useInstrumentEntitiesStore.getState().setInstruments(remoteInstruments);
-            // Guardar en Disco
-            instrumentLocal.saveBatch(remoteInstruments).catch(console.error);
-        }
-
-        return remoteInstruments;
-
-    } catch (error) {
-        console.error("[InstrumentRepo] Error crítico en getAll:", error);
-        // Fallback: devolver lo que haya en RAM
-        return Object.values(useInstrumentEntitiesStore.getState().instruments) || [];
-    }
-}
+    const ids = await cache.list(ALL_KEY, instrumentService.getAllInstruments);
+    const ram = useInstrumentEntitiesStore.getState().instruments;
+    return ids.map((id) => ram[id]).filter((e): e is InstrumentDTO => !!e);
+};

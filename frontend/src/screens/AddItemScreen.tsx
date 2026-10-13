@@ -1,12 +1,13 @@
 import AppLayout from "../components/AppLayout";
 import ProfileHeader from "../components/ProfileHeader";
 import { ScrollView, View, Text, ActivityIndicator } from "react-native";
+import Animated, { FadeOut, LinearTransition } from "react-native-reanimated";
 import { useRoute, RouteProp } from "@react-navigation/native";
 import SearchBar from "../components/SearchBar";
 import AddListItem from "../components/AddListItem";
 import { RootStackParamList } from "../types";
 import { useAddItemScreen } from "../hooks/useAddItemScreen";
-import { itemToAddListItem } from "../utils/mappers.utils";
+import { itemToListItem } from "../utils/mappers.utils";
 
 type AddItemScreenRouteProp = RouteProp<RootStackParamList, 'AddItemScreen'>;
 
@@ -50,13 +51,15 @@ export default function AddItemScreen() {
           ) : items.length > 0 ? (
             <View className="flex-column gap-3 mb-7">
               {items.map((item, index) => (
-                <AddListItem
-                  key={item.id}
-                  item={itemToAddListItem(item)}
-                  added={isAdded(item.id)}
-                  inverted={index % 2 !== 0}
-                  onPress={() => addItem(item.id)}
-                />
+                // Al quitarse de la lista (ya añadido) se desvanece y el resto se desliza a su hueco
+                <Animated.View key={item.id} exiting={FadeOut.duration(300)} layout={LinearTransition}>
+                  <AddListItem
+                    item={itemToListItem(item)}
+                    added={isAdded(item.id)}
+                    inverted={index % 2 !== 0}
+                    onPress={() => addItem(item.id)}
+                  />
+                </Animated.View>
               ))}
             </View>
           ) : (

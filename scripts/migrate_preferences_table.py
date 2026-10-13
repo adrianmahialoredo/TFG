@@ -6,7 +6,7 @@ The application originally stored the user's musical preferences in a
 ``preferences`` table whose primary key was its own ``id`` column and which had
 two mandatory text columns (``musical_genre`` and ``preferred_instrument``).
 
-The current :code:`com.demo.demo.model.Preferences` entity shares the primary key
+The current :code:`com.uo289390.toco.model.Preferences` entity shares the primary key
 with ``users`` through ``@MapsId``, so the table only needs ``user_id`` (primary
 key) and ``difficulty_level``. The favourite genres/instruments live in the
 ``user_favorite_genres`` and ``user_favorite_instruments`` join tables.
@@ -36,35 +36,20 @@ environment variables.
 import os
 import re
 import sys
-from pathlib import Path
 
 import psycopg
 
 from console_utils import configure_console
+from env_utils import load_properties
 
 configure_console()
 
-PROPERTIES_FILE = Path(__file__).parent.parent / 'src' / 'main' / 'resources' / 'application.properties'
 LEGACY_COLUMNS = ('musical_genre', 'preferred_instrument')
-
-
-def _load_properties(path: Path) -> dict:
-    """Read a .properties file into a plain dict."""
-    props = {}
-    if not path.exists():
-        return props
-    for raw_line in path.read_text(encoding='utf-8').splitlines():
-        line = raw_line.strip()
-        if not line or line.startswith('#') or '=' not in line:
-            continue
-        key, value = line.split('=', 1)
-        props[key.strip()] = value.strip()
-    return props
 
 
 def build_dsn() -> str:
     """Build a psycopg DSN from the application properties / env vars."""
-    props = _load_properties(PROPERTIES_FILE)
+    props = load_properties()
     url = os.environ.get('DB_URL', props.get('spring.datasource.url', ''))
     user = os.environ.get('DB_USER', props.get('spring.datasource.username', 'postgres'))
     password = os.environ.get('DB_PASSWORD', props.get('spring.datasource.password', ''))

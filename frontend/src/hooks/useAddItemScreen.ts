@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useItemEntitiesStore } from '../stores/entities';
 import { useItemListEntitiesStore } from '../stores/entities';
 import * as itemRepository from '../repositories/item.repository';
@@ -8,6 +8,9 @@ import { ItemSummaryDTO } from '../types';
 
 /** Máximo de resultados de búsqueda pintados a la vez. */
 const MAX_RESULTS = 50;
+
+/** Tiempo que se ve el tic antes de que el item desaparezca de la pantalla. */
+const DISMISS_DELAY_MS = 600;
 
 /** Minúsculas y sin tildes, para que "cancion" encuentre "Canción". */
 const normalize = (text?: string | null) =>
@@ -40,6 +43,14 @@ export const useAddItemScreen = (itemListId: string) => {
 
   // IDs añadidos en esta sesión (para feedback inmediato aunque la store tarde)
   const [addedIds, setAddedIds] = useState<string[]>([]);
+  // Añadidos que ya han mostrado el tic y se quitan de la pantalla
+  const [dismissedIds, setDismissedIds] = useState<string[]>([]);
+  const dismissTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+
+  useEffect(() => {
+    const timers = dismissTimers.current;
+    return () => Object.values(timers).forEach(clearTimeout);
+  }, []);
 
   // 1. Cargar recomendaciones al montar
   useEffect(() => {
@@ -122,14 +133,19 @@ export const useAddItemScreen = (itemListId: string) => {
   // Solo se "busca" mientras el catálogo aún no ha llegado (primer arranque sin caché)
   const searching = !!query.trim() && catalogLoading && catalogIds.length === 0;
 
-  // Items mostrados: resultados si hay búsqueda, si no las recomendaciones
-  const items = query.trim() ? results : recommended;
-
   // 4. Conjunto de IDs ya presentes en la lista (existentes + añadidos en sesión)
   const addedSet = useMemo(
     () => new Set<string>([...(listItemIds || []), ...addedIds]),
     [listItemIds, addedIds]
   );
+
+  // Items mostrados: resultados si hay búsqueda, si no las recomendaciones. Los que ya están
+  // en la lista no se muestran, salvo los recién añadidos mientras enseñan el tic.
+  const items = useMemo(() => {
+    const showingCheck = new Set(addedIds.filter((id) => !dismissedIds.includes(id)));
+    return (query.trim() ? results : recommended)
+      .filter((item) => !addedSet.has(item.id) || showingCheck.has(item.id));
+  }, [query, results, recommended, addedSet, addedIds, dismissedIds]);
 
   const isAdded = useCallback((itemId: string) => addedSet.has(itemId), [addedSet]);
 
@@ -139,11 +155,18 @@ export const useAddItemScreen = (itemListId: string) => {
       if (addedSet.has(itemId)) return;
       // Feedback optimista
       setAddedIds((prev) => (prev.includes(itemId) ? prev : [...prev, itemId]));
+      dismissTimers.current[itemId] = setTimeout(() => {
+        delete dismissTimers.current[itemId];
+        setDismissedIds((prev) => [...prev, itemId]);
+      }, DISMISS_DELAY_MS);
 
       const updated = await itemListRepository.addItemToList(itemListId, itemId);
       if (!updated) {
-        // Revertir si falló
+        // Revertir si falló: el item vuelve a aparecer con el más
+        clearTimeout(dismissTimers.current[itemId]);
+        delete dismissTimers.current[itemId];
         setAddedIds((prev) => prev.filter((id) => id !== itemId));
+        setDismissedIds((prev) => prev.filter((id) => id !== itemId));
         setError('No se pudo añadir el item a la lista');
       }
     },

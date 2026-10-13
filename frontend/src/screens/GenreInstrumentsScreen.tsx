@@ -2,7 +2,7 @@ import React from "react";
 import { View, ScrollView, Text } from "react-native";
 import { ToolButton } from "../components/buttons/ToolButton";
 import { Guitar, Keyboard, Drum, Music } from 'lucide-react-native';
-import InstrumentGenreScreen from "./InstrumentGenreScreen";
+import InstrumentGenreLessonScreen from "./InstrumentGenreLessonScreen";
 import { useGenreInstruments } from "../hooks/useGenreInstruments";
 import { InstrumentGenreDTO } from "../types";
 import GenreLessonsCarousel from "../components/carousels/GenreLessonsCarousel";
@@ -46,10 +46,10 @@ export default function GenreInstrumentsScreen({ genreId }: GenreInstrumentsProp
     unselectInstrument
   } = useGenreInstruments(genreId);
 
-  // SI HAY UNO SELECCIONADO: Mostramos el detalle (Nivel de niveles, lecciones, etc.)
+  // SI HAY UNO SELECCIONADO: Mostramos sus lecciones con el panel lateral (EdgePanel)
   if (selectedInstrumentGenre) {
     return (
-        <InstrumentGenreScreen
+        <InstrumentGenreLessonScreen
             instrumentGenreId={selectedInstrumentGenre.id}
             instrumentName={selectedInstrumentGenre.title ?? "Instrumento"}
             onBack={unselectInstrument}

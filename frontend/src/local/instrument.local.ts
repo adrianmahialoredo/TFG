@@ -4,7 +4,6 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const INSTRUMENT_CACHE_PREFIX = '@instrument:';
 const INDEX_CACHE_PREFIX = '@instrument_index:';
-const INSTRUMENT_ALL_KEY = '@instrument_all';
 
 export const saveSingle = async (instrument: InstrumentDTO): Promise<void> => {
   const key = `${INSTRUMENT_CACHE_PREFIX}${instrument.id}`;
@@ -24,9 +23,6 @@ export const saveBatch = async (instruments: InstrumentDTO[]): Promise<void> => 
     JSON.stringify(instrument)
   ]);
 
-  // También guardar el índice de todos los instrumentos
-  pairs.push([INSTRUMENT_ALL_KEY, JSON.stringify(instruments)]);
-
   try {
     await AsyncStorage.multiSet(pairs);
   } catch (e) {
@@ -34,18 +30,6 @@ export const saveBatch = async (instruments: InstrumentDTO[]): Promise<void> => 
   }
 };
 
-/**
- * Obtiene TODOS los instrumentos del caché
- */
-export const getAll = async (): Promise<InstrumentDTO[] | null> => {
-  try {
-    const data = await AsyncStorage.getItem(INSTRUMENT_ALL_KEY);
-    return data ? JSON.parse(data) : null;
-  } catch (e) {
-    console.error("[InstrumentLocal] Error leyendo todos los instrumentos:", e);
-    return null;
-  }
-};
 
 export const getAllById = async (ids: string[]): Promise<{ cached: InstrumentDTO[]; missing: string[] }> => {
   if (ids.length === 0) return { cached: [], missing: [] };

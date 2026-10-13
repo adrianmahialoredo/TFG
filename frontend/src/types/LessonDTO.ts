@@ -7,6 +7,7 @@ export interface LessonDTO extends ItemDTO {
   belongsToInstrumentGenre: boolean;
   instrumentGenreId?: string;
   indexInInstrumentGenre: number;
+  instrumentId?: string;
   sectionIds: string[];
 }
 

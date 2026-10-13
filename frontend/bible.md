@@ -36,8 +36,9 @@ Esta arquitectura es la ley suprema del proyecto. Su objetivo es el desacoplamie
 - **Implementación común:** todo lo anterior vive en `utils/entityCache.utils.ts` (`createEntityCache`). Cada Repository crea su `cache` y expone `getAllById = cache.getAllById` y sus listas como `cache.list(key, fetch, onFresh)` (endpoint que devuelve objetos) o `cache.idList(key, fetchIds, onFresh)` (endpoint que devuelve IDs: se resuelven contra RAM → Disco y solo se piden por `by-ids` los que falten). Prohibido reimplementar estos flujos a mano en un Repository.
 - **Carruseles:** todas las tarjetas se pintan con el resumen de la `ItemEntitiesStore` (`itemsToCarouselItems`). Según el contrato (ver *Contrato Back↔Front*) hay dos tipos:
     - **Por defecto (IDs):** `itemRepository.getFeed(key, fetchIds, onFresh)`. El DTO completo solo se pide al abrir el detalle.
-    - **Excepciones de negocio (DTO completo):** el repositorio de la entidad usa `cache.list(...)` (p.ej. `songRepository.getPopular`), o `itemFeed.repository` si el feed mezcla subtipos (recientes, recomendados para una lista): reparte cada DTO en la Store de su subtipo según su `type`.
+    - **Excepciones de negocio (DTO completo):** el repositorio de la entidad usa `cache.list(...)` (p.ej. `songRepository.getPopular`), o `itemFeed.repository` si el feed mezcla subtipos (recomendados para una lista o para el usuario): reparte cada DTO en la Store de su subtipo según su `type`.
     - Las cachés de Song, Lesson, Genre e InstrumentGenre actualizan el resumen de la `ItemEntitiesStore` cada vez que un DTO completo entra en RAM (`toItemSummary`), así la tarjeta y el detalle nunca discrepan.
+- **Catálogos completos (`getAll`):** son una lista más, `cache.list('all', service.getAll)`, con su propio índice. Prohibido deducir el catálogo de las entidades sueltas que haya en disco (p.ej. una clave `@x_all` que reescribe cada `saveBatch`): ahí solo están las que cargó otra pantalla.
 - **Flujo de Escritura:** Al recibir datos de la API, DEBE actualizar la RAM y el Disco antes de retornar.
 
 ### Nivel 4: Entity Store (`zustand/entities`)
@@ -70,7 +71,7 @@ Esta arquitectura es la ley suprema del proyecto. Su objetivo es el desacoplamie
 | Caso | El backend devuelve | Motivo |
 |---|---|---|
 | Carruseles de entidades del catálogo (**por defecto**: lecciones, por década, por nivel, otros géneros, "Según tus gustos", recomendaciones del Home… y cualquiera nuevo) | **`List<Long>`** (ruta `/ids`) | El cliente ya tiene el resumen de todas en el catálogo: pinta con él y solo pide por `by-ids` las que falten |
-| Carruseles de alta probabilidad de apertura (**excepciones de negocio**): recientes del Home, canciones populares y nuevas, Spotify (canciones e items), recomendados para añadir a una lista, populares/clásicas/nuevas de un género y "Populares en <género favorito>" | **DTOs completos** | Se espera que el usuario abra lo que ve: el detalle abre al instante. La lista completa y sus endpoints está en `architecture.md` §7 |
+| Carruseles de alta probabilidad de apertura (**excepciones de negocio**): canciones populares y nuevas, Spotify (canciones e items), recomendados para añadir a una lista, populares/clásicas/nuevas de un género y "Populares en <género favorito>" | **DTOs completos** | Se espera que el usuario abra lo que ve: el detalle abre al instante. La lista completa y sus endpoints está en `architecture.md` §7 |
 | Filtros cuyo consumidor necesita el objeto completo (`lessons/by-genre`, `instrument-genres/by-genre`) | **Lista de DTOs** | Esos objetos no están en caché: 1 petición mejor que 2 (IDs + `by-ids`) |
 | Relaciones de una entidad (`song.lessonIds`, `itemList.itemIds`, `user.favouriteGenresIds`) | **IDs dentro del DTO padre** | Mantiene la normalización; los hijos se piden solo si se necesitan |
 | Pertenencia que cambia mucho sobre entidades estables (listas de un usuario) | `List<Long>` + `POST /by-ids` | La caché acierta y no se re-descarga lo ya conocido |
@@ -82,7 +83,7 @@ Esta arquitectura es la ley suprema del proyecto. Su objetivo es el desacoplamie
 
 **Catálogo de items:** al arrancar, `AuthContext` carga en segundo plano el resumen de todos los items (`itemRepository.getCatalog()`, Cache-First, refresco de red una vez por sesión). Las búsquedas de items se hacen en local sobre ese catálogo; el logout lo conserva porque es contenido público.
 
-**Nombres de campos:** el `AppDTO` usa los mismos nombres que el JSON del backend (p.ej. `lastTimeAccessed`). Si alguno difiere, el mapeo se hace en el Service (Nivel 1), nunca más arriba.
+**Nombres de campos:** el `AppDTO` usa los mismos nombres que el JSON del backend (p.ej. `imageUrl`). Si alguno difiere, el mapeo se hace en el Service (Nivel 1), nunca más arriba.
 
 ---
 
@@ -102,7 +103,7 @@ Esta arquitectura es la ley suprema del proyecto. Su objetivo es el desacoplamie
    - Obligatorio usar `AsyncStorage.multiSet` para batches de datos.
 
 4. **LEY DE PRIVACIDAD EN LOGOUT:**
-   - El logout borra (RAM + Disco) todo lo que pertenece al usuario: su entidad, sus listas y los índices personalizados (recientes, recomendaciones, Spotify).
+   - El logout borra (RAM + Disco) todo lo que pertenece al usuario: su entidad, sus listas y los índices personalizados (recomendaciones, Spotify). Los recientes del Home se conservan: van por usuario en `RecentItemsStore` y nadie más los ve.
    - Las entidades de contenido público (canciones, lecciones, géneros…) se conservan como caché.
 
 5. **LEY DE PREVENCIÓN DE PARPADEO (FLICKER):**

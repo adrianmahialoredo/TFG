@@ -7,6 +7,8 @@ interface ProfileInputProps {
   onChange: (val: string) => void;
   placeholder?: string;
   editable?: boolean;
+  /** Campo de solo lectura (p.ej. el email verificado): nunca editable y con estilo apagado */
+  readOnly?: boolean;
 }
 
 /**
@@ -23,6 +25,7 @@ export const ProfileInput = ({
   onChange,
   placeholder,
   editable = true,
+  readOnly = false,
 }: ProfileInputProps) => {
   return (
     <View className="flex-row mb-4 items-center gap-4">
@@ -30,12 +33,12 @@ export const ProfileInput = ({
         {label}:
       </Text>
       <TextInput
-        className="text-primary border border-primary rounded-lg p-3 flex-1"
+        className={`rounded-lg p-3 flex-1 border ${readOnly ? 'text-artistName border-primary/40' : 'text-primary border-primary'}`}
         value={value}
         onChangeText={onChange}
         placeholder={placeholder}
         placeholderTextColor={COLORS.primary}
-        editable={editable}
+        editable={editable && !readOnly}
         underlineColorAndroid="transparent"
         selectionColor={COLORS.primary}
       />

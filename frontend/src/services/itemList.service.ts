@@ -1,4 +1,4 @@
-import axios from 'axios';
+import { apiClient } from './apiClient';
 import { API_ENDPOINTS } from '../config/apiConfig';
 import { CreateItemListDTO, ItemListDTO } from '../types';
 
@@ -28,47 +28,47 @@ const toBackendCreatePayload = (payload: CreateItemListDTO) => ({
 });
 
 export const getAll = async (): Promise<ItemListDTO[]> => {
-  const response = await axios.get(API_ENDPOINTS.ITEM_LISTS.BASE);
+  const response = await apiClient.get(API_ENDPOINTS.ITEM_LISTS.BASE);
   return (response.data as ItemListBackendDTO[]).map(toAppItemListDTO);
 };
 
 export const getById = async (id: string): Promise<ItemListDTO> => {
-  const response = await axios.get(API_ENDPOINTS.ITEM_LISTS.BY_ID(id));
+  const response = await apiClient.get(API_ENDPOINTS.ITEM_LISTS.BY_ID(id));
   return toAppItemListDTO(response.data as ItemListBackendDTO);
 };
 
 export const getUserIds = async (userId: string): Promise<string[]> => {
-  const response = await axios.get(API_ENDPOINTS.ITEM_LISTS.IDS_BY_USER(userId));
+  const response = await apiClient.get(API_ENDPOINTS.ITEM_LISTS.IDS_BY_USER(userId));
   // Convertir los IDs numéricos a strings si es necesario
   return response.data.map((id: number | string) => String(id));
 };
 
 export const getAllById = async (ids: string[]): Promise<ItemListDTO[]> => {
-  const response = await axios.post(API_ENDPOINTS.ITEM_LISTS.BY_IDS, ids);
+  const response = await apiClient.post(API_ENDPOINTS.ITEM_LISTS.BY_IDS, ids);
   return (response.data as ItemListBackendDTO[]).map(toAppItemListDTO);
 };
 
 export const createItemList = async (itemList: CreateItemListDTO): Promise<ItemListDTO> => {
-  const response = await axios.post(API_ENDPOINTS.ITEM_LISTS.BASE, toBackendCreatePayload(itemList));
+  const response = await apiClient.post(API_ENDPOINTS.ITEM_LISTS.BASE, toBackendCreatePayload(itemList));
   return toAppItemListDTO(response.data as ItemListBackendDTO);
 };
 
 export const updateItemList = async (id: string, itemList: ItemListDTO): Promise<ItemListDTO> => {
-  const response = await axios.put(API_ENDPOINTS.ITEM_LISTS.BY_ID(id), itemList);
+  const response = await apiClient.put(API_ENDPOINTS.ITEM_LISTS.BY_ID(id), itemList);
   return toAppItemListDTO(response.data as ItemListBackendDTO);
 };
 
 export const deleteItemList = async (id: string): Promise<void> => {
-  await axios.delete(API_ENDPOINTS.ITEM_LISTS.BY_ID(id));
+  await apiClient.delete(API_ENDPOINTS.ITEM_LISTS.BY_ID(id));
 };
 
 export const addItemToList = async (listId: string, itemId: string): Promise<ItemListDTO> => {
-  const response = await axios.post(API_ENDPOINTS.ITEM_LISTS.ITEM(listId, itemId));
+  const response = await apiClient.post(API_ENDPOINTS.ITEM_LISTS.ITEM(listId, itemId));
   return toAppItemListDTO(response.data as ItemListBackendDTO);
 };
 
 export const removeItemFromList = async (listId: string, itemId: string): Promise<ItemListDTO> => {
-  const response = await axios.delete(API_ENDPOINTS.ITEM_LISTS.ITEM(listId, itemId));
+  const response = await apiClient.delete(API_ENDPOINTS.ITEM_LISTS.ITEM(listId, itemId));
   return toAppItemListDTO(response.data as ItemListBackendDTO);
 };
 

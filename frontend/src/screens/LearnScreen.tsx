@@ -10,7 +10,7 @@ export default function LearnScreen() {
   const [query, setQuery] = useState('');
 
   // Nivel 6: Hook que orquesta con los repositorios y se suscribe a la Entity Store
-  const { populars, news, recommendations, loading, error } = useHomeLessons();
+  const { populars, news, recommendations, favouriteInstrument, loading, error } = useHomeLessons();
 
   // Filtrado por query si hay búsqueda (useMemo para evitar recálculos innecesarios)
   const filteredCategories = useMemo(() => {
@@ -18,6 +18,10 @@ export default function LearnScreen() {
       { title: 'Populares', data: populars },
       { title: 'Nuevas', data: news },
       { title: 'Para ti', data: recommendations },
+      // Solo si el usuario tiene algún instrumento favorito (y ya se conoce su nombre)
+      ...(favouriteInstrument?.title
+        ? [{ title: `Para ${favouriteInstrument.title}`, data: favouriteInstrument.data }]
+        : []),
     ];
 
     if (!query) return categories;
@@ -28,7 +32,7 @@ export default function LearnScreen() {
         item.title.toLowerCase().includes(query.toLowerCase())
       )
     })).filter(cat => cat.data.length > 0);
-  }, [populars, news, recommendations, query]);
+  }, [populars, news, recommendations, favouriteInstrument, query]);
 
   return (
     <AppLayout>

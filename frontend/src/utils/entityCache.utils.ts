@@ -1,4 +1,13 @@
+import { isAxiosError } from 'axios';
 import { createRevalidator } from './revalidate.utils';
+
+/**
+ * 401 de una petición que iba con token: el interceptor de apiClient ya cerró la sesión y
+ * lleva al login, no es un fallo que avisar. Un 401 SIN token (p.ej. en el registro) sí se
+ * avisa: significa que el endpoint no es público y la pantalla se quedará vacía.
+ */
+const isUnauthorized = (error: unknown) =>
+    isAxiosError(error) && error.response?.status === 401 && !!error.config?.headers?.Authorization;
 
 type Identified = { id: string | number };
 
@@ -35,7 +44,7 @@ export const createEntityCache = <T extends Identified>(config: EntityCacheConfi
     const revalidator = createRevalidator<T>(name, fetchByIds, (fresh) => {
         setRam(fresh);
         local.saveBatch(fresh).catch(console.error);
-    });
+    }, toId);
 
     /** RAM -> Disco, sin red. Sube a RAM lo que se lee de Disco. */
     const getCached = async (ids: string[]): Promise<{ found: T[]; missing: string[] }> => {
@@ -112,14 +121,20 @@ export const createEntityCache = <T extends Identified>(config: EntityCacheConfi
         if (cached.length > 0) {
             fetchFresh()
                 .then((ids) => onFresh?.(ids))
-                .catch((error) => console.warn(`[${name}] Refresco de '${cacheKey}' fallido, se mantiene la caché:`, error));
+                .catch((error) => {
+                    if (!isUnauthorized(error)) {
+                        console.warn(`[${name}] Refresco de '${cacheKey}' fallido, se mantiene la caché:`, error);
+                    }
+                });
             return cached;
         }
 
         try {
             return await fetchFresh();
         } catch (error) {
-            console.error(`[${name}] Error en '${cacheKey}' sin caché disponible:`, error);
+            if (!isUnauthorized(error)) {
+                console.error(`[${name}] Error en '${cacheKey}' sin caché disponible:`, error);
+            }
             return [];
         }
     };

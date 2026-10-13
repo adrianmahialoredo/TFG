@@ -28,7 +28,7 @@ export const navigateToItem = (
       });
       break;
     case ItemType.LESSON:
-      // TODO: aun no existe una pantalla dedicada para lecciones sueltas.
+      navigation.navigate('LessonScreen', { lessonId: item.id });
       break;
   }
 };

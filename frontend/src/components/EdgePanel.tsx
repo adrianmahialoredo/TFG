@@ -1,12 +1,19 @@
 import React, { useRef, useState } from 'react';
-import { View, Animated, PanResponder, Dimensions } from 'react-native';
+import { View, Animated, PanResponder, Dimensions, ScrollView } from 'react-native';
 import EdgeButton from './buttons/EdgeButton';
 import { LessonDTO } from '../types';
 
 const { height } = Dimensions.get('window');
 const PANEL_WIDTH = 152;
-const PANEL_OFFSET = -28;
-const CLOSED_POSITION = -PANEL_WIDTH + PANEL_OFFSET;
+const HANDLE_WIDTH = 6;          // Ancho de la pestaña naranja que queda siempre visible
+const HANDLE_TOUCH_WIDTH = 24;   // Zona táctil de la pestaña (más ancha que la propia pestaña para poder arrastrarla)
+const PANEL_MAX_HEIGHT = height * 0.6;
+const CLOSED_POSITION = -PANEL_WIDTH; // Cerrado: el panel queda fuera y solo asoma la pestaña
+const SWIPE_THRESHOLD = PANEL_WIDTH / 3;
+const TAP_SLOP = 5;
+// El muelle pasa un poco de largo al abrir: el cajón se prolonga por la izquierda (fuera de
+// pantalla) para que en ese rebote no asome un hueco entre el borde y el panel.
+const BOUNCE_OVERFLOW = 24;
 
 type Props = {
     lessons: LessonDTO[];
@@ -14,108 +21,117 @@ type Props = {
     onSelectLessonId: (id: string) => void;
 };
 
+/**
+ * Panel lateral tipo "edge panel": una pestaña siempre visible en el borde izquierdo
+ * que al deslizar hacia la derecha se abre como un cajón con todas las lecciones.
+ * Al pulsar una lección se cambia el contenido de la pantalla y el panel sigue abierto;
+ * se oculta deslizando hacia la izquierda. Con el panel cerrado, tocar la pestaña lo abre.
+ *
+ * Como en SlidePanel2, los gestos los recibe un contenedor FIJO (sin transform) y lo que
+ * se anima es su contenido: el área táctil no se mueve bajo el dedo mientras se arrastra.
+ */
 export default function EdgePanel({ lessons, activeLessonId, onSelectLessonId }: Props) {
     const translateX = useRef(new Animated.Value(CLOSED_POSITION)).current;
+    // El estado dimensiona el área táctil; el ref es lo que lee el PanResponder (creado una
+    // sola vez), que con el estado vería siempre el valor inicial.
     const [isOpen, setIsOpen] = useState(false);
+    const isOpenRef = useRef(false);
+
+    const animateTo = (open: boolean) => {
+        isOpenRef.current = open;
+        if (open) setIsOpen(true); // Se amplía el área táctil antes de que el panel llegue
+        // Muelle con algo de rebote al final, en vez de una transición lineal
+        Animated.spring(translateX, {
+            toValue: open ? 0 : CLOSED_POSITION,
+            tension: 70,
+            friction: 8,
+            useNativeDriver: true,
+        }).start(({ finished }) => { if (finished && !open) setIsOpen(false); });
+    };
+
+    const isHorizontal = (dx: number, dy: number) => Math.abs(dx) > TAP_SLOP && Math.abs(dx) > Math.abs(dy);
 
     /**
      * CONFIGURACIÓN DE GESTOS TÁCTILES
      *
-     * PanResponder maneja los gestos de deslizar para abrir/cerrar el panel
+     * Se usa la fase de captura para que los botones de lección no se queden con el arrastre,
+     * y solo ante movimientos horizontales, para no robar el scroll vertical de la lista.
      */
     const panResponder = useRef(
         PanResponder.create({
-            // Determina cuándo debe activarse el gesto (movimiento horizontal > 10px)
-            onMoveShouldSetPanResponder: (_, gestureState) => Math.abs(gestureState.dx) > 5,
+            // Cerrado solo es tocable la pestaña: un toque en ella abre el panel
+            onStartShouldSetPanResponder: () => !isOpenRef.current,
+            onMoveShouldSetPanResponderCapture: (_, gesture) => isHorizontal(gesture.dx, gesture.dy),
+            onMoveShouldSetPanResponder: (_, gesture) => isHorizontal(gesture.dx, gesture.dy),
+            onPanResponderTerminationRequest: () => false,
 
-            // Maneja el movimiento mientras se arrastra
+            // Sigue al dedo sin salirse de los límites [cerrado, abierto]
             onPanResponderMove: (_, gesture) => {
-                let dx = gesture.dx; // Distancia horizontal del movimiento
-
-                if (isOpen) {
-                    // Si el panel está abierto, permite deslizar hacia la izquierda para cerrarlo
-                    if (dx < 0 && dx >= -PANEL_WIDTH) {
-                        translateX.setValue(dx);
-                    }
-                } else {
-                    // Si el panel está cerrado, permite deslizar hacia la derecha para abrirlo
-                    if (dx > 0 && dx <= PANEL_WIDTH) {
-                        translateX.setValue(CLOSED_POSITION + dx);
-                    }
-                }
+                const start = isOpenRef.current ? 0 : CLOSED_POSITION;
+                translateX.setValue(Math.min(0, Math.max(CLOSED_POSITION, start + gesture.dx)));
             },
 
-            // Maneja el final del gesto (cuando se suelta el dedo)
+            // Al soltar decide si abrir o cerrar según cuánto se ha arrastrado
             onPanResponderRelease: (_, gesture) => {
-                // Si está cerrado y se desliza más de 100px a la derecha, abrir
-                if (!isOpen && gesture.dx > 100) {
-                    openPanel();
-                }
-                // Si está abierto y se desliza más de 100px a la izquierda, cerrar
-                else if (isOpen && gesture.dx < -100) {
-                    closePanel();
-                }
-                // Si no se cumple el umbral, volver al estado anterior
-                else {
-                    isOpen ? openPanel() : closePanel();
+                const isTap = Math.abs(gesture.dx) < TAP_SLOP && Math.abs(gesture.dy) < TAP_SLOP;
+                if (!isOpenRef.current && (isTap || gesture.dx > SWIPE_THRESHOLD)) {
+                    animateTo(true);
+                } else if (isOpenRef.current && gesture.dx < -SWIPE_THRESHOLD) {
+                    animateTo(false);
+                } else {
+                    animateTo(isOpenRef.current);
                 }
             },
+            onPanResponderTerminate: () => animateTo(isOpenRef.current),
         })
     ).current;
 
-    /**
-     * FUNCIONES DE ANIMACIÓN
-     */
-
-        // Abre el panel con animación suave
-    const openPanel = () => {
-            Animated.timing(translateX, {
-                toValue: 0,          // Posición final (visible)
-                duration: 300,       // Duración de la animación en ms
-                useNativeDriver: true, // Usa el driver nativo para mejor rendimiento
-            }).start(() => setIsOpen(true)); // Actualiza el estado cuando termina
-        };
-
-    // Cierra el panel con animación suave
-    const closePanel = () => {
-        Animated.timing(translateX, {
-            toValue: CLOSED_POSITION, // Usa la constante para mantener la pestaña visible
-            duration: 300,
-            useNativeDriver: true,
-        }).start(() => setIsOpen(false));
-    };
-
     return (
+        // Contenedor fijo que recibe los gestos. Cerrado solo ocupa la franja de la pestaña,
+        // para no tapar los toques del contenido de la pantalla.
         <View
-            className="flex-row absolute top-0 left-0 bottom-0 z-50"
-            style={{ height: height * 0.7, alignSelf: 'center' }}
+            className="absolute top-0 bottom-0 left-0 z-50 justify-center"
+            style={{ width: isOpen ? PANEL_WIDTH + HANDLE_TOUCH_WIDTH : HANDLE_TOUCH_WIDTH }}
             {...panResponder.panHandlers}
         >
+            {/* Estilos en línea (no className) en la vista animada: NativeWind pisa el estilo
+                animado al re-renderizar (p.ej. con setIsOpen) y el panel saltaba de golpe. */}
             <Animated.View
-                className="bg-secondary rounded-xl self-center"
-                style={{ width: PANEL_WIDTH, transform: [{ translateX }] }}
+                style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    marginLeft: -BOUNCE_OVERFLOW,
+                    width: BOUNCE_OVERFLOW + PANEL_WIDTH + HANDLE_TOUCH_WIDTH,
+                    transform: [{ translateX }],
+                }}
             >
-                <View className="flex-col">
-                    {lessons.map((lesson, index) => (
-                        <EdgeButton
-                            key={lesson.id}
-                            name={lesson.title} // O "Paso " + (index + 1)
-                            isSelected={activeLessonId === lesson.id}
-                            isTopEdge={index === 0}
-                            isBottomEdge={index === lessons.length - 1}
-                            onPress={() => {
-                                onSelectLessonId(lesson.id);
-                                closePanel();
-                            }}
-                        />
-                    ))}
+                {/* CAJÓN CON LAS LECCIONES (con un margen extra fuera de pantalla para el rebote) */}
+                <View
+                    className="bg-secondary rounded-r-xl overflow-hidden"
+                    style={{ width: BOUNCE_OVERFLOW + PANEL_WIDTH, paddingLeft: BOUNCE_OVERFLOW, maxHeight: PANEL_MAX_HEIGHT, elevation: 5 }}
+                >
+                    <ScrollView showsVerticalScrollIndicator={false}>
+                        {lessons.map((lesson, index) => (
+                            <EdgeButton
+                                key={lesson.id}
+                                name={lesson.title}
+                                isSelected={activeLessonId === lesson.id}
+                                isTopEdge={index === 0}
+                                isBottomEdge={index === lessons.length - 1}
+                                onPress={() => onSelectLessonId(lesson.id)}
+                            />
+                        ))}
+                    </ScrollView>
+                </View>
+
+                {/* PESTAÑA SIEMPRE VISIBLE: zona táctil ancha y transparente con la barra naranja dentro */}
+                <View style={{ width: HANDLE_TOUCH_WIDTH, height: 120 }} className="justify-center">
+                    <View
+                        className="bg-primary rounded-r-xl"
+                        style={{ width: HANDLE_WIDTH, height: 100 }}
+                    />
                 </View>
             </Animated.View>
-
-            <Animated.View
-                className="w-1.5 bg-primary rounded-r-xl self-center"
-                style={{ height: 100, transform: [{ translateX }] }}
-            />
         </View>
     );
 }

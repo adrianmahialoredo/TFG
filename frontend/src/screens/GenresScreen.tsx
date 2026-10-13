@@ -21,15 +21,29 @@ export default function GenresScreen() {
 
   return (
       <AppLayout>
-        <ProfileHeader title="Géneros" />
-        {loading ? (
-            <ActivityIndicator />
-        ) : (
-            <ScrollView>
-              <SearchBar value={query} onChangeText={setQuery} />
-              <VerticalButtonsCarousel data={formattedData} />
-            </ScrollView>
-        )}
+        {/* Misma cabecera que Canciones y Aprender: título y buscador fijos, fuera del scroll */}
+        <View className="bg-background flex-1 pt-2">
+
+          <ProfileHeader title="Géneros" />
+
+          {/* Barra de búsqueda */}
+          <View className="bg-background mt-3 mb-4">
+            <SearchBar value={query} onChangeText={setQuery} />
+          </View>
+
+          {loading ? (
+              <View className="flex-1 justify-center items-center">
+                <ActivityIndicator size="large" color="#ffffff" />
+              </View>
+          ) : (
+              <ScrollView
+                  showsVerticalScrollIndicator={false}
+                  contentContainerStyle={{ paddingBottom: 120 }}
+              >
+                <VerticalButtonsCarousel data={formattedData} />
+              </ScrollView>
+          )}
+        </View>
       </AppLayout>
   );
 }

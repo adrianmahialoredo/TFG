@@ -7,4 +7,5 @@ export interface UserDTO {
   profileImageUrl?: string;
   favouriteGenresIds?: Array<string | number>;
   favouriteInstrumentsIds?: Array<string | number>;
+  spotifyConnected?: boolean; // Lo calcula el backend; se ignora al enviarlo
 }

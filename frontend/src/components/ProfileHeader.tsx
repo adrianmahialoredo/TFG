@@ -1,8 +1,9 @@
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { TouchableOpacity, View, Image, Text } from "react-native";
+import { TouchableOpacity, View, Text } from "react-native";
 import { RootStackParamList } from "../types";
 import {useAuth} from "../hooks/useAuth";
+import UserAvatar from "./UserAvatar";
 
 type ProfileHeaderProps = {
     title: string;
@@ -19,10 +20,7 @@ export default function ProfileHeader({ title, compact = false }: ProfileHeaderP
         return (
             <View className="justify-center mr-4">
                 <TouchableOpacity onPress={() => navigation.navigate('ProfileScreen')}>
-                    <Image
-                        source={{ uri: user?.profileImageUrl || 'https://via.placeholder.com/150' }}
-                        className="w-12 h-12 rounded-full border border-primary/30"
-                    />
+                    <UserAvatar user={user} size={48} className="border border-primary/30" />
                 </TouchableOpacity>
             </View>
         );
@@ -31,10 +29,7 @@ export default function ProfileHeader({ title, compact = false }: ProfileHeaderP
     return (
         <View className="flex-row items-center mt-6 mb-7">
             <TouchableOpacity onPress={() => navigation.navigate('ProfileScreen')}>
-                <Image
-                    source={{ uri: user?.profileImageUrl || 'https://via.placeholder.com/150' }}
-                    className="w-14 h-14 rounded-full border-2 border-primary/20"
-                />
+                <UserAvatar user={user} size={56} className="border-2 border-primary/20" />
             </TouchableOpacity>
             <Text className="text-[24px] font-bold text-primary ml-3 flex-1">{title}</Text>
         </View>

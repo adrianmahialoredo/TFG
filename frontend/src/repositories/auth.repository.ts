@@ -3,7 +3,9 @@ import * as userLocal from '../local/user.local';
 import * as itemListLocal from '../local/itemList.local';
 import * as itemLocal from '../local/item.local';
 import * as songLocal from '../local/song.local';
-import { SPOTIFY_INDEX_KEY } from './song.repository';
+import * as lessonLocal from '../local/lesson.local';
+import { SPOTIFY_INDEX_KEY, RECOMMENDED_INDEX_KEY as SONGS_RECOMMENDED_INDEX_KEY } from './song.repository';
+import { RECOMMENDED_INDEX_KEY as LESSONS_RECOMMENDED_INDEX_KEY } from './lesson.repository';
 import { useAuthStore, useUserEntitiesStore, useItemListEntitiesStore } from '../stores/entities';
 import { UserDTO } from '../types';
 
@@ -28,13 +30,17 @@ export const login = async (email: string, password: string): Promise<{ token: s
   }
 };
 
-export const register = async (formData: any): Promise<{ token: string; user: UserDTO }> => {
+/** Envía el código de verificación al email del registro (paso previo a `register`). */
+export const requestVerificationCode = (email: string): Promise<void> =>
+  authService.requestVerificationCode(email);
+
+export const register = async (formData: any, verificationCode: string): Promise<{ token: string; user: UserDTO }> => {
   try {
     // 1. Limpiamos el objeto: mandamos solo lo que el service espera
     // (quitamos confirmPassword antes de enviar al Nivel 1)
     const { confirmPassword, ...registerData } = formData;
 
-    const { user: registeredUser, token } = await authService.register(registerData);
+    const { user: registeredUser, token } = await authService.register(registerData, verificationCode);
     const userId = registeredUser.id.toString();
 
     // 2. Hidratación RAM & Disco (Atómica)
@@ -61,14 +67,16 @@ export const logout = async (): Promise<void> => {
 
     // 2. LIMPIAR DISCO (Vital para la privacidad)
     // Borramos los datos del usuario, sus listas y los índices de feeds personalizados
-    // (recientes, recomendaciones, Spotify…), que otro usuario no debe ver.
+    // (recomendaciones, Spotify…), que otro usuario no debe ver. Los recientes del Home se
+    // conservan: van por usuario en RecentItemsStore, así que nadie más los ve, y siguen ahí al volver.
     await Promise.all([
       userLocal.clearAll(),
       itemListLocal.clearAll(),
       // El catálogo de items es público: se conserva.
       itemLocal.clearQueryIndexes(['items_catalog']),
-      // Las canciones de Spotify van con DTO completo y su índice vive en el de canciones.
-      songLocal.removeQueryIndexes([SPOTIFY_INDEX_KEY]),
+      // Las canciones de Spotify y las recomendadas van con DTO completo y su índice vive en el de canciones.
+      songLocal.removeQueryIndexes([SPOTIFY_INDEX_KEY, SONGS_RECOMMENDED_INDEX_KEY]),
+      lessonLocal.removeQueryIndexes([LESSONS_RECOMMENDED_INDEX_KEY]),
     ]);
 
     // Las entidades de contenido público (canciones, lecciones, géneros…)

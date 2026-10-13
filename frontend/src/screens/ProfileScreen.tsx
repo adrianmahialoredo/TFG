@@ -11,12 +11,15 @@ import GenreViewer from "../components/GenreViewer";
 import InstrumentViewer from "../components/InstrumentViewer";
 import ListCarousel from "../components/carousels/ListCarousel";
 import CreateListMiniModal from "../components/CreateListMiniModal";
+import FavoritesPickerModal from "../components/FavoritesPickerModal";
 import { SpotifyButton } from "../components/buttons/SpotifyButton";
 import { useProfile } from "../hooks/useProfile";
 import { useAuth } from "../hooks/useAuth";
 import {useItemLists} from "../hooks/useItemLists";
 import { RootStackParamList } from "../types";
 import { useAppAlert } from "../context/AlertModalContext";
+import { MIN_FAVOURITE_GENRES, MIN_FAVOURITE_INSTRUMENTS } from "../constants/Preferences";
+import UserAvatar from "../components/UserAvatar";
 
 export default function ProfileScreen() {
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
@@ -24,7 +27,9 @@ export default function ProfileScreen() {
     user,
     isLoading,
     updateProfileData,
-    pickAndUploadImage
+    pickAndUploadImage,
+    updateFavoriteGenres,
+    updateFavoriteInstruments,
   } = useProfile();
 
   const { logout } = useAuth();
@@ -80,6 +85,19 @@ export default function ProfileScreen() {
     imgUrl: l.imageUrl || '',
   })), [lists]);
 
+  // Qué favoritos se están editando (null = modal cerrado)
+  const [favoritesKind, setFavoritesKind] = useState<'genres' | 'instruments' | null>(null);
+
+  const handleSaveFavorites = async (ids: string[]) => {
+    try {
+      if (favoritesKind === 'genres') await updateFavoriteGenres(ids);
+      else await updateFavoriteInstruments(ids);
+      setFavoritesKind(null);
+    } catch (err) {
+      showAlert({ title: 'Error', message: 'No se pudieron guardar los favoritos' });
+    }
+  };
+
   const [profileModalVisible, setProfileModalVisible] = useState(false);
   const [viewImageModal, setViewImageModal] = useState(false);
 
@@ -100,6 +118,15 @@ export default function ProfileScreen() {
   }, [user?.id, user?.name, user?.username, user?.email]);
 
   const handleSaveProfile = async () => {
+    // El backend rechaza el perfil sin el mínimo de favoritos (Preferences.MIN_NUMBER_OF_FAVOURITE_*)
+    if ((user?.favouriteGenresIds?.length ?? 0) < MIN_FAVOURITE_GENRES
+        || (user?.favouriteInstrumentsIds?.length ?? 0) < MIN_FAVOURITE_INSTRUMENTS) {
+      showAlert({
+        title: 'Faltan favoritos',
+        message: `Elige al menos ${MIN_FAVOURITE_GENRES} géneros y ${MIN_FAVOURITE_INSTRUMENTS} instrumentos con los botones +`,
+      });
+      return;
+    }
     try {
       await updateProfileData(form);
       showAlert({ title: 'Exito', message: 'Perfil actualizado correctamente' });
@@ -128,10 +155,7 @@ export default function ProfileScreen() {
           {/* CABECERA: FOTO Y USERNAME */}
           <View className="items-center mt-8">
             <TouchableOpacity onPress={() => setProfileModalVisible(true)}>
-              <Image
-                  source={{ uri: user.profileImageUrl || 'https://via.placeholder.com/128' }}
-                  className="h-32 w-32 rounded-full mb-4 border-2 border-secondary"
-              />
+              <UserAvatar user={user} size={128} className="mb-4 border-2 border-secondary" />
             </TouchableOpacity>
 
             <Text className="text-2xl font-bold text-primary mb-2">@{user.username}</Text>
@@ -167,11 +191,12 @@ export default function ProfileScreen() {
                 onChange={(val) => setForm({ ...form, username: val })}
                 editable={!isLoading}
             />
+            {/* El email se verificó con un código al registrarse: no se puede cambiar desde aquí */}
             <ProfileInput
                 label="Email"
                 value={form.email}
-                onChange={(val) => setForm({ ...form, email: val })}
-                editable={!isLoading}
+                onChange={() => {}}
+                readOnly
             />
           </View>
 
@@ -182,11 +207,13 @@ export default function ProfileScreen() {
             <GenreViewer
                 ids={user.favouriteGenresIds || []}
                 label={"Mis géneros favoritos:"}
+                onAddPress={() => setFavoritesKind('genres')}
             />
 
             <InstrumentViewer
                 ids={user.favouriteInstrumentsIds || []}
                 label="Instrumentos que toco:"
+                onAddPress={() => setFavoritesKind('instruments')}
             />
           </View>
 
@@ -214,6 +241,15 @@ export default function ProfileScreen() {
         </ScrollView>
 
         {/* MODALES EXTRAÍDOS */}
+        {favoritesKind && (
+            <FavoritesPickerModal
+                kind={favoritesKind}
+                initialIds={favoritesKind === 'genres' ? user.favouriteGenresIds ?? [] : user.favouriteInstrumentsIds ?? []}
+                saving={isLoading}
+                onSave={handleSaveFavorites}
+                onClose={() => setFavoritesKind(null)}
+            />
+        )}
         <PhotoOptionsModal
             visible={profileModalVisible}
             onClose={() => setProfileModalVisible(false)}
@@ -226,11 +262,15 @@ export default function ProfileScreen() {
 
         <Modal visible={viewImageModal} transparent animationType="fade">
           <Pressable className="flex-1 bg-black justify-center items-center" onPress={() => setViewImageModal(false)}>
-            <Image
-                source={{ uri: user.profileImageUrl || 'https://via.placeholder.com/256' }}
-                className="w-full h-full"
-                resizeMode="contain"
-            />
+            {user.profileImageUrl ? (
+              <Image
+                  source={{ uri: user.profileImageUrl }}
+                  className="w-full h-full"
+                  resizeMode="contain"
+              />
+            ) : (
+              <UserAvatar user={user} size={256} />
+            )}
           </Pressable>
         </Modal>
 

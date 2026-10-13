@@ -14,6 +14,7 @@ La arquitectura interna del frontend está detallada en [`frontend/bible.md`](fr
 | Base de datos | PostgreSQL. Esquema gestionado por Hibernate (`spring.jpa.hibernate.ddl-auto=update`) |
 | Frontend | React Native (Expo), Axios, Zustand, AsyncStorage |
 | Carga de datos | Scripts Python en `scripts/` que llaman a la API (`load_all_data.py`) |
+| Emails | Spring Mail (SMTP, Gmail) con plantillas hechas en React Email (`emails/`) y exportadas a `templates/email` |
 
 ### Capas del backend
 
@@ -118,13 +119,13 @@ Hay `findX`/`resolveX` para todas las entidades con repositorio. `resolveX` est�
 ## 5. Repositorios
 
 1. **Consultas derivadas del nombre** siempre que sea posible. `@Query` solo cuando no se puede expresar con el nombre.
-2. `Distinct` cuando la consulta atraviesa una colección (`genres`, `instruments`) para no repetir resultados: `findDistinctByGenresIdAndGenreNewTrue`.
-3. Exclusiones con IDs: `...AndIdNotIn(Collection<Long> excludedIds, ...)` (el servicio convierte las entidades a IDs).
+2. `Distinct` solo cuando se filtra una colección con `In`, porque una canción que coincide con varios de los valores saldría repetida: `findDistinctByInstrumentsInAndIdNotIn`. Filtrar por un único id (`findByGenresIdAndGenreNewTrue`) no repite resultados: la tabla intermedia tiene clave primaria, así que cada canción solo puede casar con ese género una vez.
+3. Exclusiones con IDs: `...AndIdNotIn(Collection<Long> excludedIds, ...)` (el servicio convierte las entidades a IDs). Los IDs se pasan **siempre** por `Utils.idsToExclude(ids)`: con una colección vacía Hibernate enlaza un único `NULL` (`id not in (null)`), que en SQL nunca es cierto, y la consulta no devolvería ninguna fila. `idsToExclude` sustituye la colección vacía por un ID imposible (`-1`).
 4. `In` sobre colecciones de entidades: `findDistinctByInstrumentsInAndIdNotIn(Collection<Instrument>, ...)`.
 5. Límites con `Pageable` construido por `Utils.resolvePageable(limit)` (`null` = sin límite; `<= 0` lanza `IllegalArgumentException`). Los servicios no llaman a `resolvePageable(0)`: comprueban antes si falta algo.
 6. No se redefinen métodos que ya da `JpaRepository` (`findAllById` ya devuelve `List`).
 7. Si el dato se obtiene navegando una relación de la entidad, no se crea una consulta (p. ej. IDs de los acordes de una lección = `songLesson.getChords()`; IDs de las listas de un usuario = `user.getItemLists()`).
-8. Los repositorios no contienen métodos `default` de conveniencia ni marcadores tipo `WHERE 1 = 0`: eso va en el servicio.
+8. Los repositorios no contienen métodos `default` de conveniencia ni marcadores tipo `WHERE 1 = 0`: eso va en el servicio. **Excepción:** una consulta que no se puede derivar del nombre ni escribir con una `@Query` fija porque depende de un número variable de condiciones se construye con una `Specification` en un método `default` del propio repositorio (que extiende `JpaSpecificationExecutor`), para que los servicios no monten criterios JPA. Ejemplo: `SongRepository.findByTitleAndArtistIn(Collection<TitleArtist>)`, un OR de parejas título/artista sin distinguir mayúsculas que usan las recomendaciones de Spotify; el record `TitleArtist` vive en el repositorio.
 9. Las consultas **sin** `Pageable` pueden devolver `Set` (Spring Data convierte el resultado). Las que reciben `Pageable` **tienen que** devolver `List`, `Page`, `Slice` o `Window`; si no, Spring falla al arrancar ("Method has to have one of the following return types"). Las consultas de recomendación devuelven `List` y el servicio añade el resultado a su `LinkedHashSet`, que es quien garantiza que no haya duplicados y que se mantenga el orden. Este error no lo detecta la compilación: aparece al arrancar.
 
 ---
@@ -218,7 +219,6 @@ Son carruseles a los que se espera que el usuario entre en cuanto los ve, así q
 
 | Carrusel | Endpoint | Motivo |
 |---|---|---|
-| Home: items recientes | `GET /api/items/recent` | Son items que el usuario ya estaba usando |
 | Canciones populares y nuevas | `GET /api/songs/popular`, `GET /api/songs/new` | Carruseles principales de la pantalla de canciones |
 | Recomendaciones de Spotify (canciones y, cuando exista, items) | `GET /api/songs/spotify` (y el futuro de items) | Personalizadas: alta probabilidad de apertura |
 | Recomendados para añadir a una lista | `GET /api/recommendations/items/by-item-list/{id}` | Si el usuario añade un item, se espera que después vaya a él |
@@ -227,7 +227,7 @@ Son carruseles a los que se espera que el usuario entre en cuanto los ve, así q
 
 Cualquier carrusel nuevo sigue la regla por defecto (IDs) salvo que se añada explícitamente a esta tabla.
 
-Los feeds **mixtos** de items (recientes, recomendados para una lista) devuelven `List<ItemDTO>` polimórfica: cada elemento es el DTO completo de su subtipo (`SongDTO`, `LessonDTO`, `GenreDTO`, `InstrumentGenreDTO`) y lleva `type` (`ItemDTO.getType()`, de solo lectura) para que el cliente lo guarde en su sitio. El mapeo lo hace `DtoMapper.itemToItemDto`.
+Los feeds **mixtos** de items (recomendados para una lista o para el usuario) devuelven `List<ItemDTO>` polimórfica: cada elemento es el DTO completo de su subtipo (`SongDTO`, `LessonDTO`, `GenreDTO`, `InstrumentGenreDTO`) y lleva `type` (`ItemDTO.getType()`, de solo lectura) para que el cliente lo guarde en su sitio. El mapeo lo hace `DtoMapper.itemToItemDto`.
 
 Reglas asociadas:
 
@@ -280,6 +280,7 @@ Cada método lleva Javadoc con `@param` y `@return` indicando los códigos de re
 - Algoritmos por **niveles**: cada nivel completa lo que falta del anterior; se para en cuanto se alcanza el límite.
 - Resultado `SequencedSet` (`LinkedHashSet`): sin duplicados y en orden de prioridad.
 - Se excluye lo que ya está en la playlist y lo ya recomendado.
+- Las exclusiones se acumulan como `Set<Long>` de IDs (lo que reciben las consultas `...IdNotIn`), no como entidades: se inicializan con los IDs de lo que ya tiene la playlist/usuario y cada nivel añade los IDs de lo que recomienda. Así no se vuelve a mapear el conjunto entero en cada consulta.
 - Guardas: nunca `getFirst()` sobre listas posiblemente vacías, nunca índices fuera de rango (for-each sobre los rankings), nunca `resolvePageable(0)`, ni consultas con colecciones vacías cuando se pueden evitar.
 - La aleatoriedad (`Collections.shuffle` sobre las preferencias del usuario) forma parte del algoritmo y se conserva.
 - Parámetros en `RecommendationConstants`.
@@ -289,8 +290,28 @@ Cada método lleva Javadoc con `@param` y `@return` indicando los códigos de re
 ## 9. Seguridad y autenticación
 
 - JWT en la cabecera `Authorization: Bearer <token>`; `JwtAuthenticationFilter` rellena el `SecurityContext`. Sin sesión (`STATELESS`), CSRF desactivado.
-- Actualmente todas las rutas son `permitAll`; los endpoints que necesitan usuario lo comprueban leyendo el `SecurityContext` y descartando el `AnonymousAuthenticationToken` (que también devuelve `isAuthenticated() == true`).
-- `POST /api/auth/register` registra y devuelve directamente el `LoginResponse` (token + usuario), igual que `login`.
+- El token lleva el id del usuario (subject) y su rol (claim `role`); el filtro concede `ROLE_<rol>`. Los tokens antiguos sin `role` cuentan como `USER`. Un cambio de rol se aplica en el siguiente login.
+- Reglas (`SecurityConfig`):
+  - Públicas: `/api/auth/**`, `/api/spotify/callback`, `/actuator/health`, `/error` y las listas `GET /api/genres` y `GET /api/instruments` (el formulario de registro elige favoritos antes de tener token; solo la lista exacta: el detalle por id, `by-ids` y las escrituras siguen protegidos).
+  - Solo `ADMIN`: `POST`/`PUT`/`DELETE` sobre el catálogo (`genres`, `songs`, `song-lessons`, `tab-sections`, `chords`, `lessons`, `lesson-sections`, `instruments`, `instrument-genres`), `GET`/`POST /api/users`, `GET /api/item-lists` (todas las listas) y el resto del actuator.
+  - `POST /api/<recurso>/by-ids` es una lectura: basta con estar autenticado.
+  - Todo lo demás exige JWT. Sin token (o con uno inválido) se responde **401**, no 403, para que la app cierre la sesión.
+- Propiedad de los datos, para leer y para modificar (method security, `@PreAuthorize` + `security/OwnershipChecker`): usuario y favoritos (`/api/users/{id}`, `/api/users/{id}/...`, `POST /api/users/by-ids` solo con el propio id), listas (`/api/item-lists/{id}`, `/by-ids`, `/by-user/{userId}/ids`, sus items; al crear o actualizar, el `userId` del body también tiene que ser el del usuario) y recomendaciones personales (`/api/recommendations/.../by-user/{id}`, `/api/recommendations/items/by-item-list/{id}`, `/api/items/recommended/by-item-list/{id}`, `/api/spotify/recommendations/.../{userId}`). `/api/recommendations/lessons/by-genre/{id}` es catálogo. Un `ADMIN` puede actuar sobre cualquiera. Si no es suyo: **403** (`GlobalExceptionHandler` traduce `AccessDeniedException`). Una lista que no existe pasa la comprobación para que el controlador responda 404.
+- Administrador inicial: `config/AdminBootstrap` lo crea al arrancar (o asciende a `ADMIN` al usuario con ese email) a partir de `ADMIN_EMAIL`/`ADMIN_PASSWORD` del `.env`. El registro siempre crea usuarios `USER`. Los scripts de carga inician sesión con él (`scripts/api_auth.py`).
+- `SpotifyAuthController.getLoginUrl` sigue leyendo el usuario del `SecurityContext`.
+- `POST /api/auth/register` registra y devuelve directamente el `LoginResponse` (token + usuario), igual que `login`. Exige el código de verificación del email (ver abajo).
+
+### Verificación del email en el registro
+
+1. La app valida el formulario y llama a `POST /api/auth/verification-code` con el email. `EmailVerificationServiceImpl` rechaza un email ya registrado (400), genera un código de 6 dígitos (`SecureRandom`) y lo envía con `EmailService`.
+2. El usuario escribe el código en la app y esta llama a `POST /api/auth/register` con los datos y `verificationCode` (campo `WRITE_ONLY` de `UserDto`, nunca se devuelve).
+3. `AuthController` comprueba el código (`checkCode`) antes de registrar y lo descarta (`consume`) solo cuando el usuario se ha guardado: si el registro falla por otro motivo (p. ej. usuario ocupado), se puede corregir y reintentar con el mismo código.
+
+Reglas: el código caduca a los 10 minutos, se descarta tras 5 intentos fallidos y no se puede pedir otro para el mismo email hasta pasados 60 s (`ResponseStatusException` 429). Los emails se comparan sin mayúsculas ni espacios. Los códigos pendientes viven en memoria (una sola instancia, igual que los `state` de Spotify): un reinicio obliga a pedir uno nuevo.
+
+Envío (`EmailServiceImpl`): SMTP configurado con `MAIL_*` en `.env`. Lee la plantilla HTML y la de texto plano de `templates/email` (generadas desde `emails/` con React Email) y sustituye sus marcadores `{{...}}`. Si no hay `JavaMailSender`, escribe el código en el log. Un fallo de SMTP se traduce en `IllegalStateException` (500) y el código no se guarda, para poder pedirlo otra vez al momento.
+
+El email no se puede cambiar después del registro: el perfil de la app lo muestra como solo lectura y `PUT /api/users/{id}` ignora el que llegue en el body (`UserServiceImpl.update` conserva el guardado y solo comprueba que el nombre de usuario esté libre).
 
 ### Flujo OAuth2 de Spotify
 
@@ -340,7 +361,7 @@ Contrato con el backend:
 
 - Todas las URLs están en `src/config/apiConfig.ts`. Nadie escribe URLs a mano.
 - Las constantes siguen las convenciones de la API: `BASE`, `BY_ID`, `BY_IDS` (siempre `POST` con el array en el body), `BY_<RELACIÓN>`, `IDS_BY_<RELACIÓN>` y rutas de acción (`ITEM_LISTS.ITEM` con `POST`/`DELETE`, `ITEMS.ACCESS`).
-- Los servicios de axios no comparten instancia: el JWT se añade donde hace falta (`auth.service` con interceptor, `spotify.service` en la cabecera).
+- Todos los services usan la instancia compartida `services/apiClient.ts`: añade `Authorization: Bearer <token>` si hay sesión y, ante un 401 con sesión abierta, la cierra. Las llamadas a servicios externos (Cloudinary) no la usan para no enviar el JWT.
 - Qué endpoints devuelven IDs y cuáles objetos: ver *IDs u objetos en las respuestas* (§7).
 
 Caché y sincronización en el cliente:
@@ -349,8 +370,27 @@ Caché y sincronización en el cliente:
 - Listas (`repo.getX(onFresh?)`): si hay índice guardado se devuelven sus IDs al instante y la red refresca después avisando con `onFresh`. Sin índice, se espera a la red; sin red ni índice, `[]`.
 - Catálogo y feeds: al arrancar se carga el resumen de todos los items. Las tarjetas de todos los carruseles se pintan con ese resumen. Los carruseles por defecto reciben solo IDs (`itemRepository.getFeed`) y el DTO completo se pide al abrir el detalle; las excepciones de negocio (§7) reciben el DTO completo, que se guarda en la store de su entidad y deja su resumen al día.
 - Logout: borra de RAM y disco los datos del usuario (su entidad, sus listas e índices personalizados). El contenido público se conserva como caché.
+- Catálogos completos (`genreRepository.getAll`, `instrumentRepository.getAll`): son una lista más (`cache.list('all', ...)`), con su propio índice. No se deducen de las entidades sueltas que haya en disco, que pueden ser solo las que cargó otra pantalla.
+
+Sesión:
+
+- Al arrancar, `auth.entities.store` descarta el token guardado si ha caducado (lee el `exp` del JWT con `utils/jwt.utils.ts`, con 30 s de margen) antes de marcar la store como hidratada: la app va directa al login sin lanzar peticiones que acabarían en 401.
+- Si el token caduca con la app abierta, el 401 lo gestiona `apiClient` (cierra la sesión). `entityCache.utils` no avisa de esos 401 (petición con token); sí de los 401 sin token, que indican un endpoint que no es público.
 
 ---
+
+### Recientes del Home
+
+La sección "Recientes" del Home es solo del frontend: no hay endpoint ni campo en el backend
+(el antiguo `Item.lastTimeAccessed` era global, de todos los usuarios, y se eliminó).
+`itemRepository.markAsAccessed(id)` (al abrir una canción, un género o un InstrumentGenre) guarda el ID
+en `RecentItemsStore`, por usuario, del más reciente al más antiguo y hasta `MAX_RECENT_ITEMS` (12),
+persistida en AsyncStorage. Las tarjetas se pintan con el catálogo de items. Al ser local, no se
+sincroniza entre dispositivos.
+
+Sin recientes (primera vez) o sin recomendaciones, el carrusel no se oculta: muestra una card dorada
+(`components/carousels/EmptyCarouselCard`, vía la prop `emptyMessage` de `GenericCarousel`) que invita
+a explorar la app. Solo aparece cuando ha terminado la carga, para no parpadear.
 
 ## 13. Pendiente
 

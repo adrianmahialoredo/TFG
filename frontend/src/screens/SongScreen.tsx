@@ -1,14 +1,14 @@
 import React from 'react';
 import { View, Text, Image, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
-import { Video, ResizeMode } from 'expo-av';
-import { Ionicons } from '@expo/vector-icons';
+import { useVideoPlayer, VideoView } from 'expo-video';
 import { useRoute, RouteProp } from '@react-navigation/native';
 import AppLayout from '../components/AppLayout';
 import ProfileHeader from '../components/ProfileHeader';
+import DifficultyStars from '../components/DifficultyStars';
 import {ChordDTO, RootStackParamList, TabSectionDTO} from '../types';
 import { useSong } from '../hooks/useSong';
 import { DifficultyLevel } from '../types';
-import {COLORS} from "../constants/Theme";
+import { LyricLine } from '../utils/song.utils';
 
 type SongScreenRouteProp = RouteProp<RootStackParamList, 'SongScreen'>;
 
@@ -27,7 +27,9 @@ export default function SongScreen() {
     parsedLyrics,
   } = useSong(songId);
 
-  const filledStars = Math.max(0, Math.min(5, Math.round(song?.level ?? 0)));
+  // expo-video: el player se crea siempre (las reglas de hooks no permiten hacerlo tras los return)
+  // y cambia de fuente cuando cambia la lección seleccionada. Sin vídeo, la fuente es null.
+  const player = useVideoPlayer(selectedLesson?.videoUrl ?? null);
 
   if (loading) {
     return (
@@ -78,23 +80,16 @@ export default function SongScreen() {
           </View>
 
           {/* Estrellas de dificultad */}
-          <View className="flex-row justify-center mb-7">
-            {[...Array(5)].map((_, i) => (
-              <Ionicons
-                key={i}
-                name={i < filledStars ? 'star' : 'star-outline'}
-                size={18}
-                color={COLORS.primary}
-              />
-            ))}
+          <View className="mb-7">
+            <DifficultyStars level={song.level} />
           </View>
 
           {/* Video */}
           {selectedLesson.videoUrl && (
-            <Video
-              source={{ uri: selectedLesson.videoUrl }}
-              useNativeControls
-              resizeMode={ResizeMode.STRETCH}
+            <VideoView
+              player={player}
+              nativeControls
+              contentFit="fill"
               style={{ width: 180, height: 99, borderRadius: 12, marginBottom: 16, alignSelf: 'center' }}
             />
           )}
@@ -145,15 +140,28 @@ export default function SongScreen() {
           {parsedLyrics.length > 0 && (
             <View className="mb-6">
               <Text className="text-primary text-lg font-bold mb-3 text-center">Letra</Text>
-              <View className="justify-center items-center">
-                {parsedLyrics.map((line, idx) => (
-                  <View key={idx} className="mb-1">
-                    {line.chord && (
-                      <Text className="text-primary font-bold text-center">[{line.chord}]</Text>
-                    )}
-                    <Text className="text-secondary text-center">{line.text.trim()}</Text>
-                  </View>
-                ))}
+              <View>
+                {parsedLyrics.map((line: LyricLine, lineIdx) => {
+                  if (line.length === 0) return <View key={lineIdx} className="h-4" />;
+
+                  // Las líneas sin acordes no reservan la fila superior
+                  const hasChords = line.some((segment) => segment.chord);
+
+                  return (
+                    <View key={lineIdx} className="flex-row flex-wrap justify-center mb-2">
+                      {line.map((segment, segmentIdx) => (
+                        // Cada fragmento es una columna: acorde arriba y letra debajo, así el acorde
+                        // queda alineado con el inicio del fragmento aunque la línea haga wrap
+                        <View key={segmentIdx}>
+                          {hasChords && (
+                            <Text className="text-primary font-bold pr-1">{segment.chord ?? ' '}</Text>
+                          )}
+                          <Text className="text-secondary">{segment.text}</Text>
+                        </View>
+                      ))}
+                    </View>
+                  );
+                })}
               </View>
             </View>
           )}

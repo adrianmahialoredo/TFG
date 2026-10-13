@@ -1,7 +1,7 @@
 import { FlatList, Image, Text, TouchableOpacity, View } from 'react-native';
 import { COLORS } from '../../constants/Theme';
 import { CarouselItemDTO } from '../../types';
-import RoundedSquarePlus from '../icons/RoundedSquarePlus';
+import AddButton from '../iconbuttons/AddButton';
 
 type ListCarouselProps = {
   data: CarouselItemDTO[];
@@ -36,7 +36,7 @@ export default function ListCarousel({ data, onItemPress, onEmptyPress }: ListCa
             className="items-center justify-center"
             style={{ width: ITEM_SIZE, height: ITEM_SIZE, borderRadius: 6 }}
           >
-            <RoundedSquarePlus size={ADD_ICON_SIZE} color={COLORS.primary} strokeWidth={1.2} />
+            <AddButton size={ADD_ICON_SIZE} color={COLORS.primary} strokeWidth={1.2} />
           </TouchableOpacity>
         </View>
       );

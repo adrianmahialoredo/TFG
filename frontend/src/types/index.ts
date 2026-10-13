@@ -13,6 +13,7 @@ export type { InstrumentGenreDTO } from './InstrumentGenreDTO';
 export type { SongLessonDTO } from './SongLessonDTO';
 export type { LessonDTO } from './LessonDTO';
 export type { TabSectionDTO } from './TabSectionDTO';
+export type { LessonSectionDTO } from './LessonSectionDTO';
 export type { ItemListDTO, CreateItemListDTO } from './ItemListDTO';
 export type { ItemDTO } from './ItemDTO';
 export type { ItemSummaryDTO } from './ItemSummaryDTO';

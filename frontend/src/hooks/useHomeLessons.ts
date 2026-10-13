@@ -1,7 +1,8 @@
 import { useState, useEffect, useMemo } from 'react';
-import { useItemEntitiesStore } from '../stores/entities';
+import { useAuthStore, useItemEntitiesStore, useUserEntitiesStore } from '../stores/entities';
 import * as lessonRepository from '../repositories/lesson.repository';
 import { itemsToCarouselItems } from '../utils/mappers.utils';
+import { useInstrumentsByIds } from './useInstruments';
 
 /**
  * Nivel 6: Hook de hidratación para el Home de Lecciones (LearnScreen).
@@ -11,6 +12,7 @@ import { itemsToCarouselItems } from '../utils/mappers.utils';
 export const useHomeLessons = () => {
   // Suscripción reactiva a la Store de Entidades de Lecciones
   const allItems = useItemEntitiesStore((state) => state.items);
+  const currentUserId = useAuthStore((state) => state.currentUserId);
 
   // Estados locales para los IDs (la "lista de llaves")
   const [ids, setIds] = useState({
@@ -40,7 +42,10 @@ export const useHomeLessons = () => {
         await Promise.all([
           lessonRepository.getPopular(setSection('popular')).then(setSection('popular')),
           lessonRepository.getNew(setSection('news')).then(setSection('news')),
-          lessonRepository.getRecommended(setSection('recommendations')).then(setSection('recommendations')),
+          // Las recomendaciones son por usuario: sin sesión no se piden
+          currentUserId
+            ? lessonRepository.getRecommended(currentUserId, setSection('recommendations')).then(setSection('recommendations'))
+            : Promise.resolve(setSection('recommendations')([])),
         ]);
 
         setError(null);
@@ -56,7 +61,7 @@ export const useHomeLessons = () => {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [currentUserId]);
 
   // HIDRATACIÓN REACTIVA CON MAPEO:
   // Si una lección cambia en la Store, estos useMemo se disparan automáticamente.
@@ -76,10 +81,54 @@ export const useHomeLessons = () => {
     return itemsToCarouselItems(lessons);
   }, [ids.recommendations, allItems]);
 
+  // --- Carrusel "Para <instrumento favorito>" ---
+  // Se elige uno de los instrumentos favoritos del usuario al azar, estable mientras no cambien.
+  const favouriteInstrumentIds = useUserEntitiesStore((state) =>
+    currentUserId ? state.users[currentUserId]?.favouriteInstrumentsIds : undefined
+  );
+  const favouriteKey = (favouriteInstrumentIds ?? []).map(String).join(',');
+
+  const favouriteInstrumentId = useMemo(() => {
+    const candidates = favouriteKey ? favouriteKey.split(',') : [];
+    return candidates.length > 0 ? candidates[Math.floor(Math.random() * candidates.length)] : null;
+  }, [favouriteKey]);
+
+  // Trae el instrumento (para su nombre) si aún no está en la Store
+  const [favouriteInstrumentEntity] = useInstrumentsByIds(favouriteInstrumentId ? [favouriteInstrumentId] : []);
+
+  const [favouriteInstrumentLessonIds, setFavouriteInstrumentLessonIds] = useState<string[]>([]);
+
+  useEffect(() => {
+    setFavouriteInstrumentLessonIds([]);
+    if (!favouriteInstrumentId) return;
+
+    let cancelled = false;
+    const apply = (sectionIds: string[]) => {
+      if (!cancelled) setFavouriteInstrumentLessonIds(sectionIds);
+    };
+    lessonRepository.getPopularByInstrumentId(favouriteInstrumentId, apply)
+      .then(apply)
+      .catch((err) => console.error('[useHomeLessons] Error en el instrumento favorito:', err));
+
+    return () => {
+      cancelled = true;
+    };
+  }, [favouriteInstrumentId]);
+
+  const favouriteInstrument = useMemo(() => {
+    if (!favouriteInstrumentId) return null;
+    const lessons = favouriteInstrumentLessonIds.map(id => allItems[id]).filter(Boolean);
+    return {
+      title: favouriteInstrumentEntity?.name ?? '',
+      data: itemsToCarouselItems(lessons),
+    };
+  }, [favouriteInstrumentId, favouriteInstrumentLessonIds, allItems, favouriteInstrumentEntity]);
+
   return {
     populars,
     news,
     recommendations,
+    favouriteInstrument,
     loading,
     error,
   } as const;

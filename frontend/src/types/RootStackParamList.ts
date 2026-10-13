@@ -4,6 +4,7 @@ export type RootStackParamList = {
   RegisterScreen: undefined;
   BottomTab: undefined;
   SongScreen: { songId: string };
+  LessonScreen: { lessonId: string };
   GenreMainScreen: {genreId: string};
   InstrumentGenreScreen: {instrumentGenreId: string, instrumentName: string};
   InstrumentGenreLesson: { instrumentGenreId: string; instrumentName: string };

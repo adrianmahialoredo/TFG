@@ -2,6 +2,7 @@ import json
 import requests
 from pathlib import Path
 
+from api_auth import admin_session
 from console_utils import configure_console
 
 configure_console()
@@ -25,7 +26,7 @@ def load_data(file_path):
 def insert_lesson(lesson):
     """Insert a single lesson via API."""
     try:
-        response = requests.post(API_URL, json=lesson, timeout=5)
+        response = admin_session().post(API_URL, json=lesson, timeout=5)
 
         if response.status_code in [200, 201]:
             print(f"✓ Lesson '{lesson.get('title')}' added successfully.")

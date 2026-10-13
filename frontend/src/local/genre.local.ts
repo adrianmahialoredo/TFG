@@ -4,7 +4,6 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const GENRE_CACHE_PREFIX = '@genre:';
 const INDEX_CACHE_PREFIX = '@genre_index:';
-const GENRE_ALL_KEY = '@genre_all'; // Clave especial para almacenar todos los géneros
 
 export const saveSingle = async (genre: GenreDTO): Promise<void> => {
   const key = `${GENRE_CACHE_PREFIX}${genre.id}`;
@@ -24,9 +23,6 @@ export const saveBatch = async (genres: GenreDTO[]): Promise<void> => {
     JSON.stringify(genre)
   ]);
 
-  // También guardar el índice de todos los géneros
-  pairs.push([GENRE_ALL_KEY, JSON.stringify(genres)]);
-
   try {
     await AsyncStorage.multiSet(pairs);
   } catch (e) {
@@ -34,19 +30,6 @@ export const saveBatch = async (genres: GenreDTO[]): Promise<void> => {
   }
 };
 
-/**
- * Obtiene TODOS los géneros del caché
- * Retorna null si no hay ninguno
- */
-export const getAll = async (): Promise<GenreDTO[] | null> => {
-  try {
-    const data = await AsyncStorage.getItem(GENRE_ALL_KEY);
-    return data ? JSON.parse(data) : null;
-  } catch (e) {
-    console.error("[GenreLocal] Error leyendo todos los géneros:", e);
-    return null;
-  }
-};
 
 export const getAllById = async (ids: string[]): Promise<{ cached: GenreDTO[]; missing: string[] }> => {
   if (ids.length === 0) return { cached: [], missing: [] };

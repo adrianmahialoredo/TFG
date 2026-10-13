@@ -1,0 +1,7 @@
+TOCO
+
+Usa este código para verificar tu email y terminar de crear tu cuenta:
+
+{{code}}
+
+El código caduca en {{minutes}} minutos. Si no has pedido crear una cuenta en TOCO, ignora este email.

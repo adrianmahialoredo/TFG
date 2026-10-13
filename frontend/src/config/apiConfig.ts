@@ -21,6 +21,7 @@ export const API_ENDPOINTS = {
   AUTH: {
     LOGIN: `${API_URL}/auth/login`,
     REGISTER: `${API_URL}/auth/register`,
+    VERIFICATION_CODE: `${API_URL}/auth/verification-code`,
   },
 
   USERS: {
@@ -28,6 +29,9 @@ export const API_ENDPOINTS = {
     BY_ID: (id: string | number) => `${API_URL}/users/${id}`,
     BY_IDS: `${API_URL}/users/by-ids`,
     FAVORITE_GENRES: (id: string | number) => `${API_URL}/users/${id}/favorite-genres`,
+    FAVORITE_GENRE: (id: string | number, genreId: string | number) => `${API_URL}/users/${id}/favorite-genres/${genreId}`,
+    FAVORITE_INSTRUMENTS: (id: string | number) => `${API_URL}/users/${id}/favorite-instruments`,
+    FAVORITE_INSTRUMENT: (id: string | number, instrumentId: string | number) => `${API_URL}/users/${id}/favorite-instruments/${instrumentId}`,
   },
 
   // Genres
@@ -49,9 +53,8 @@ export const API_ENDPOINTS = {
     NEW_BY_GENRE: (genreId: string) => `${API_URL}/songs/by-genre/${genreId}/new`,
     POPULAR: `${API_URL}/songs/popular`,
     NEW: `${API_URL}/songs/new`,
-    SPOTIFY: `${API_URL}/songs/spotify`,
-    // Carruseles por convención: solo IDs (se resuelven contra el catálogo de items)
-    RECOMMENDED_IDS: `${API_URL}/songs/recommended/ids`,
+    SPOTIFY: (userId: string) => `${API_URL}/spotify/recommendations/songs/${userId}`,
+    RECOMMENDED_BY_USER: (userId: string) => `${API_URL}/recommendations/songs/by-user/${userId}`,
   },
 
   // Song Lessons
@@ -68,10 +71,12 @@ export const API_ENDPOINTS = {
     BY_ID: (id: string) => `${API_URL}/lessons/${id}`,
     BY_IDS: `${API_URL}/lessons/by-ids`,
     BY_GENRE: (genreId: string) => `${API_URL}/lessons/by-genre/${genreId}`,
+    RECOMMENDED_BY_GENRE: (genreId: string) => `${API_URL}/recommendations/lessons/by-genre/${genreId}`,
+    RECOMMENDED_BY_USER: (userId: string) => `${API_URL}/recommendations/lessons/by-user/${userId}`,
     // Feeds de carrusel: devuelven solo IDs (se resuelven contra el catálogo de items)
     POPULAR_IDS: `${API_URL}/lessons/popular/ids`,
     NEW_IDS: `${API_URL}/lessons/new/ids`,
-    RECOMMENDED_IDS: `${API_URL}/lessons/recommended/ids`,
+    POPULAR_BY_INSTRUMENT_IDS: (instrumentId: string) => `${API_URL}/lessons/by-instrument/${instrumentId}/popular/ids`,
   },
 
   // Lesson Sections
@@ -138,11 +143,8 @@ export const API_ENDPOINTS = {
     BY_ID: (id: string) => `${API_URL}/items/${id}`,
     BY_IDS: `${API_URL}/items/by-ids`,
     // Feeds mixtos con DTO completo de cada subtipo (decisión de negocio)
-    RECENT: `${API_URL}/items/recent`,
     RECOMMENDED_BY_ITEM_LIST: (id: string) => `${API_URL}/recommendations/items/by-item-list/${id}`,
-    // Feeds por convención: solo IDs (se resuelven contra el catálogo de items)
-    RECOMMENDED_IDS: `${API_URL}/items/recommended/ids`,
-    ACCESS: (id: string) => `${API_URL}/items/${id}/access`,
+    RECOMMENDED_BY_USER: (userId: string) => `${API_URL}/recommendations/items/by-user/${userId}`,
   },
 };
 

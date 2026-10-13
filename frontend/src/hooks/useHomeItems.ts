@@ -1,6 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { useItemEntitiesStore } from '../stores/entities';
-import * as itemRepository from '../repositories/item.repository';
+import { useAuthStore, useItemEntitiesStore, useRecentItemsStore } from '../stores/entities';
 import * as itemFeedRepository from '../repositories/itemFeed.repository';
 import { itemsToCarouselItems } from '../utils/mappers.utils';
 import { ItemSummaryDTO } from '../types';
@@ -10,8 +9,9 @@ import { ItemSummaryDTO } from '../types';
  *
  * Orquesta el repositorio de items (que inyecta los DTOs en la Entity Store)
  * y mapea los IDs a objetos reactivos listos para los carruseles:
- *  - "Recientes": items accedidos más recientemente (lastTimeAccessed).
- *  - "Recomendaciones": items recomendados (esqueleto en backend).
+ *  - "Recientes": items que ha abierto el usuario actual, del más reciente al más antiguo.
+ *    Salen de la RecentItemsStore (solo del front) y se pintan con el catálogo de items.
+ *  - "Recomendaciones": items recomendados al usuario (`/recommendations/items/by-user`).
  *
  * También expone `getItemById` para que la UI pueda resolver el item completo
  * (con su `type`) y decidir la navegación al pulsarlo.
@@ -19,10 +19,11 @@ import { ItemSummaryDTO } from '../types';
 export const useHomeItems = () => {
   // Suscripción reactiva a la Store de Entidades de Items
   const allItems = useItemEntitiesStore((state) => state.items);
+  const currentUserId = useAuthStore((state) => state.currentUserId);
+  const recentIds = useRecentItemsStore((state) => (currentUserId ? state.byUser[currentUserId] : undefined));
 
   // Estados locales para los IDs (la "lista de llaves")
   const [ids, setIds] = useState({
-    recent: [] as string[],
     recommendations: [] as string[],
   });
 
@@ -45,8 +46,10 @@ export const useHomeItems = () => {
       try {
         // Los resúmenes ya están en la Store (catálogo); aquí solo guardamos los IDs
         await Promise.all([
-          itemFeedRepository.getRecent(setSection('recent')).then(setSection('recent')),
-          itemRepository.getRecommendations(setSection('recommendations')).then(setSection('recommendations')),
+          // Las recomendaciones son por usuario: sin sesión no se piden
+          currentUserId
+            ? itemFeedRepository.getRecommendedForUser(currentUserId, setSection('recommendations')).then(setSection('recommendations'))
+            : Promise.resolve(),
         ]);
 
         setError(null);
@@ -62,15 +65,16 @@ export const useHomeItems = () => {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [currentUserId]);
 
   // HIDRATACIÓN REACTIVA CON MAPEO:
   // Si un item cambia en la Store, estos useMemo se disparan automáticamente.
 
   const recentItems = useMemo(() => {
-    const items = ids.recent.map((id) => allItems[id]).filter(Boolean) as ItemSummaryDTO[];
+    // Un item que ya no está en el catálogo (p. ej. borrado) simplemente no se pinta
+    const items = (recentIds ?? []).map((id) => allItems[id]).filter(Boolean) as ItemSummaryDTO[];
     return itemsToCarouselItems(items);
-  }, [ids.recent, allItems]);
+  }, [recentIds, allItems]);
 
   const recommendations = useMemo(() => {
     const items = ids.recommendations.map((id) => allItems[id]).filter(Boolean) as ItemSummaryDTO[];

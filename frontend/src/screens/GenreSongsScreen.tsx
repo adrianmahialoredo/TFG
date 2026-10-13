@@ -40,7 +40,7 @@ export default function GenreSongsScreen({ genreId }: GenreSongsProps) {
           contentContainerStyle={{ paddingBottom: 120 }}
       >
         {categories.map((category) => (
-            <View key={category.title} className="mb-8">
+            <View key={category.title} className="mb-6">
               <SongsCarousel
                   title={category.title}
                   data={category.data}

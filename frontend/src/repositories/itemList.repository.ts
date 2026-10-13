@@ -1,5 +1,6 @@
 import * as itemListService from '../services/itemList.service';
 import * as itemListLocal from '../local/itemList.local';
+import { uploadProfileImageToCloudinary } from '../services/cloudinary.service';
 import * as itemRepository from '../repositories/item.repository';
 import { useItemListEntitiesStore } from "../stores/entities";
 import { CreateItemListDTO, ItemListDTO } from '../types';
@@ -14,6 +15,7 @@ const cache = createEntityCache<ItemListDTO>({
     fetchByIds: itemListService.getAllById,
 });
 
+/** Toda escritura pasa por aquí: RAM + Disco + markFresh (invalida revalidaciones en vuelo). */
 const hydrateItemLists = async (itemLists: ItemListDTO[]) => {
     if (itemLists.length === 0) return;
     useItemListEntitiesStore.getState().setItemLists(itemLists);
@@ -113,10 +115,7 @@ export const getByUserId = async (userId: string): Promise<string[]> => {
 export const addItemToList = async (listId: string, itemId: string): Promise<ItemListDTO | null> => {
     try {
         const updated = await itemListService.addItemToList(listId, itemId);
-        if (updated) {
-            useItemListEntitiesStore.getState().setItemLists([updated]);
-            await itemListLocal.saveSingle(updated).catch(console.error);
-        }
+        if (updated) await hydrateItemLists([updated]);
         return updated;
     } catch (error) {
         console.error("[ItemListRepo] Error en addItemToList:", error);
@@ -130,10 +129,7 @@ export const addItemToList = async (listId: string, itemId: string): Promise<Ite
 export const removeItemFromList = async (listId: string, itemId: string): Promise<ItemListDTO | null> => {
     try {
         const updated = await itemListService.removeItemFromList(listId, itemId);
-        if (updated) {
-            useItemListEntitiesStore.getState().setItemLists([updated]);
-            await itemListLocal.saveSingle(updated).catch(console.error);
-        }
+        if (updated) await hydrateItemLists([updated]);
         return updated;
     } catch (error) {
         console.error("[ItemListRepo] Error en removeItemFromList:", error);
@@ -175,10 +171,7 @@ export const updateItemList = async (
         };
 
         const updated = await itemListService.updateItemList(listId, payload);
-        if (updated) {
-            useItemListEntitiesStore.getState().setItemLists([updated]);
-            await itemListLocal.saveSingle(updated).catch(console.error);
-        }
+        if (updated) await hydrateItemLists([updated]);
         return updated;
     } catch (error) {
         console.error('[ItemListRepo] Error en updateItemList:', error);
@@ -186,3 +179,10 @@ export const updateItemList = async (
     }
 };
 
+/**
+ * Sube una imagen de lista a Cloudinary y actualiza la lista con la URL resultante.
+ */
+export const updateItemListImage = async (listId: string, localUri: string): Promise<ItemListDTO | null> => {
+    const secureUrl = await uploadProfileImageToCloudinary(localUri);
+    return updateItemList(listId, { imageUrl: secureUrl });
+};

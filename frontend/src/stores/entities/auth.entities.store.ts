@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { isTokenExpired } from '../../utils/jwt.utils';
 
 /**
  * AuthState: El contrato que define qué guarda esta store.
@@ -49,7 +50,13 @@ export const useAuthStore = create<AuthState>()(
             name: 'auth-store', // Nombre de la clave en AsyncStorage
             storage: createJSONStorage(() => AsyncStorage), // Forma segura de usar AsyncStorage en Zustand
             onRehydrateStorage: () => (state) => {
-                // Esto se ejecuta cuando Zustand termina de cargar los datos del disco
+                // Esto se ejecuta cuando Zustand termina de cargar los datos del disco.
+                // Un token guardado que ya caducó se descarta ANTES de marcar la store como
+                // hidratada: así el AppNavigator va directo al login y no se lanzan
+                // peticiones que acabarían en 401.
+                if (state?.token && isTokenExpired(state.token)) {
+                    state.clearAuth();
+                }
                 state?.setHydrated(true);
             },
         }

@@ -3,7 +3,6 @@ import * as songLocal from '../local/song.local';
 import * as songLessonRepository from './songLesson.repository';
 import * as tabSectionRepository from './tabSection.repository';
 import * as chordRepository from './chord.repository';
-import * as itemRepository from './item.repository';
 import { useSongEntitiesStore, useItemEntitiesStore } from "../stores/entities";
 import { SongDTO, ItemType } from "../types";
 import axios from 'axios';
@@ -95,13 +94,18 @@ export const getPopular = (onFresh?: OnFresh): Promise<string[]> =>
 export const getNew = (onFresh?: OnFresh): Promise<string[]> =>
     cache.list('new', () => songService.getNew(), onFresh);
 
-/** Personalizado por usuario: su índice se borra en el logout. */
+/** Personalizados por usuario: sus índices se borran en el logout. */
 export const SPOTIFY_INDEX_KEY = 'spotify';
+export const RECOMMENDED_INDEX_KEY = 'recommended';
 
-export const getFromSpotify = (onFresh?: OnFresh): Promise<string[]> =>
-    cache.list(SPOTIFY_INDEX_KEY, () => songService.getFromSpotify(), onFresh);
+/** Canciones del carrusel de Spotify (el backend exige `limit`). */
+const SPOTIFY_SONGS_LIMIT = 10;
 
-// --- CARRUSELES POR CONVENCIÓN (el backend devuelve IDs; se pintan con el catálogo de items) ---
+export const getFromSpotify = (userId: string, onFresh?: OnFresh): Promise<string[]> =>
+    cache.list(SPOTIFY_INDEX_KEY, () => songService.getRecommendedFromSpotify(userId, SPOTIFY_SONGS_LIMIT), onFresh);
 
-export const getRecommended = (onFresh?: OnFresh): Promise<string[]> =>
-    itemRepository.getFeed('songs_recommended', () => songService.getRecommendedIds(), onFresh);
+/** Canciones del carrusel de recomendaciones (el backend exige `limit`). */
+const RECOMMENDED_SONGS_LIMIT = 10;
+
+export const getRecommended = (userId: string, onFresh?: OnFresh): Promise<string[]> =>
+    cache.list(RECOMMENDED_INDEX_KEY, () => songService.getRecommendedByUser(userId, RECOMMENDED_SONGS_LIMIT), onFresh);

@@ -4,13 +4,16 @@ import { useState, useMemo } from "react";
 import SearchBar from "../components/SearchBar";
 import SongsCarousel from "../components/carousels/SongsCarousel";
 import ProfileHeader from "../components/ProfileHeader";
-import { useCategorizedSongs } from "../hooks/useCategorizedSongs";
+import { SpotifyButton } from "../components/buttons/SpotifyButton";
+import { useFeedSongs } from "../hooks/useFeedSongs";
+
+const SPOTIFY_TITLE = 'Según tu Spotify';
 
 export default function SongsScreen() {
   const [query, setQuery] = useState('');
 
   // Nivel 6: Hook que orquesta con los repositorios y se suscribe a las Entity Stores
-  const { populars, news, recommendations, spotify, favouriteGenre, loading, error } = useCategorizedSongs();
+  const { populars, news, recommendations, spotify, spotifyConnected, favouriteGenre, loading, error } = useFeedSongs();
 
   // Filtrado por query si hay búsqueda (useMemo para evitar recálculos innecesarios)
   const filteredCategories = useMemo(() => {
@@ -21,7 +24,7 @@ export default function SongsScreen() {
         ? [{ title: `Populares en ${favouriteGenre.title || 'tu género favorito'}`, data: favouriteGenre.data }]
         : []),
       { title: 'Según tus gustos', data: recommendations },
-      { title: 'Según tu Spotify', data: spotify },
+      { title: SPOTIFY_TITLE, data: spotify },
     ];
 
     if (!query) return categories;
@@ -60,9 +63,15 @@ export default function SongsScreen() {
           >
             {filteredCategories.length > 0 ? (
               filteredCategories.map((category) => (
-                <View key={category.title} className="mb-8">
-                  {category.data.length > 0 && (
+                <View key={category.title} className="mb-6">
+                  {category.data.length > 0 ? (
                     <SongsCarousel title={category.title} data={category.data} />
+                  ) : category.title === SPOTIFY_TITLE && spotifyConnected === false && (
+                    // Cuenta de Spotify sin vincular: se ofrece conectarla
+                    <View className="my-4">
+                      <Text className="text-2xl font-semibold text-secondary mb-6">{category.title}</Text>
+                      <SpotifyButton />
+                    </View>
                   )}
                 </View>
               ))

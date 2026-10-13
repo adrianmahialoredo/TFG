@@ -63,43 +63,17 @@ export const getAllById = cache.getAllById;
 /** Guarda en RAM + Disco DTOs completos recibidos por otra vía (p.ej. un feed mixto de items). */
 export const hydrate = (entities: GenreDTO[]): string[] => cache.hydrate(entities);
 
+/** Clave del índice con el catálogo completo (distinto de los géneros sueltos ya cacheados). */
+const ALL_KEY = 'all';
+
+/**
+ * Obtiene todos los géneros
+ * Cache-First sobre el índice del catálogo completo: devuelve lo guardado al instante y lo
+ * refresca en segundo plano (la Store se actualiza sola). Sin índice, espera a la API.
+ * @returns Array de GenreDTO
+ */
 export const getAll = async (): Promise<GenreDTO[]> => {
-    try {
-        // 1. INTENTAR LOCAL
-        // Usamos || [] para convertir el null en un array vacío y poder preguntar .length
-        const localGenres: GenreDTO[] = (await genreLocal.getAll()) || [];
-
-        // 2. SI HAY DATOS EN LOCAL, LOS POSICIONAMOS EN RAM Y RETORNAMOS
-        if (localGenres.length > 0) {
-            useGenreEntitiesStore.getState().setGenres(localGenres);
-
-            // OPCIONAL: Lanzar actualización en segundo plano (Background Sync)
-            // Esto actualiza la RAM silenciosamente si hay cambios en el servidor
-            genreService.getAll().then(fresh => {
-                if (fresh.length > 0) {
-                    genreLocal.saveBatch(fresh);
-                    useGenreEntitiesStore.getState().setGenres(fresh);
-                }
-            }).catch(() => {});
-
-            return localGenres;
-        }
-
-        // 3. SI LOCAL ESTÁ VACÍO (NULL O []), IR A LA API
-        const remoteGenres = await genreService.getAll();
-
-        if (remoteGenres.length > 0) {
-            // Guardar en RAM
-            useGenreEntitiesStore.getState().setGenres(remoteGenres);
-            // Guardar en Disco (sin await para no bloquear)
-            genreLocal.saveBatch(remoteGenres).catch(console.error);
-        }
-
-        return remoteGenres;
-
-    } catch (error) {
-        console.error("[GenreRepo] Error crítico en getAll:", error);
-        // Fallback: devolver lo que haya en RAM si existe, o array vacío
-        return Object.values(useGenreEntitiesStore.getState().genres) || [];
-    }
-}
+    const ids = await cache.list(ALL_KEY, genreService.getAll);
+    const ram = useGenreEntitiesStore.getState().genres;
+    return ids.map((id) => ram[id]).filter((e): e is GenreDTO => !!e);
+};

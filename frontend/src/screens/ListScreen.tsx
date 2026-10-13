@@ -1,18 +1,18 @@
 import React from 'react';
 import { ScrollView, TouchableOpacity, View, Text, Image, ActivityIndicator, Modal, Pressable } from "react-native";
 import {useRoute, RouteProp, useNavigation, NavigationProp, useFocusEffect} from '@react-navigation/native';
-import { Pencil } from 'lucide-react-native';
 import * as ImagePicker from 'expo-image-picker';
 import AppLayout from "../components/AppLayout";
 import ProfileHeader from "../components/ProfileHeader";
 import ListItem from "../components/ListItem";
 import { COLORS } from "../constants/Theme";
-import { RootStackParamList, ItemSummaryDTO, ItemType } from '../types';
+import { RootStackParamList, ItemSummaryDTO } from '../types';
 import { useItemListDetail } from '../hooks/useItemListDetail';
 import { navigateToItem } from '../utils/navigation.utils';
-import RoundedSquarePlus from '../components/icons/RoundedSquarePlus';
+import { itemToListItem } from '../utils/mappers.utils';
+import AddButton from '../components/iconbuttons/AddButton';
 import { PhotoOptionsModal } from '../components/PhotoOptionsModal';
-import { uploadProfileImageToCloudinary } from '../services';
+import EditButton from '../components/iconbuttons/EditButton';
 import { useAppAlert } from '../context/AlertModalContext';
 import CreateListMiniModal from '../components/CreateListMiniModal';
 
@@ -23,7 +23,7 @@ export default function ListScreen() {
   const route = useRoute<ListScreenRouteProp>();
   const { itemListId } = route.params;
 
-  const { list, items, loading, error, refresh, updateList } = useItemListDetail(itemListId);
+  const { list, items, loading, error, refresh, updateList, updateImage } = useItemListDetail(itemListId);
   const { showAlert } = useAppAlert();
 
   const [editingPhoto, setEditingPhoto] = React.useState(false);
@@ -48,24 +48,6 @@ export default function ListScreen() {
       // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [itemListId])
   );
-
-  /**
-   * Determina qué texto mostrar como descripción según el tipo de item
-   */
-  const getItemDescription = (item: ItemSummaryDTO): string => {
-    switch (item.type) {
-      case ItemType.SONG:
-        return item.artist || 'Artista desconocido';
-      case ItemType.LESSON:
-        return 'Lección práctica';
-      case ItemType.GENRE:
-        return 'Explorar género';
-      case ItemType.INSTRUMENT_GENRE:
-        return 'Técnica de instrumento';
-      default:
-        return '';
-    }
-  };
 
   /**
    * Maneja la navegación según el tipo de item pulsado
@@ -116,14 +98,7 @@ export default function ListScreen() {
       }
 
       setSavingImage(true);
-      const uploadedUrl = await uploadProfileImageToCloudinary(result.assets[0].uri);
-      const updated = await updateList({ imageUrl: uploadedUrl });
-
-      if (!updated) {
-        showAlert({ title: 'Error', message: 'No se pudo actualizar la foto de la lista' });
-        return;
-      }
-
+      await updateImage(result.assets[0].uri);
       setEditingPhoto(false);
     } catch (e) {
       showAlert({ title: 'Error', message: 'No se pudo actualizar la foto de la lista' });
@@ -191,9 +166,7 @@ export default function ListScreen() {
                 <Text className="text-secondary text-2xl font-bold text-center">
                   {list.name}
                 </Text>
-                <TouchableOpacity onPress={handleOpenRename} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-                  <Pencil size={18} color={COLORS.secondary} />
-                </TouchableOpacity>
+                <EditButton onPress={handleOpenRename} size={18} color={COLORS.secondary} strokeWidth={2} accessibilityLabel="Renombrar lista" />
               </View>
               {list.description && (
                   <Text className="text-secondary opacity-60 text-sm text-center mt-1">
@@ -208,13 +181,7 @@ export default function ListScreen() {
                   items.map((item, index) => (
                       <ListItem
                           key={item.id}
-                          item={{
-                            id: item.id,
-                            title: item.title,
-                            description: getItemDescription(item),
-                            imageUrl: item.imageUrl,
-                            info: `${item.type}${item.level ? ` • Lvl ${item.level}` : ''}`,
-                          }}
+                          item={itemToListItem(item)}
                           inverted={index % 2 !== 0}
                           onPress={() => handlePress(item)}
                       />
@@ -236,7 +203,7 @@ export default function ListScreen() {
                 <Text className="text-xl font-semibold text-primary">
                   Añadir a la lista
                 </Text>
-                <RoundedSquarePlus size={26} color={COLORS.primary} />
+                <AddButton size={26} color={COLORS.primary} />
               </TouchableOpacity>
             </View>
           </ScrollView>

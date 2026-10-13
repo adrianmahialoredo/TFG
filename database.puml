@@ -3,7 +3,7 @@
 ' =====================================================================
 ' Esquema físico de la base de datos PostgreSQL "demo".
 ' Generado por Hibernate (spring.jpa.hibernate.ddl-auto=update) a partir
-' de las entidades de com.demo.demo.model, con la estrategia de nombres
+' de las entidades de com.uo289390.toco.model, con la estrategia de nombres
 ' por defecto de Spring (camelCase -> snake_case).
 '
 ' Leyenda:

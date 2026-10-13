@@ -2,6 +2,8 @@ import { ItemSummaryDTO } from "../types";
 import * as itemLocal from "../local/item.local";
 import * as itemService from "../services/item.service";
 import { useItemEntitiesStore } from "../stores/entities/item.entities.store";
+import { useAuthStore } from "../stores/entities/auth.entities.store";
+import { useRecentItemsStore } from "../stores/entities/recentItems.entities.store";
 import { createEntityCache, OnFresh } from '../utils/entityCache.utils';
 
 /**
@@ -70,19 +72,13 @@ export const getCatalog = async (onFresh?: OnFresh): Promise<string[]> => {
 export const getFeed = (cacheKey: string, fetchIds: () => Promise<(string | number)[]>, onFresh?: OnFresh): Promise<string[]> =>
     cache.idList(cacheKey, fetchIds, onFresh);
 
-/** Items recomendados para el Home (Home "Recomendaciones"). */
-export const getRecommendations = (onFresh?: OnFresh): Promise<string[]> =>
-    getFeed('items_home_recommendations', () => itemService.getRecommendedIds(), onFresh);
-
 /**
- * Marca un item como accedido (actualiza `lastTimeAccessed` en el backend).
- * Fire-and-forget: no propaga errores para no interrumpir la navegación del usuario.
+ * Marca un item como abierto por el usuario actual (sección "Recientes" del Home).
+ * Es solo del front: se guarda en la RecentItemsStore (RAM + disco), sin llamar al backend.
+ * Sin sesión no hace nada.
  */
-export const markAsAccessed = async (id: string): Promise<void> => {
-    if (!id) return;
-    try {
-        await itemService.markAsAccessed(id);
-    } catch (error) {
-        console.error(`[ItemRepo] Error en markAsAccessed(${id}):`, error);
-    }
+export const markAsAccessed = (id: string): void => {
+    const userId = useAuthStore.getState().currentUserId;
+    if (!id || !userId) return;
+    useRecentItemsStore.getState().markAsAccessed(userId, id.toString());
 };

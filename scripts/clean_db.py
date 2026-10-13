@@ -3,27 +3,14 @@
 
 import argparse
 import os
-from pathlib import Path
 
 import psycopg
 
-
-def _load_properties(path: Path) -> dict:
-    props = {}
-    if not path.exists():
-        return props
-    for raw_line in path.read_text(encoding="utf-8").splitlines():
-        line = raw_line.strip()
-        if not line or line.startswith("#") or "=" not in line:
-            continue
-        key, value = line.split("=", 1)
-        props[key.strip()] = value.strip()
-    return props
+from env_utils import load_properties
 
 
 def _get_defaults() -> dict:
-    project_root = Path(__file__).resolve().parents[1]
-    props = _load_properties(project_root / "src" / "main" / "resources" / "application.properties")
+    props = load_properties()
     jdbc_url = props.get("spring.datasource.url", "")
 
     host = os.getenv("DB_HOST") or "localhost"

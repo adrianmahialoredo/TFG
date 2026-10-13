@@ -5,7 +5,7 @@ Why this script exists
 The relationship between instrument-genres and lessons used to be a many-to-many
 stored in the ``instrument_genre_lesson`` join table.
 
-Now the :code:`com.demo.demo.model.Lesson` entity owns it through three columns in
+Now the :code:`com.uo289390.toco.model.Lesson` entity owns it through three columns in
 ``lessons``:
 
 * ``instrument_genre_id`` (FK to ``instrument_genres``)

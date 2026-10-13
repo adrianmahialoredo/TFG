@@ -2,6 +2,7 @@ import { Image, View, Text, FlatList, TouchableOpacity } from 'react-native';
 import React, { useMemo } from 'react';
 import { useNavigation, NavigationProp } from '@react-navigation/native';
 import { CarouselItemDTO, RootStackParamList } from '../../types';
+import EmptyCarouselCard from './EmptyCarouselCard';
 
 export type CarouselSize = 'small' | 'medium' | 'large';
 
@@ -12,6 +13,8 @@ type CarouselProps = {
   onItemPress?: (itemId: string) => void;
   showArtist?: boolean;
   borderSquare?: boolean;
+  /** Si se pasa, con `data` vacío se muestra una card con este texto en lugar de ocultar el carrusel */
+  emptyMessage?: string;
 };
 
 interface SizeConfig {
@@ -54,6 +57,7 @@ export default function GenericCarousel({
   onItemPress,
   showArtist = true,
   borderSquare = false,
+  emptyMessage,
 }: CarouselProps) {
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
   const config = CAROUSEL_SIZES[size];
@@ -111,9 +115,16 @@ export default function GenericCarousel({
     </View>
   );
 
-  // Si no hay datos, no renderizar
+  // Si no hay datos: card con el mensaje (si lo hay) o no renderizar
   if (!data || data.length === 0) {
-    return null;
+    if (!emptyMessage) return null;
+
+    return (
+      <View className="my-4">
+        <Text className="text-2xl font-semibold text-secondary mb-6">{title}</Text>
+        <EmptyCarouselCard message={emptyMessage} minHeight={config.imageHeight} />
+      </View>
+    );
   }
 
   return (

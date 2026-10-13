@@ -71,3 +71,14 @@ export const getQueryIndex = async (key: string): Promise<string[] | null> => {
     return null;
   }
 };
+
+/**
+ * Borra del Disco los índices indicados (p.ej. los personalizados por usuario en el logout).
+ */
+export const removeQueryIndexes = async (keys: string[]): Promise<void> => {
+  try {
+    await AsyncStorage.multiRemove(keys.map(key => `${INDEX_CACHE_PREFIX}${key}`));
+  } catch (e) {
+    console.error("[LessonLocal] Error en removeQueryIndexes:", e);
+  }
+};

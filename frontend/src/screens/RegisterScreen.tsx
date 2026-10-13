@@ -1,18 +1,21 @@
 import React, { useState } from "react";
 import { ScrollView, View, Text, TouchableOpacity, ActivityIndicator, TextInput, Pressable } from "react-native";
-import { ArrowLeft, Mail, UserRound, Lock, Speech, Eye, EyeOff } from "lucide-react-native";
+import { Mail, UserRound, Lock, Speech } from "lucide-react-native";
 import { useNavigation } from "@react-navigation/native";
 
 import AppLayout from "../components/AppLayout";
 import GenrePicker from "../components/GenrePicker";
 import InstrumentPicker from "../components/InstrumentPicker";
 import { COLORS } from "../constants/Theme";
+import BackButton from "../components/iconbuttons/BackButton";
+import PasswordVisibilityToggle from "../components/iconbuttons/PasswordVisibilityToggle";
 import { useRegister } from "../hooks/useRegister"; // Importamos el especialista
 import { useAppAlert } from "../context/AlertModalContext";
+import EmailVerificationModal from "../components/EmailVerificationModal";
 
 export default function RegisterScreen() {
   const navigation = useNavigation();
-  const { register, isLoading } = useRegister();
+  const { requestCode, resendCode, register, isLoading } = useRegister();
   const { showAlert } = useAppAlert();
 
   const [form, setForm] = useState({
@@ -26,23 +29,45 @@ export default function RegisterScreen() {
   });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  // Paso de verificación: abierto tras enviar el código, con el error del último intento
+  const [verifying, setVerifying] = useState(false);
+  const [codeError, setCodeError] = useState<string | null>(null);
 
+  // Paso 1: validar el formulario y enviar el código al email
   const handleRegister = async () => {
     try {
-      await register(form);
+      await requestCode(form);
+      setCodeError(null);
+      setVerifying(true);
+    } catch (error: any) {
+      if (error.status === 429) {
+        // Ya se envió un código hace menos de un minuto (p.ej. se cerró el modal para corregir
+        // el usuario) y sigue siendo válido: se vuelve al paso del código
+        setCodeError('Ya te enviamos un código hace poco, revisa tu email');
+        setVerifying(true);
+        return;
+      }
+      showAlert({ title: 'Error', message: error.message });
+    }
+  };
+
+  // Paso 2: crear la cuenta con el código
+  const handleCodeSubmit = async (code: string) => {
+    setCodeError(null);
+    try {
+      await register(form, code);
+      setVerifying(false);
       // No navegamos manualmente; el AppNavigator reaccionará al cambio de AuthStore
       showAlert({ title: 'Exito', message: 'Creando tu perfil musical...' });
     } catch (error: any) {
-      showAlert({ title: 'Error', message: error.message });
+      setCodeError(error.message);
     }
   };
 
   return (
       <AppLayout backgroundColor="bg-primary">
         <View className="flex-row items-center my-8 gap-2">
-          <TouchableOpacity onPress={() => navigation.goBack()}>
-            <ArrowLeft size={30} color={COLORS.secondary} />
-          </TouchableOpacity>
+          <BackButton onPress={() => navigation.goBack()} size={30} color={COLORS.secondary} />
           <Text className="text-3xl font-bold text-secondary">Registrarse</Text>
         </View>
 
@@ -84,17 +109,11 @@ export default function RegisterScreen() {
               autoComplete="new-password"
               textContentType="newPassword"
               rightElement={
-                <TouchableOpacity
-                  onPress={() => setShowPassword((prev) => !prev)}
+                <PasswordVisibilityToggle
+                  visible={showPassword}
+                  onToggle={() => setShowPassword((prev) => !prev)}
                   disabled={isLoading}
-                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                >
-                  {showPassword ? (
-                    <EyeOff size={20} color={COLORS.secondary} />
-                  ) : (
-                    <Eye size={20} color={COLORS.secondary} />
-                  )}
-                </TouchableOpacity>
+                />
               }
               value={form.password}
               onChange={(v: any) => setForm({...form, password: v})}
@@ -109,17 +128,11 @@ export default function RegisterScreen() {
               autoComplete="new-password"
               textContentType="newPassword"
               rightElement={
-                <TouchableOpacity
-                  onPress={() => setShowConfirmPassword((prev) => !prev)}
+                <PasswordVisibilityToggle
+                  visible={showConfirmPassword}
+                  onToggle={() => setShowConfirmPassword((prev) => !prev)}
                   disabled={isLoading}
-                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                >
-                  {showConfirmPassword ? (
-                    <EyeOff size={20} color={COLORS.secondary} />
-                  ) : (
-                    <Eye size={20} color={COLORS.secondary} />
-                  )}
-                </TouchableOpacity>
+                />
               }
               value={form.confirmPassword}
               onChange={(v: any) => setForm({...form, confirmPassword: v})}
@@ -147,6 +160,17 @@ export default function RegisterScreen() {
             )}
           </Pressable>
         </ScrollView>
+
+        {verifying && (
+            <EmailVerificationModal
+                email={form.email.trim()}
+                submitting={isLoading}
+                error={codeError}
+                onSubmit={handleCodeSubmit}
+                onResend={() => resendCode(form.email)}
+                onClose={() => setVerifying(false)}
+            />
+        )}
       </AppLayout>
   );
 }

@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, FlatList, Image, StyleSheet } from 'react-native';
+import { View, TouchableOpacity, FlatList, Image } from 'react-native';
 
 type GenreButton = {
   id: string;
@@ -9,15 +9,18 @@ type GenreButton = {
 
 export default function VerticalButtonsCarousel({ data }: { data: GenreButton[] }) {
   const renderItem = ({ item }: { item: GenreButton }) => (
+    // TouchableOpacity con estilo en línea y sin className (NativeWind 4.1):
+    //  - TouchableOpacity + className pisa la opacidad animada al re-renderizar y el botón se quedaba "pulsado".
+    //  - Pressable con `style={({ pressed }) => ...}` pierde el estilo (el interop no soporta la función).
     <TouchableOpacity
-      className="mb-3 rounded-xl"
       onPress={item.onPress}
+      activeOpacity={0.7}
+      style={{ marginBottom: 12, borderRadius: 12 }}
     >
       <Image
         source={{ uri: item.imageUrl }}
-        className="w-[170px] h-[170px]"
+        style={{ width: 170, height: 170, borderRadius: 12 }}
         resizeMode="cover"
-        borderRadius={12}
       />
     </TouchableOpacity>
   );

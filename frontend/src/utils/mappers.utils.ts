@@ -81,15 +81,11 @@ export const instrumentToCarouselItem = (instrument: InstrumentDTO): CarouselIte
 export const instrumentsToCarouselItems = (instruments: InstrumentDTO[]): CarouselItemDTO[] =>
   instruments.map(instrumentToCarouselItem);
 
-/**
- * Devuelve un subtítulo descriptivo según el tipo de item polimórfico.
- * @param item Cualquier item (Song, Lesson, Genre, InstrumentGenre)
- * @returns Texto descriptivo del tipo
- */
-export const getItemSubtitle = (item: ItemSummaryDTO): string => {
+/** Nombre legible del tipo de item. */
+const getItemTypeLabel = (item: ItemSummaryDTO): string => {
   switch (item.type) {
     case ItemType.SONG:
-      return `Canción · ${item.artist || 'Artista desconocido'}`;
+      return 'Canción';
     case ItemType.LESSON:
       return 'Lección';
     case ItemType.GENRE:
@@ -102,11 +98,20 @@ export const getItemSubtitle = (item: ItemSummaryDTO): string => {
 };
 
 /**
- * Mapea un ItemSummaryDTO a las props que espera el componente AddListItem.
- * @param item Cualquier item polimórfico
- * @returns Objeto con { id, title, description, imageUrl, info } listo para AddListItem
+ * Subtítulo de un item polimórfico: "Artista · Tipo" (el artista solo en canciones que lo tengan).
+ * @param item Cualquier item (Song, Lesson, Genre, InstrumentGenre)
  */
-export const itemToAddListItem = (item: ItemSummaryDTO) => ({
+export const getItemSubtitle = (item: ItemSummaryDTO): string =>
+  [item.type === ItemType.SONG ? item.artist : null, getItemTypeLabel(item)]
+    .filter(Boolean)
+    .join(' · ');
+
+/**
+ * Mapea un ItemSummaryDTO a las props que esperan los componentes ListItem y AddListItem.
+ * @param item Cualquier item polimórfico
+ * @returns Objeto con { id, title, description, imageUrl, info } (info: título y subtítulo)
+ */
+export const itemToListItem = (item: ItemSummaryDTO) => ({
   id: item.id,
   title: item.title,
   description: getItemSubtitle(item),

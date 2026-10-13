@@ -2,6 +2,7 @@ import json
 import requests
 from pathlib import Path
 
+from api_auth import admin_session
 from console_utils import configure_console
 
 configure_console()
@@ -26,7 +27,7 @@ def load_data(file_path):
 def insert_instrument_genre(relationship):
     """Insert a single instrument-genre relationship via API."""
     try:
-        response = requests.post(API_URL, json=relationship, timeout=REQUEST_TIMEOUT)
+        response = admin_session().post(API_URL, json=relationship, timeout=REQUEST_TIMEOUT)
 
         if response.status_code in [200, 201]:
             print(f"✓ Instrument-Genre relationship (Genre ID: {relationship.get('genreId')}, Instrument ID: {relationship.get('instrumentId')}) added successfully.")

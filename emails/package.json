@@ -1,0 +1,21 @@
+{
+  "name": "toco-emails",
+  "private": true,
+  "description": "Plantillas de email de TOCO hechas con React Email. Se exportan a HTML/texto para el backend.",
+  "type": "module",
+  "scripts": {
+    "dev": "email dev --dir emails",
+    "export": "tsx scripts/export.tsx"
+  },
+  "dependencies": {
+    "@react-email/components": "1.0.12",
+    "react": "19.1.0",
+    "react-dom": "19.1.0"
+  },
+  "devDependencies": {
+    "@types/react": "19.1.0",
+    "react-email": "6.11.1",
+    "tsx": "4.20.5",
+    "typescript": "5.8.3"
+  }
+}

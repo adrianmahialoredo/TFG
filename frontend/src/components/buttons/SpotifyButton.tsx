@@ -1,20 +1,16 @@
-import { TouchableOpacity, Text } from "react-native";
-import * as WebBrowser from 'expo-web-browser';
-import { spotifyLogin } from "../../services";
+import { TouchableOpacity, Text, Image } from "react-native";
+import { useSpotifyConnect } from "../../hooks/useSpotifyConnect";
 import { useAppAlert } from "../../context/AlertModalContext";
+
+const SPOTIFY_WHITE_LOGO_URL = 'https://storage.googleapis.com/pr-newsroom-wp/1/2023/05/Spotify_Primary_Logo_RGB_White.png';
 
 export const SpotifyButton = () => {
     const { showAlert } = useAppAlert();
+    const { connect, connecting } = useSpotifyConnect();
 
     const handleSpotifyLogin = async () => {
         try {
-          const { authUrl } = await spotifyLogin();
-
-          if (!authUrl) {
-            throw new Error('Spotify auth URL no disponible');
-          }
-
-          await WebBrowser.openBrowserAsync(authUrl);
+          await connect();
         } catch (error) {
           showAlert({ title: 'Error', message: 'No se pudo iniciar sesion con Spotify.' });
           console.error(error);
@@ -22,8 +18,13 @@ export const SpotifyButton = () => {
     };
 
     return (
-        <TouchableOpacity className="bg-spotify px-7 py-4 rounded-full self-center" onPress={handleSpotifyLogin}>
-            <Text className="text-secondary text-lg self-center  font-bold">
+        <TouchableOpacity
+            className="bg-spotify px-7 py-4 rounded-full self-center flex-row items-center"
+            onPress={handleSpotifyLogin}
+            disabled={connecting}
+        >
+            <Image source={{ uri: SPOTIFY_WHITE_LOGO_URL }} className="h-6 w-6 mr-3" />
+            <Text className="text-secondary text-lg font-bold">
                 Conectar con Spotify
             </Text>
         </TouchableOpacity>

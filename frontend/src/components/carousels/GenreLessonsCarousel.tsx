@@ -1,7 +1,8 @@
 import { Image, View, Text, FlatList, TouchableOpacity } from 'react-native';
 import React from 'react';
-import {LessonDTO} from "../../types";
-import {useLessonsByGenre} from "../../hooks/useLessonsByGenre";
+import { useNavigation, NavigationProp } from "@react-navigation/native";
+import {LessonDTO, RootStackParamList} from "../../types";
+import {useRecommendedLessonsByGenre} from "../../hooks/useRecommendedLessonsByGenre";
 
 type CarouselProps = {
     title: string;
@@ -9,15 +10,19 @@ type CarouselProps = {
 };
 
 export default function GenreLessonsCarousel({ title, genreId }: CarouselProps) {
-    // Conexión a la RAM
-    const { lessons } = useLessonsByGenre(genreId);
+    // Lecciones recomendadas del género (endpoint de recomendaciones)
+    const { lessons } = useRecommendedLessonsByGenre(genreId);
+    const navigation = useNavigation<NavigationProp<RootStackParamList>>();
 
     // Si no hay lecciones para este género, no renderizamos el carrusel
     if (lessons.length === 0) return null;
 
     const renderItem = ({ item }: { item: LessonDTO }) => (
         <View className="w-[51px]">
-            <TouchableOpacity activeOpacity={0.7}>
+            <TouchableOpacity
+                activeOpacity={0.7}
+                onPress={() => navigation.navigate('LessonScreen', { lessonId: item.id })}
+            >
                 <Image
                     source={{ uri: item.imageUrl }} // Usamos imageUrl del DTO
                     className="w-[51px] h-[93px] mb-1"

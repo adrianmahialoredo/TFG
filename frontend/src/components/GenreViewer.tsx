@@ -1,14 +1,14 @@
-import { View, Text, TouchableOpacity } from "react-native";
-import { CirclePlus } from "lucide-react-native";
-import { COLORS } from "../constants/Theme";
+import { View, Text } from "react-native";
+import EditButton from "./iconbuttons/EditButton";
 import { useGenresByIds } from "../hooks/useGenres";
 
 type Props = {
     ids: (string | number)[]; // Recibimos solo los IDs
     label: string;
+    onAddPress?: () => void; // Sin él no se muestra el botón de añadir
 };
 
-export default function GenreViewer({ ids, label }: Props) {
+export default function GenreViewer({ ids, label, onAddPress }: Props) {
     // IDs -> Objetos (el hook trae de Disco/API los que no estén en RAM)
     const genres = useGenresByIds(ids);
 
@@ -26,9 +26,9 @@ export default function GenreViewer({ ids, label }: Props) {
                         <Text className="text-secondary text-base">{genre.title}</Text>
                     </View>
                 ))}
-                <TouchableOpacity className="py-1">
-                    <CirclePlus size={20} color={COLORS.primary} strokeWidth={1} />
-                </TouchableOpacity>
+                {onAddPress && (
+                    <EditButton onPress={onAddPress} />
+                )}
             </View>
         </View>
     );

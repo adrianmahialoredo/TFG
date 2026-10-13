@@ -4,7 +4,7 @@ Why this script exists
 ----------------------
 Chords used to belong to a song, so the join table ``song_chords`` had the
 columns ``(song_id, chord_id)``. They now belong to a song lesson
-(:code:`com.demo.demo.model.SongLesson`), which maps the same table as
+(:code:`com.uo289390.toco.model.SongLesson`), which maps the same table as
 ``(song_lesson_id, chord_id)``. The foreign key of ``song_id`` already points at
 ``song_lessons(id)``; only the column name is outdated.
 

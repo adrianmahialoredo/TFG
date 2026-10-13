@@ -33,9 +33,9 @@ const hydrateMixed = (dtos: AnyItemDTO[]): string[] => {
 const getMixedFeed = (cacheKey: string, fetchDtos: () => Promise<AnyItemDTO[]>, onFresh?: OnFresh): Promise<string[]> =>
     itemRepository.getCustomFeed(cacheKey, async () => hydrateMixed(await fetchDtos()), onFresh);
 
-/** Items accedidos más recientemente (Home "Recientes"). Personalizado: se borra en el logout. */
-export const getRecent = (onFresh?: OnFresh): Promise<string[]> =>
-    getMixedFeed('items_recent', () => itemService.getRecent(), onFresh);
+/** Items recomendados al usuario (Home "Recomendaciones"). Personalizado: se borra en el logout. */
+export const getRecommendedForUser = (userId: string, onFresh?: OnFresh): Promise<string[]> =>
+    getMixedFeed('items_recommended_user', () => itemService.getRecommendedByUser(userId), onFresh);
 
 /** Items recomendados ("Para ti") para añadir a una lista concreta. */
 export const getRecommendedByItemList = (itemListId: string, onFresh?: OnFresh): Promise<string[]> =>

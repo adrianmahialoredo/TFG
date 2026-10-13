@@ -1,114 +1,88 @@
 import ProfileHeader from "../components/ProfileHeader";
 import AppLayout from "../components/AppLayout";
-import {Animated, Text, TouchableOpacity, View, StyleSheet, Easing} from "react-native";
+import {Text, View, ScrollView} from "react-native";
 import {COLORS} from "../constants/Theme";
-import React, {useEffect, useRef, useState} from "react";
-import MetronomeSlider from "../components/MetronomeSlider";
+import React, {useCallback, useRef, useState} from "react";
+import {useFocusEffect} from "@react-navigation/native";
+import MetronomeSlider, {clampTempo, DEFAULT_TEMPO} from "../components/metronome/MetronomeSlider";
+import MetronomePulse, {MetronomePulseHandle} from "../components/metronome/MetronomePulse";
+import MetronomeBeatIndicator, {MetronomeBeatIndicatorHandle} from "../components/metronome/MetronomeBeatIndicator";
+import MetronomeActionButton from "../components/metronome/MetronomeActionButton";
+import {MetronomeSound, useMetronome, useTapTempo} from "../hooks/useMetronome";
 
-type RippleCircleProps = {
-    delay: number;
-    duration: number;
-};
-
-const styles = StyleSheet.create({
-    dot: {
-        width: 100,
-        height: 100,
-        borderRadius: 50,
-        backgroundColor: COLORS.primary,
-    },
-    baseDot: {
-        opacity: 0.5,
-    },
-    center: {
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-});
-
-function RippleCircle({delay, duration}: RippleCircleProps) {
-    const scale = useRef(new Animated.Value(1)).current;
-    const opacity = useRef(new Animated.Value(1)).current;
-
-    useEffect(() => {
-        scale.setValue(1);
-        opacity.setValue(1);
-
-        const animation = Animated.loop(
-            Animated.sequence([
-                Animated.delay(delay),
-                Animated.parallel([
-                    Animated.timing(scale, {
-                        toValue: 2,
-                        duration,
-                        easing: Easing.out(Easing.ease),
-                        useNativeDriver: true,
-                    }),
-                    Animated.timing(opacity, {
-                        toValue: 0,
-                        duration,
-                        easing: Easing.out(Easing.ease),
-                        useNativeDriver: true,
-                    }),
-                ]),
-            ]),
-            {resetBeforeIteration: true}
-        );
-
-        animation.start();
-
-        return () => {
-            animation.stop();
-        };
-    }, [delay, duration, opacity, scale]);
-
-    return (
-        <Animated.View
-            style={[
-                StyleSheet.absoluteFillObject,
-                styles.dot,
-                {
-                    opacity,
-                    transform: [{scale}],
-                },
-            ]}
-        />
-    );
-}
+/**
+ * Alto fijo de la zona del pulso: cabe la onda más grande (100 px × 2.3) y los puntos del compás.
+ * No puede ser `flex: 1` dentro de un ScrollView: se quedaría a 0 y taparía el botón de play.
+ */
+const PULSE_AREA_HEIGHT = 300;
 
 export default function MetronomeScreen() {
-    const [tempo, setTempo] = useState(120);
-    const beatDuration = 60000 / tempo;
+    const [tempo, setTempo] = useState(DEFAULT_TEMPO);
+    const [sound, setSound] = useState<MetronomeSound>('click');
+
+    // La onda y los puntos se actualizan por ref: en cada golpe no se re-renderiza la pantalla
+    const pulseRef = useRef<MetronomePulseHandle>(null);
+    const beatIndicatorRef = useRef<MetronomeBeatIndicatorHandle>(null);
+
+    const handleBeat = useCallback((beatInBar: number) => {
+        pulseRef.current?.pulse(beatInBar);
+        beatIndicatorRef.current?.setBeat(beatInBar);
+    }, []);
+
+    const {isPlaying, toggle, stop} = useMetronome(tempo, sound, handleBeat);
+    const {tap} = useTapTempo();
+
+    // Las pantallas del tab no se desmontan: al salir de la pantalla se para el metrónomo
+    useFocusEffect(useCallback(() => () => {
+        stop();
+        beatIndicatorRef.current?.setBeat(null);
+    }, [stop]));
+
+    const handleToggle = () => {
+        if (isPlaying) beatIndicatorRef.current?.setBeat(null);
+        toggle();
+    };
+
+    const handleTap = () => {
+        const bpm = tap();
+        if (bpm !== null) setTempo(clampTempo(bpm));
+    };
+
+    const isHiHat = sound === 'hihat';
 
     return (
         <AppLayout>
             <View className = "bg-background flex-1 pt-2">
                 <ProfileHeader title={"Metrónomo"} />
-                <MetronomeSlider onTempoChange={setTempo} />
 
-                {/** ANIMACIONES DE LOS GOLPES DEL METRÓNOMO */}
-                <View style={{flex: 1, justifyContent: 'center', alignItems: 'center'}}>
-                    <View style={[styles.dot, styles.baseDot, styles.center]}>
-                        {[...Array(3).keys()].map((index) => {
-                            return (
-                                <RippleCircle
-                                    key={index}
-                                    delay={index * beatDuration}
-                                    duration={beatDuration}
-                                />
-                            );
-                        })}
+                {/* Scroll con hueco abajo para la tab bar (absoluta), como el resto de pantallas */}
+                <ScrollView
+                    showsVerticalScrollIndicator={false}
+                    contentContainerStyle={{paddingBottom: 120}}
+                >
+                    <MetronomeSlider tempo={tempo} onTempoChange={setTempo} />
+
+                    {/** PULSO DEL METRÓNOMO: el círculo central es el botón de play/stop */}
+                    <View style={{height: PULSE_AREA_HEIGHT, justifyContent: 'center', alignItems: 'center'}}>
+                        <MetronomePulse ref={pulseRef} tempo={tempo} isPlaying={isPlaying} onToggle={handleToggle} />
+
+                        <Text style={{color: COLORS.secondary, opacity: 0.6, marginTop: 72}}>
+                            {isPlaying ? 'Toca para parar' : 'Toca para empezar'}
+                        </Text>
+
+                        <MetronomeBeatIndicator ref={beatIndicatorRef} />
                     </View>
-                </View>
 
-                <View className="flex-column mt-10 gap-1">
-                    <TouchableOpacity className="bg-secondary w-80 py-4 rounded-md self-center">
-                        <Text className="text-primary text-3xl self-center">TAP TEMPO</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity className="bg-secondary w-80 py-5 rounded-md self-center">
-                        <Text className="text-primary text-lg text-bold self-center">Hi-Hat</Text>
-                    </TouchableOpacity>
-                </View>
+                    <View style={{gap: 4}}>
+                        <MetronomeActionButton label="TAP TEMPO" onPress={handleTap} large />
+                        {/** Alterna el sonido entre click y hi-hat (se aplica al siguiente golpe si está sonando) */}
+                        <MetronomeActionButton
+                            label={isHiHat ? 'Hi-Hat ✓' : 'Hi-Hat'}
+                            onPress={() => setSound(isHiHat ? 'click' : 'hihat')}
+                            selected={isHiHat}
+                        />
+                    </View>
+                </ScrollView>
             </View>
         </AppLayout>
     );

@@ -73,13 +73,26 @@ export const useProfile = () => {
         }
     };
 
+    const updateFavorites = async (kind: 'genres' | 'instruments', ids: string[]) => {
+        if (!currentUserId) return;
+        setIsLoading(true);
+        try {
+            await userRepository.updateFavorites(currentUserId, kind, ids);
+        } catch (err) {
+            setError('Error al actualizar los favoritos');
+            throw err;
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
     return {
         user,
         isLoading,
         error,
         updateProfileData,
         pickAndUploadImage, // La pantalla ahora solo llama a esto
-        updateFavoriteGenres: (ids: string[]) => updateProfileData({ favouriteGenresIds: ids }),
-        updateFavoriteInstruments: (ids: string[]) => updateProfileData({ favouriteInstrumentsIds: ids }),
+        updateFavoriteGenres: (ids: string[]) => updateFavorites('genres', ids),
+        updateFavoriteInstruments: (ids: string[]) => updateFavorites('instruments', ids),
     };
 };

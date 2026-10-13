@@ -1,6 +1,7 @@
 import React from "react";
 import { View, Image, ScrollView, TouchableOpacity, Text } from "react-native";
-import { ArrowLeft, Play } from "lucide-react-native";
+import { Play } from "lucide-react-native";
+import BackButton from "../components/iconbuttons/BackButton";
 import { useRoute, useNavigation, RouteProp } from "@react-navigation/native";
 import { useInstrumentGenre } from "../hooks/useInstrumentGenre";
 import { RootStackParamList } from "../types";
@@ -42,9 +43,7 @@ export default function InstrumentGenreScreen(props: InstrumentGenreProps) {
             <ScrollView className="bg-background flex-1">
                 {/* Header Adaptable */}
                 <View className="flex-row items-center px-4 mt-4 mb-6">
-                    <TouchableOpacity onPress={handleBack}>
-                        <ArrowLeft size={24} color="white" />
-                    </TouchableOpacity>
+                    <BackButton onPress={handleBack} />
                     <Text className="text-primary text-xl font-bold ml-4">
                         {instrumentName || instrumentGenre.title}
                     </Text>

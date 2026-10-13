@@ -1,7 +1,8 @@
 import { Image, Text, TextInput, TouchableOpacity, View, ActivityIndicator } from "react-native";
 import AppLayout from "../components/AppLayout";
-import { UserRound, Lock, Eye, EyeOff } from "lucide-react-native";
+import { UserRound, Lock } from "lucide-react-native";
 import { COLORS } from "../constants/Theme";
+import PasswordVisibilityToggle from "../components/iconbuttons/PasswordVisibilityToggle";
 import { useAuth } from "../context/AuthContext";
 import { useState } from "react";
 import { useNavigation } from "@react-navigation/native";
@@ -98,17 +99,12 @@ export default function LoginScreen() {
           selectionColor={COLORS.secondary}
         />
         <View className="absolute right-4 top-1/3 transform -translate-y-1/4 flex-row items-center gap-3">
-          <TouchableOpacity
-            onPress={() => setShowPassword((prev) => !prev)}
+          <PasswordVisibilityToggle
+            visible={showPassword}
+            onToggle={() => setShowPassword((prev) => !prev)}
             disabled={loading}
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-          >
-            {showPassword ? (
-              <EyeOff size={22} color={COLORS.secondary} />
-            ) : (
-              <Eye size={22} color={COLORS.secondary} />
-            )}
-          </TouchableOpacity>
+            size={22}
+          />
           <Lock size={25} color={COLORS.secondary} />
         </View>
       </View>

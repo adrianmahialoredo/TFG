@@ -1,0 +1,38 @@
+package com.uo289390.toco.repository;
+
+import java.util.Optional;
+
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+
+import com.uo289390.toco.model.SpotifyUser;
+
+/**
+ * Repository interface for managing SpotifyUser entities.
+ * 
+ * This interface extends JpaRepository to provide CRUD operations
+ * for SpotifyUser entities, including methods to find users by their Spotify user ID.
+ * 
+ * @author Adrián Mahía
+ * @version 1.0
+ * @since 2025-06-06
+ */
+@Repository
+public interface SpotifyUserRepository extends JpaRepository<SpotifyUser, Long> {
+
+    /**
+     * Finds a SpotifyUser by their Spotify user ID.
+     * 
+     * @param userId the related user ID to search for
+     * @return an Optional containing the SpotifyUser if found, or empty if not found
+     */
+    Optional<SpotifyUser> findByUserId(Long userId);
+
+    /**
+     * Finds a SpotifyUser by the ID of the account in Spotify.
+     *
+     * @param spotifyUserId the Spotify user ID to search for
+     * @return an Optional containing the SpotifyUser if found, or empty if not found
+     */
+    Optional<SpotifyUser> findBySpotifyUserId(String spotifyUserId);
+}
