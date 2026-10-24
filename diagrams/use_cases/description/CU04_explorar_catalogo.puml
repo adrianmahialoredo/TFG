@@ -1,0 +1,55 @@
+@startuml DS-CU-04
+title DS-CU-04 - Explorar catálogo de ítems
+
+' Diagrama de secuencia de análisis (patrón Boundary-Control-Entity)
+autonumber
+hide footbox
+skinparam sequenceMessageAlign center
+skinparam roundcorner 6
+
+actor "Músico" as musico
+boundary "CatalogoView" as pantalla
+control "GestorCatalogo" as gestor
+entity "ItemResumenLocal" as resumen
+entity "ItemDetallado" as detalle
+
+musico -> pantalla : abrirExploracion()
+pantalla -> gestor : obtenerCatalogo()
+gestor -> resumen : obtenerTodos()
+resumen --> gestor : ItemSummaryDTO[]
+gestor --> pantalla : itemsPorTipo
+pantalla --> musico : mostrarItemsPorTipo()
+
+loop Por cada cambio en la barra de búsqueda
+    musico -> pantalla : ingresarTextoBusqueda(query)
+    pantalla -> gestor : filtrarEnMemoriaLocal(query)
+    note right of gestor : Sin peticiones HTTP.\nInsensible a mayúsculas y acentos.
+    gestor -> resumen : obtenerTodos()
+    resumen --> gestor : ItemSummaryDTO[]
+    gestor --> pantalla : coincidencias
+
+    alt 4a. Sin coincidencias
+        pantalla --> musico : mostrarAvisoSinResultados()
+    else Hay coincidencias
+        pantalla --> musico : mostrarCoincidencias(título, artista/tipo, imagen)
+    end
+end
+
+musico -> pantalla : seleccionarElemento(id)
+pantalla -> gestor : solicitarDetalleCompleto(id)
+gestor -> detalle : buscarEnCacheLocal(id)
+
+alt 6a. No está en la caché local (cache-miss)
+    detalle --> gestor : no encontrado
+    gestor -> detalle : obtenerDeAPI(id)
+    note right of detalle : GET /api/{recurso}/{id}
+    detalle --> gestor : DTO completo
+    gestor -> detalle : hidratarCache(DTO)
+else Encontrado en caché
+    detalle --> gestor : DTO completo
+end
+
+gestor --> pantalla : detalle
+pantalla --> musico : abrirDetalle()
+
+@enduml

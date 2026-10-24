@@ -4,13 +4,14 @@ import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
 import lombok.*;
 
 /**
  * Represents a section within a lesson in the system.
  * 
  * The LessonSection entity is used to store information about different sections
- * of a lesson, including the title, HTML content, and the order of the section.
+ * of a lesson, including the title, HTML content, an optional support video and the order of the section.
  * 
  * Each LessonSection is associated with a specific Lesson, allowing for structured
  * content delivery within lessons.
@@ -53,6 +54,13 @@ public class LessonSection {
     @Lob
     @Column(columnDefinition = "TEXT")
     private String htmlContent;
+
+    /**
+     * Optional URL of a support video for the section (a YouTube link, like
+     * {@link SongLesson#getVideoUrl()}). Null or empty when the section has no video.
+     */
+    @Pattern(regexp = "^https?://.+|^$", message = "Video URL must be a valid HTTP/HTTPS URL or empty")
+    private String videoUrl;
 
     /**
      * The lesson to which this section belongs.

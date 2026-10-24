@@ -2,7 +2,7 @@ import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { TouchableOpacity, View, Text } from "react-native";
 import { RootStackParamList } from "../types";
-import {useAuth} from "../hooks/useAuth";
+import { useAuth } from "../context/AuthContext";
 import UserAvatar from "./UserAvatar";
 
 type ProfileHeaderProps = {
@@ -27,7 +27,7 @@ export default function ProfileHeader({ title, compact = false }: ProfileHeaderP
     }
 
     return (
-        <View className="flex-row items-center mt-6 mb-7">
+        <View className="flex-row items-center mt-2 mb-7">
             <TouchableOpacity onPress={() => navigation.navigate('ProfileScreen')}>
                 <UserAvatar user={user} size={56} className="border-2 border-primary/20" />
             </TouchableOpacity>

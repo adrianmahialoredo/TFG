@@ -82,6 +82,7 @@ class LessonSectionServiceTest {
         dto.setId(5L);
         dto.setTitle("Practice");
         dto.setHtmlContent("<p>Practice</p>");
+        dto.setVideoUrl("https://www.youtube.com/watch?v=abc123");
         dto.setOrderIndex(2);
         dto.setLessonId(lessonId);
         return dto;
@@ -105,6 +106,7 @@ class LessonSectionServiceTest {
         assertEquals(5L, saved.getId());
         assertEquals("Practice", saved.getTitle());
         assertEquals("<p>Practice</p>", saved.getHtmlContent());
+        assertEquals("https://www.youtube.com/watch?v=abc123", saved.getVideoUrl());
         assertEquals(2, saved.getOrderIndex());
         assertSame(lesson2, saved.getLesson());
         assertEquals(dto(20L), result);
@@ -253,6 +255,7 @@ class LessonSectionServiceTest {
         assertEquals(1L, testSection.getId(), "the id must not change on update");
         assertEquals("Practice", testSection.getTitle());
         assertEquals("<p>Practice</p>", testSection.getHtmlContent());
+        assertEquals("https://www.youtube.com/watch?v=abc123", testSection.getVideoUrl());
         assertEquals(2, testSection.getOrderIndex());
         assertSame(lesson1, testSection.getLesson());
         verifyNoInteractions(lessonRepository);

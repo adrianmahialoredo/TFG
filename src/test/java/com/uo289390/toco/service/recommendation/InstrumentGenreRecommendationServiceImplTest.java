@@ -392,4 +392,86 @@ class InstrumentGenreRecommendationServiceImplTest {
             verify(instrumentGenreRepository).findByGenreIdInAndInstrumentIdInAndIdNotIn(any(), any(), any(), any());
         }
     }
+
+    @Nested
+    class FindFavouriteCombinationsForUser {
+
+        @Test
+        void testFindFavouriteCombinations_UnknownUser_Throws() {
+            // Arrange
+            when(userRepository.findById(99L)).thenReturn(Optional.empty());
+
+            // Act & Assert
+            assertThrows(EntityNotFoundException.class, () -> service.findFavouriteCombinationsForUser(99L, 2));
+        }
+
+        @Test
+        void testFindFavouriteCombinations_NonPositiveLimit_ReturnsEmptyWithoutQueries() {
+            // Act
+            SequencedSet<InstrumentGenre> result = service.findFavouriteCombinationsForUser(USER_ID, 0);
+
+            // Assert
+            assertTrue(result.isEmpty());
+            verifyNoInteractions(instrumentGenreRepository);
+        }
+
+        @Test
+        void testFindFavouriteCombinations_NoFavouriteInstruments_ReturnsEmptyWithoutQueries() {
+            // Arrange
+            when(user.getPreferences()).thenReturn(preferences(List.of(genre(1)), List.of()));
+
+            // Act
+            SequencedSet<InstrumentGenre> result = service.findFavouriteCombinationsForUser(USER_ID, 2);
+
+            // Assert
+            assertTrue(result.isEmpty());
+            verifyNoInteractions(instrumentGenreRepository);
+        }
+
+        @Test
+        void testFindFavouriteCombinations_UsesAllFavouritesOnlyAndExcludesItemLists() {
+            // Arrange
+            when(user.getTopGenresFromItemLists(anyInt())).thenReturn(List.of(genre(5)));
+            when(user.getTopInstrumentsFromItemLists(anyInt())).thenReturn(List.of(instrument(15)));
+            when(user.getIdsFromItemListsOfType(InstrumentGenre.class)).thenReturn(ids(77L));
+            when(user.getPreferences()).thenReturn(preferences(
+                    List.of(genre(1), genre(2), genre(3)),
+                    List.of(instrument(11), instrument(12), instrument(13))));
+            List<InstrumentGenre> found = List.of(instrumentGenre(100, genre(3), instrument(12)));
+            when(instrumentGenreRepository.findByGenreIdInAndInstrumentIdInAndLevelLessThanEqualAndIdNotIn(any(), any(), anyInt(), any(), any()))
+                    .thenReturn(found);
+
+            // Act
+            SequencedSet<InstrumentGenre> result = service.findFavouriteCombinationsForUser(USER_ID, 1);
+
+            // Assert
+            assertEquals(found, List.copyOf(result));
+            verify(instrumentGenreRepository).findByGenreIdInAndInstrumentIdInAndLevelLessThanEqualAndIdNotIn(
+                    genreIdsCaptor.capture(), instrumentIdsCaptor.capture(), eq(USER_LEVEL), excludedCaptor.capture(), pageableCaptor.capture());
+            // Every favourite (not limited) and nothing from the tops of the item lists
+            assertEquals(List.of(1L, 2L, 3L), List.copyOf(genreIdsCaptor.getValue()));
+            assertEquals(List.of(11L, 12L, 13L), List.copyOf(instrumentIdsCaptor.getValue()));
+            assertTrue(excludedCaptor.getValue().contains(77L));
+            assertEquals(1, pageableCaptor.getValue().getPageSize());
+            verify(instrumentGenreRepository, never()).findByGenreIdInAndInstrumentIdInAndIdNotIn(any(), any(), any(), any());
+        }
+
+        @Test
+        void testFindFavouriteCombinations_Level1Short_Level2CompletesWithoutLevelFilter() {
+            // Arrange
+            when(user.getPreferences()).thenReturn(preferences(List.of(genre(1)), List.of(instrument(11))));
+            InstrumentGenre byLevel = instrumentGenre(100, genre(1), instrument(11));
+            InstrumentGenre anyLevel = instrumentGenre(101, genre(1), instrument(11));
+            when(instrumentGenreRepository.findByGenreIdInAndInstrumentIdInAndLevelLessThanEqualAndIdNotIn(any(), any(), anyInt(), any(), any()))
+                    .thenReturn(List.of(byLevel));
+            when(instrumentGenreRepository.findByGenreIdInAndInstrumentIdInAndIdNotIn(any(), any(), any(), any()))
+                    .thenReturn(List.of(anyLevel));
+
+            // Act
+            SequencedSet<InstrumentGenre> result = service.findFavouriteCombinationsForUser(USER_ID, 5);
+
+            // Assert
+            assertEquals(List.of(byLevel, anyLevel), List.copyOf(result));
+        }
+    }
 }

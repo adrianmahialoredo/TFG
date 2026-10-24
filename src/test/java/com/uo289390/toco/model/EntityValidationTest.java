@@ -280,23 +280,35 @@ class EntityValidationTest {
 
         @Test
         void validSection_hasNoViolations() {
-            LessonSection section = new LessonSection(null, "Intro", "<p>x</p>", new Lesson(), 0);
+            LessonSection section = new LessonSection(null, "Intro", "<p>x</p>", null, new Lesson(), 0);
 
             assertTrue(invalidFields(section).isEmpty());
         }
 
         @Test
         void blankTitleAndNullLesson_areRejected() {
-            LessonSection section = new LessonSection(null, " ", null, null, 0);
+            LessonSection section = new LessonSection(null, " ", null, null, null, 0);
 
             assertEquals(Set.of("title", "lesson"), invalidFields(section));
         }
 
         @Test
         void nullHtmlContent_isAllowed() {
-            LessonSection section = new LessonSection(null, "Intro", null, new Lesson(), 0);
+            LessonSection section = new LessonSection(null, "Intro", null, null, new Lesson(), 0);
 
             assertTrue(invalidFields(section).isEmpty());
+        }
+
+        @Test
+        void videoUrl_mustBeHttpOrEmpty() {
+            LessonSection section = new LessonSection(null, "Intro", null, "https://www.youtube.com/watch?v=abc123", new Lesson(), 0);
+            assertTrue(invalidFields(section).isEmpty());
+
+            section.setVideoUrl("");
+            assertTrue(invalidFields(section).isEmpty());
+
+            section.setVideoUrl("ftp://video");
+            assertEquals(Set.of("videoUrl"), invalidFields(section));
         }
     }
 

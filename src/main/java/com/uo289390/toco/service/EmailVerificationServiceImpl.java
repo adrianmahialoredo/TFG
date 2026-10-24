@@ -73,7 +73,7 @@ public class EmailVerificationServiceImpl implements EmailVerificationService {
     public void sendCode(String email) {
         String key = normalize(email);
         // Checked here too: no point in verifying an email that the registration will reject anyway
-        if (userRepository.findByEmail(email).isPresent()) {
+        if (userRepository.existsByEmailIgnoreCase(key)) {
             throw new IllegalArgumentException("Email already registered");
         }
 

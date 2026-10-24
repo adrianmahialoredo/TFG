@@ -3,6 +3,8 @@ package com.uo289390.toco.dto;
 import java.util.List;
 
 import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
@@ -101,6 +103,15 @@ public class UserDto {
      */
     @JsonProperty(access = JsonProperty.Access.READ_ONLY)
     private boolean spotifyConnected;
+
+    /**
+     * Self-assessed musical level of the user (0 to 5, like the item stars).
+     * Editable from the profile ({@code PUT /api/users/{id}}); null in a request keeps the current
+     * one. Ignored by the registration, which starts every user at the default level.
+     */
+    @Min(value = 0, message = "Difficulty level must be at least 0")
+    @Max(value = 5, message = "Difficulty level must be at most 5")
+    private Integer difficultyLevel;
 
     /**
      * Code sent to the email by {@code POST /api/auth/verification-code}. Only used (and

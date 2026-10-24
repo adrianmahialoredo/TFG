@@ -17,7 +17,8 @@ export interface AuthResponseDTO {
  * DTO para credenciales de login
  */
 export interface LoginCredentialsDTO {
-  email: string;
+  /** Email o nombre de usuario. */
+  identifier: string;
   password: string;
 }
 

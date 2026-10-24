@@ -57,4 +57,9 @@ public class UserResponseDTO {
      */
     private boolean spotifyConnected;
 
+    /**
+     * Musical level of the user (0 to 5, like the item stars).
+     */
+    private int difficultyLevel;
+
 }

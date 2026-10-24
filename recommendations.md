@@ -33,7 +33,6 @@ cada algoritmo.
 
 | Endpoint | Qué hace en realidad |
 |---|---|
-| `GET /api/items/recommended/by-item-list/{id}` (`ItemController`) | Marcador: los 20 items más nuevos (`findTop20ByOrderByCreatedAtDesc`). El frontend no lo llama. |
 | `GET /api/lessons/recommended/ids` (`LessonController`) | Todas las lecciones ordenadas por nivel ascendente (`findAllByOrderByLevelAscIdAsc`). El frontend ya no lo llama. |
 | `GET /api/songs/recommended/ids` (documentado en `SongController`) | Sin implementar. El frontend ya no lo llama. |
 

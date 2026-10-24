@@ -55,6 +55,7 @@ import com.uo289390.toco.repository.SongRepository;
 import com.uo289390.toco.repository.SongRepository.TitleArtist;
 import com.uo289390.toco.repository.SpotifyUserRepository;
 import com.uo289390.toco.repository.TabSectionRepository;
+import com.uo289390.toco.repository.TuneRepository;
 import com.uo289390.toco.repository.UserRepository;
 import com.uo289390.toco.utils.EntityResolver;
 import com.uo289390.toco.utils.RecommendationConstants;
@@ -106,6 +107,7 @@ class SpotifyRecommendationServiceImplTest {
                 mock(InstrumentGenreRepository.class), mock(ItemRepository.class), mock(ItemListRepository.class),
                 mock(LessonRepository.class), mock(LessonSectionRepository.class), songRepository,
                 mock(SongLessonRepository.class), mock(SpotifyUserRepository.class), mock(TabSectionRepository.class),
+                mock(TuneRepository.class),
                 userRepository);
 
         when(spotifyAuthService.getValidAccessToken(USER_ID)).thenReturn(ACCESS_TOKEN);
@@ -285,6 +287,24 @@ class SpotifyRecommendationServiceImplTest {
                     new TitleArtist("song a", "artist a"),
                     new TitleArtist("Unknown", "Nobody")), List.copyOf(pairs.getValue()));
             verify(songRepository, mockitoNever()).findByArtistIgnoreCaseAndArtistPopularTrueAndIdNotIn(anyString(), any(), any());
+        }
+
+        @Test
+        void testFindSongsForUser_DuplicateSongsInDatabase_KeepsTheFirstOne() {
+            // Arrange: two stored songs share the same (case-insensitive) title and artist
+            expectTopTracks(2, "medium_term", items(track("Song A", "Artist A")));
+            expectTopTracks(1, "long_term", EMPTY_ITEMS);
+            expectTopTracks(1, "short_term", EMPTY_ITEMS);
+            when(songRepository.findByTitleAndArtistIn(any()))
+                    .thenReturn(List.of(song(5, "Song A", "Artist A"), song(6, "SONG A", "artist a")));
+            expectTopArtists(EMPTY_ITEMS);
+
+            // Act
+            List<SongDTO> result = service.findSongsForUser(USER_ID, 2);
+
+            // Assert
+            assertEquals(List.of(5L), idsOf(result));
+            server.verify();
         }
 
         @Test
@@ -487,6 +507,42 @@ class SpotifyRecommendationServiceImplTest {
             // Assert
             assertEquals("Error fetching recommendations from Spotify API", ex.getMessage());
             assertNotNull(ex.getCause());
+            server.verify();
+        }
+
+        @Test
+        void testFindItemsForUser_TopTracksRedirectStatus_ThrowsWrappedIllegalState() {
+            // Arrange: RestTemplate only raises on 4xx/5xx, so a 3xx reaches the explicit status check
+            server.expect(requestTo(TOP_TWO_ARTISTS_URL))
+                    .andRespond(withSuccess(items("{\"name\":\"Seed\",\"id\":\"seed-1\"}"), MediaType.APPLICATION_JSON));
+            server.expect(requestTo("https://api.spotify.com/v1/artists/seed-1/top-tracks"))
+                    .andRespond(withStatus(HttpStatus.MULTIPLE_CHOICES));
+
+            // Act
+            IllegalStateException ex = assertThrows(IllegalStateException.class, () -> service.findItemsForUser(USER_ID));
+
+            // Assert
+            assertEquals("Error fetching recommendations from Spotify API", ex.getMessage());
+            assertInstanceOf(IllegalStateException.class, ex.getCause());
+            server.verify();
+        }
+
+        @Test
+        void testFindItemsForUser_SuccessfulTopTracks_RequestsSeedArtistAndReturnsNoItems() {
+            // Arrange
+            server.expect(requestTo(TOP_TWO_ARTISTS_URL))
+                    .andRespond(withSuccess(items("{\"name\":\"Seed\",\"id\":\"seed-1\"}", "{\"name\":\"Second\",\"id\":\"seed-2\"}"),
+                            MediaType.APPLICATION_JSON));
+            server.expect(requestTo("https://api.spotify.com/v1/artists/seed-1/top-tracks"))
+                    .andExpect(method(HttpMethod.GET))
+                    .andExpect(header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN))
+                    .andRespond(withSuccess("{\"tracks\":[{\"name\":\"T\"}]}", MediaType.APPLICATION_JSON));
+
+            // Act
+            List<?> result = service.findItemsForUser(USER_ID);
+
+            // Assert: the fetched tracks are not mapped to items yet, the method returns null (unfinished feature)
+            assertNull(result);
             server.verify();
         }
 

@@ -1,6 +1,7 @@
 import {RouteProp, useRoute} from "@react-navigation/native";
 import {RootStackParamList} from "../types";
-import {View, Text, Image, ScrollView, ActivityIndicator} from "react-native";
+import { View, Text, Image, ActivityIndicator } from "react-native";
+import FadeScrollView from "../components/FadeScrollView";
 import ProfileHeader from "../components/ProfileHeader";
 import React from "react";
 import AppLayout from "../components/AppLayout";
@@ -42,7 +43,7 @@ export default function LessonScreen() {
           {/* Icono de perfil y titulo */}
           <ProfileHeader title="Aprender" />
 
-          <ScrollView className="bg-background p-4 flex-1">
+          <FadeScrollView className="bg-background p-4 flex-1">
             {/* Información de la lección */}
             <View className="items-center mb-1 mx-4">
               <Image
@@ -63,7 +64,7 @@ export default function LessonScreen() {
 
             {/* Navegación entre secciones y contenido HTML */}
             <LessonSectionViewer {...sectionState} />
-          </ScrollView>
+          </FadeScrollView>
         </View>
       </AppLayout>
   );

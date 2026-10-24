@@ -5,7 +5,6 @@ import com.uo289390.toco.service.ItemService;
 import com.uo289390.toco.exception.GlobalExceptionHandler;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -16,12 +15,13 @@ import java.util.List;
  * Base path: {@code /api/items}
  *
  * Endpoints:
- * - GET    /api/items                                      Retrieve the summary of every item (the app catalog)
- * - POST   /api/items/by-ids                               Retrieve the items with the given IDs (IDs in the body)
- * - GET    /api/items/{id}                                 Retrieve an item by ID
- * - GET    /api/items/search?q={query}                     Search items by title
- * - GET    /api/items/recommended                          Retrieve the recommended items for the user
- * - GET    /api/items/recommended/by-item-list/{itemListId} Retrieve the recommended items for an item list
+ * - GET    /api/items                      Retrieve the summary of every item (the app catalog)
+ * - POST   /api/items/by-ids               Retrieve the items with the given IDs (IDs in the body)
+ * - GET    /api/items/{id}                 Retrieve an item by ID
+ * - GET    /api/items/search?q={query}     Search items by title
+ *
+ * Recommended items are served by {@code RecommendationController}
+ * ({@code /api/recommendations/items/...}).
  *
  * Responses: 200 OK and 404 Not Found when the item does not exist.
  * Other errors are translated by {@link GlobalExceptionHandler}.
@@ -79,17 +79,5 @@ public class ItemController {
     @GetMapping("/search")
     public ResponseEntity<List<ItemSummaryDTO>> search(@RequestParam("q") String query) {
         return ResponseEntity.ok(itemService.search(query));
-    }
-
-    /**
-     * Retrieves the recommended items for an item list.
-     *
-     * @param itemListId the ID of the item list
-     * @return 200 OK with the recommended items
-     */
-    @GetMapping("/recommended/by-item-list/{itemListId}")
-    @PreAuthorize("hasRole('ADMIN') or @ownership.ownsItemList(#itemListId, authentication)")
-    public ResponseEntity<List<ItemSummaryDTO>> getRecommendedForItemList(@PathVariable Long itemListId) {
-        return ResponseEntity.ok(itemService.findRecommendedForItemList(itemListId));
     }
 }

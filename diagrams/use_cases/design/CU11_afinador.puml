@@ -1,0 +1,165 @@
+@startuml DSD-CU-11
+title DSD-CU-11 - Utilizar afinador cromático
+
+' Diagrama de secuencia de diseño: realización de CU-11 (análisis en
+' diagrams/use_cases/description/CU11_afinador.puml).
+' Fuentes: frontend/src/screens/TunerScreen.tsx, components/tuner/(TunerStringSelector, TunerGauge,
+' TuneWheel).tsx, hooks/useTuner.ts, hooks/useTunes.ts, hooks/useInstruments.ts,
+' repositories/tune.repository.ts, services/tune.service.ts, utils/entityCache.utils.ts,
+' utils/microphone.utils.ts, utils/pitch.utils.ts, utils/tuner.utils.ts, config/apiConfig.ts;
+' TuneController.java, TuneServiceImpl.java, DtoMapper.java, SecurityConfig.java;
+' architecture.md §12 "Afinador".
+' Notas:
+'  - La captura y el análisis del audio son solo del frontend: el backend solo sirve el catálogo
+'    de afinaciones (GET /api/tunes).
+'  - En Expo Go (isRunningInExpoGo) se usa createSimulatedMicrophone (setInterval que genera bloques
+'    de una cuerda que se va afinando, sin pedir permiso); en una development build,
+'    createNativeMicrophone sobre react-native-audio-api. Ambos cumplen la interfaz Microphone.
+autonumber
+hide footbox
+skinparam sequenceMessageAlign center
+skinparam roundcorner 6
+skinparam maxMessageSize 260
+skinparam BoxPadding 10
+
+actor "Músico" as actor
+
+box "App (React Native)" #F3F8FF
+    participant "TunerScreen\n<<Nivel 7>>" as screen
+    participant "components/tuner\n(TunerStringSelector,\nTunerGauge, TuneWheel)\n<<Nivel 7>>" as comps
+    participant "useTunes\n<<Nivel 6>>" as useTunes
+    participant "tuneRepository\n<<Nivel 3>>" as repo
+    participant "tuneService\n<<Nivel 1>>" as service
+    participant "useTuner\n<<Nivel 6>>" as tuner
+    participant "Microphone\n(microphone.utils)\n<<utils>>" as mic
+    participant "pitch.utils /\ntuner.utils\n<<utils>>" as utils
+end box
+
+box "Backend (Spring Boot)" #FFF9F0
+    participant "TuneController\n<<controller>>" as controller
+    participant "TuneServiceImpl\n<<service>>" as tuneSvc
+end box
+
+box "Librería nativa" #F3F3F3
+    participant "react-native-audio-api\n(AudioManager, AudioRecorder)\n<<sistema externo>>" as lib
+end box
+
+== Carga de las afinaciones ==
+
+actor -> screen : pulsa "Afinador" en el Home\n(navigate('TunerScreen'))
+screen -> useTunes : useTunes()
+useTunes -> repo : getAll(onFresh)
+note right of repo : cache.list('all', tuneService.getAll, onFresh):\nCache-First sobre el índice del catálogo
+alt Hay índice en caché (RAM / disco)
+    repo --> useTunes : tuneIds (al instante)
+    repo ->> service : revalidación en segundo plano\n(llama a onFresh(fresh) al llegar)
+else Sin índice: se espera a la API
+    repo -> service : getAll()
+    service -> controller : GET /api/tunes\nAuthorization: Bearer <JWT>
+    controller -> tuneSvc : findAll()
+    note right of tuneSvc : tuneRepository.findAll()\n.map(dtoMapper::tuneToTuneDto)
+    tuneSvc --> controller : List<TuneDTO>
+    controller --> service : 200 OK\nList<TuneDTO>
+    service -> service : map(toAppTuneDTO)\n(ids a string)
+    service --> repo : TuneDTO[]
+    repo -> repo : hydrate: setTunes (TuneEntitiesStore)\n+ disco + índice 'all'
+    repo --> useTunes : tuneIds
+end
+useTunes -> useTunes : useInstrumentsByIds(instrumentIds)\n(pide los instrumentos que falten)
+useTunes -> useTunes : label "Instrumento (Afinación)";\nordena por instrumento y por id;\ndefaultTuneId = 1.ª de un instrumento favorito\n(useAuth().user) o la 1.ª de la lista
+useTunes --> screen : { tunes, defaultTuneId, loading }
+alt No hay afinaciones (sin conexión ni caché)
+    screen --> actor : "No hay afinaciones disponibles.\nComprueba tu conexión."
+else
+    screen -> comps : <TunerStringSelector notes>, <TunerGauge>,\n<TuneWheel options selectedIndex>
+    comps --> actor : cuerdas, medidor y rueda de afinaciones
+end
+
+== Escucha (useFocusEffect al entrar en la pantalla) ==
+
+screen -> tuner : useTuner(tune.notes)
+tuner -> utils : noteToFrequency(note) por cuerda
+screen -> tuner : start()
+tuner -> tuner : si ya graba, return;\nsession = ++sessionRef; status = 'starting'
+tuner -> mic : getMicrophone()
+note right of mic : isMicrophoneSimulated() (isRunningInExpoGo())\n? createSimulatedMicrophone(getTargets, getLockedString)\n: createNativeMicrophone() (require perezoso de la librería)
+tuner -> mic : requestPermission()
+mic -> lib : AudioManager.requestRecordingPermissions()\n(el simulado devuelve 'Granted' sin pedir nada)
+mic --> tuner : 'Granted' | 'Denied' | 'Undetermined'
+
+alt Permiso no concedido
+    tuner -> tuner : status = 'denied'
+    tuner --> screen : status
+    screen --> actor : "El afinador necesita el micrófono..."\n+ botón "Abrir ajustes" (Linking.openSettings())
+else Permiso concedido
+    tuner -> mic : start(handleBlock, onError)
+    mic -> lib : [iOS] setAudioSessionOptions(record, measurement)\nsetAudioSessionActivity(true)
+    mic -> lib : new AudioRecorder(); onError(...);\nonAudioReady({ sampleRate: 44100,\nbufferLength: 4096, channelCount: 1 }, callback)
+    mic -> lib : recorder.start()
+    alt No arranca (status 'error')
+        mic -> mic : release()
+        mic --> tuner : throw Error
+        tuner -> tuner : status = 'error'
+    else Grabando
+        mic --> tuner : ok -> status = 'listening'\n(si se paró mientras arrancaba: release)
+
+        loop Cada bloque de 4096 muestras (~93 ms) mientras escucha
+            actor -> lib : hace sonar una cuerda
+            lib ->> mic : onAudioReady({ buffer })
+            note right of mic : Simulado: setInterval(SIMULATED_BLOCK_MS)\ncon simulatedBlock(frecuencia, fase)
+            mic ->> tuner : handleBlock({ samples, sampleRate })
+            tuner -> utils : detectPitch(samples, sampleRate)
+            note right of utils : YIN: null si rms < MIN_RMS (silencio)\no sin periodicidad clara (ruido)
+            alt pitch === null
+                utils --> tuner : null
+                tuner -> tuner : recentPitches = []\n(se mantiene la última lectura)
+            else Nota detectada
+                utils --> tuner : pitch (Hz)
+                tuner -> utils : median(últimos 3 pitches) : frequency
+                alt Cuerda fijada
+                    tuner -> tuner : stringIndex = lockedString
+                else Detección automática
+                    tuner -> utils : closestStringIndex(frequency, targets)\n: stringIndex (la más cercana en cents)
+                end
+                tuner -> utils : centsBetween(frequency, target) : cents
+                tuner -> tuner : setReading({ frequency, stringIndex, cents })
+                tuner --> screen : reading (re-render)
+                screen -> utils : tuningAdvice(cents) : 'Afinado' (±5 cents) | 'Tensar' | 'Destensar'
+                screen -> comps : TunerStringSelector activeIndex = stringIndex\nTunerGauge cents, inTune = |cents| <= IN_TUNE_CENTS
+                comps --> actor : resalta la cuerda, mueve la aguja (verde si afinada)\ncents, consejo y Hz
+            end
+        end
+    end
+end
+
+== Acciones del músico durante la escucha ==
+
+alt Fijar o soltar una cuerda
+    actor -> comps : pulsa la cuerda i (TunerStringSelector)
+    comps -> screen : onSelect(i) -> handleStringPress(i)
+    screen -> tuner : selectString(lockedString === i ? null : i)
+    opt No estaba escuchando
+        screen -> tuner : start()
+    end
+else Cambiar de afinación
+    actor -> comps : gira la rueda (TuneWheel)
+    comps -> screen : onSelect(index) -> handleTuneSelect(index)
+    screen -> tuner : stop()
+    screen -> screen : setSelectedTuneId(tunes[index].id)
+    note right of tuner : Con las nuevas notas, useTuner borra\nla lectura y la cuerda fijada.\nSe vuelve a escuchar tocando el medidor o una cuerda
+else Pausar / reanudar
+    actor -> comps : pulsa el medidor (TunerGauge)
+    comps -> screen : onPress -> handleGaugePress()
+    screen -> tuner : isListening ? stop() : start()
+end
+
+== Salida (limpieza de useFocusEffect) ==
+
+actor -> screen : sale del afinador
+screen -> tuner : stop()
+tuner -> tuner : ++sessionRef; recentPitches = [];\nreading = null; status = 'idle'
+tuner -> mic : stop()
+mic -> lib : clearOnAudioReady(); clearOnError();\nrecorder.stop(); [iOS] setAudioSessionActivity(false)
+note right of mic : Simulado: clearInterval(timer)
+
+@enduml

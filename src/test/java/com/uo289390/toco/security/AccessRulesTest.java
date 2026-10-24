@@ -33,6 +33,7 @@ import com.uo289390.toco.controller.ItemController;
 import com.uo289390.toco.controller.ItemListController;
 import com.uo289390.toco.controller.RecommendationController;
 import com.uo289390.toco.controller.SpotifyRecommendationController;
+import com.uo289390.toco.controller.TuneController;
 import com.uo289390.toco.controller.UserController;
 import com.uo289390.toco.model.ItemList;
 import com.uo289390.toco.model.User;
@@ -48,6 +49,7 @@ import com.uo289390.toco.repository.SongLessonRepository;
 import com.uo289390.toco.repository.SongRepository;
 import com.uo289390.toco.repository.SpotifyUserRepository;
 import com.uo289390.toco.repository.TabSectionRepository;
+import com.uo289390.toco.repository.TuneRepository;
 import com.uo289390.toco.repository.UserRepository;
 import com.uo289390.toco.exception.GlobalExceptionHandler;
 import com.uo289390.toco.service.EmailVerificationService;
@@ -55,11 +57,14 @@ import com.uo289390.toco.service.GenreService;
 import com.uo289390.toco.service.InstrumentService;
 import com.uo289390.toco.service.ItemListService;
 import com.uo289390.toco.service.ItemService;
+import com.uo289390.toco.service.recommendation.GenreRecommendationService;
+import com.uo289390.toco.service.recommendation.InstrumentGenreRecommendationService;
 import com.uo289390.toco.service.recommendation.ItemRecommendationService;
 import com.uo289390.toco.service.recommendation.LessonRecommendationService;
 import com.uo289390.toco.service.recommendation.SongRecommendationService;
 import com.uo289390.toco.utils.mapper.DtoMapper;
 import com.uo289390.toco.service.SpotifyRecommendationService;
+import com.uo289390.toco.service.TuneService;
 import com.uo289390.toco.service.UserService;
 import com.uo289390.toco.utils.EntityResolver;
 
@@ -72,7 +77,7 @@ import com.uo289390.toco.utils.EntityResolver;
  */
 @WebMvcTest(controllers = {AuthController.class, GenreController.class, UserController.class,
         ItemListController.class, SpotifyRecommendationController.class, RecommendationController.class,
-        ItemController.class, InstrumentController.class})
+        ItemController.class, InstrumentController.class, TuneController.class})
 @Import({SecurityConfig.class, JwtAuthenticationFilter.class, OwnershipChecker.class, GlobalExceptionHandler.class})
 class AccessRulesTest {
 
@@ -115,10 +120,19 @@ class AccessRulesTest {
     private SongRecommendationService songRecommendationService;
 
     @MockitoBean
+    private InstrumentGenreRecommendationService instrumentGenreRecommendationService;
+
+    @MockitoBean
+    private GenreRecommendationService genreRecommendationService;
+
+    @MockitoBean
     private DtoMapper dtoMapper;
 
     @MockitoBean
     private ItemService itemService;
+
+    @MockitoBean
+    private TuneService tuneService;
 
     private ItemListRepository itemListRepository;
 
@@ -130,7 +144,7 @@ class AccessRulesTest {
                 mock(InstrumentGenreRepository.class), mock(ItemRepository.class), itemListRepository,
                 mock(LessonRepository.class), mock(LessonSectionRepository.class), mock(SongRepository.class),
                 mock(SongLessonRepository.class), mock(SpotifyUserRepository.class), mock(TabSectionRepository.class),
-                mock(UserRepository.class));
+                mock(TuneRepository.class), mock(UserRepository.class));
 
         User owner = new User();
         owner.setId(OWNER_ID);
@@ -241,10 +255,45 @@ class AccessRulesTest {
         void delete_asAdmin_isAllowed() throws Exception {
             expectAllowed(delete("/api/genres/1").with(asAdmin()));
         }
+
+        @Test
+        void tunesRead_asUser_isAllowed() throws Exception {
+            // The tuner reads the tunings with the user's token
+            expectAllowed(get("/api/tunes").with(asUser(OWNER_ID)));
+            expectAllowed(get("/api/tunes/by-instrument/1").with(asUser(OWNER_ID)));
+        }
+
+        @Test
+        void tunesRead_withoutToken_isUnauthorized() throws Exception {
+            mockMvc.perform(get("/api/tunes")).andExpect(status().isUnauthorized());
+        }
+
+        @Test
+        void tunesCreate_asUser_isForbidden() throws Exception {
+            mockMvc.perform(post("/api/tunes").with(asUser(OWNER_ID))
+                            .contentType(MediaType.APPLICATION_JSON).content("{}"))
+                    .andExpect(status().isForbidden());
+        }
+
+        @Test
+        void tunesDelete_asAdmin_isAllowed() throws Exception {
+            expectAllowed(delete("/api/tunes/1").with(asAdmin()));
+        }
     }
 
     @Nested
     class Users {
+
+        @Test
+        void topArtists_ofOwnUser_isAllowed() throws Exception {
+            expectAllowed(get("/api/users/" + OWNER_ID + "/top-artists").with(asUser(OWNER_ID)));
+        }
+
+        @Test
+        void topArtists_ofAnotherUser_isForbidden() throws Exception {
+            mockMvc.perform(get("/api/users/" + OTHER_ID + "/top-artists").with(asUser(OWNER_ID)))
+                    .andExpect(status().isForbidden());
+        }
 
         @Test
         void listAll_asUser_isForbidden() throws Exception {
@@ -473,20 +522,37 @@ class AccessRulesTest {
         }
 
         @Test
-        void lessonsForGenre_isCatalogAndAllowed() throws Exception {
-            expectAllowed(get("/api/recommendations/lessons/by-genre/3").with(asUser(OTHER_ID)));
+        void favouriteCombinationsForSelf_isAllowed() throws Exception {
+            expectAllowed(get("/api/recommendations/instrument-genres/favourite-combinations/by-user/" + OWNER_ID + "/ids")
+                    .with(asUser(OWNER_ID)));
         }
 
         @Test
-        void itemSummariesForOtherUsersList_isForbidden() throws Exception {
-            mockMvc.perform(get("/api/items/recommended/by-item-list/" + LIST_ID).with(asUser(OTHER_ID)))
+        void favouriteCombinationsForOther_isForbidden() throws Exception {
+            mockMvc.perform(get("/api/recommendations/instrument-genres/favourite-combinations/by-user/" + OTHER_ID + "/ids")
+                            .with(asUser(OWNER_ID)))
                     .andExpect(status().isForbidden());
         }
 
         @Test
-        void itemSummariesForOwnList_isAllowed() throws Exception {
-            expectAllowed(get("/api/items/recommended/by-item-list/" + LIST_ID).with(asUser(OWNER_ID)));
+        void mostUsedGenresForSelf_isAllowed() throws Exception {
+            expectAllowed(get("/api/recommendations/genres/most-used-in-item-lists/by-user/" + OWNER_ID + "/ids")
+                    .with(asUser(OWNER_ID)));
         }
+
+        @Test
+        void mostUsedGenresForOther_isForbidden() throws Exception {
+            mockMvc.perform(get("/api/recommendations/genres/most-used-in-item-lists/by-user/" + OTHER_ID + "/ids")
+                            .with(asUser(OWNER_ID)))
+                    .andExpect(status().isForbidden());
+        }
+
+        @Test
+        void lessonsForGenre_isCatalogAndAllowed() throws Exception {
+            expectAllowed(get("/api/recommendations/lessons/by-genre/3").with(asUser(OTHER_ID)));
+        }
+
+
     }
 
     @Nested

@@ -23,7 +23,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // 1. Selectores ATÓMICOS del AuthStore (evita re-renders y warnings de getSnapshot)
   const currentUserId = useAuthStore((state) => state.currentUserId);
   const token = useAuthStore((state) => state.token);
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const isHydrated = useAuthStore((state) => state.isHydrated);
+
+  // Petición de login en curso (para deshabilitar el formulario)
+  const [isLoading, setIsLoading] = useState(false);
 
   // 2. Buscamos al usuario en la store de entidades usando el ID anterior
   const user = useUserEntitiesStore(state =>
@@ -37,6 +41,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Esperamos a que la AuthStore termine de leer del disco para no parpadear.
     if (!isHydrated) return;
 
+    // Sin sesión (p.ej. tras un logout) el próximo login vuelve a cargar los datos globales.
+    if (!token) initialDataLoadedRef.current = false;
+
     const initializeAuth = async () => {
       try {
         // Sesión persistida (hay token + ID) pero la RAM está vacía tras reiniciar:
@@ -47,7 +54,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               .catch((e) => console.error('[AuthContext] Error restaurando usuario:', e));
         }
 
-        // Cargamos los datos globales UNA sola vez por sesión.
+        // Cargamos los datos globales UNA sola vez por sesión. También cubre el login:
+        // al guardarse el token este efecto vuelve a ejecutarse y los carga.
         if (token && !initialDataLoadedRef.current) {
           initialDataLoadedRef.current = true;
           await loadInitialData();
@@ -60,11 +68,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     initializeAuth();
   }, [isHydrated, token, currentUserId, user]);
 
+  /**
+   * Función de login
+   */
+  const login = async (identifier: string, password: string): Promise<void> => {
+    setIsLoading(true);
+    try {
+      // El estado se actualiza vía useAuthStore y el efecto carga los datos globales
+      await authRepository.login(identifier, password);
+    } catch (error) {
+      console.warn('[AuthContext] Login rejected by backend');
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
       <AuthContext.Provider
           value={{
             user: user || null, // Ahora 'user' viene de las entidades, no del aire
             token: token || null,
+            isAuthenticated,
+            isReady: isHydrated,
+            isLoading,
             login,
             logout,
             loading,
@@ -87,20 +114,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       await genreRepository.getAll();
     } catch (err) {
       console.error('[AuthContext] Error cargando géneros:', err);
-    }
-  };
-
-  /**
-   * Función de login
-   */
-  const login = async (email: string, password: string): Promise<void> => {
-    try {
-      await authRepository.login(email, password);
-      // El estado se actualiza automáticamente vía useAuthStore
-      await loadInitialData();
-    } catch (error) {
-      console.warn('[AuthContext] Login rejected by backend');
-      throw error;
     }
   };
 

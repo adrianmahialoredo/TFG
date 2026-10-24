@@ -1,0 +1,121 @@
+@startuml DD-01
+title DD-01 - Diagrama de despliegue del sistema (producción)
+
+' Despliegue objetivo de la aplicación publicada. Datos tomados del proyecto:
+'   - pom.xml: artefacto TOCO-0.0.1-SNAPSHOT.jar, Java 23, Spring Boot 3.4.
+'   - application.properties: Tomcat embebido en el puerto 8080, base de datos
+'     PostgreSQL "demo" en el 5432, pool HikariCP (máx. 10 conexiones), Spring Mail.
+'   - frontend/package.json y app.json: Expo SDK 57, React Native 0.86.
+'
+' Diferencias con el entorno de desarrollo actual (no se dibujan):
+'   - El backend y PostgreSQL corren en el PC de desarrollo (localhost:5432) y
+'     la app llama por HTTP a la IP de la red local (BASE_URL en apiConfig.ts).
+'   - La app se instala como development build (expo-dev-client) y el JS lo
+'     sirve Metro; en producción va empaquetado en la build de release.
+'   - La redirect_uri de Spotify es http://127.0.0.1:8080/...; en producción
+'     es la URL HTTPS pública del servidor (SPOTIFY_REDIRECT_URI).
+' Al publicar hay que cambiar BASE_URL a la URL HTTPS del servidor y dar a la
+' API un certificado TLS (proxy inverso o server.ssl de Spring Boot).
+' El servidor de base de datos puede compartir máquina con el de aplicaciones.
+skinparam roundcorner 6
+skinparam nodesep 70
+skinparam ranksep 80
+skinparam defaultTextAlignment center
+skinparam node {
+    BackgroundColor<<device>> #F3F8FF
+    BorderColor<<device>> #3D6FA8
+    BackgroundColor<<executionEnvironment>> #FFFFFF
+}
+skinparam cloud {
+    BackgroundColor #F3F3F3
+    BorderColor #888888
+}
+skinparam artifact {
+    BackgroundColor #FFF4E0
+    BorderColor #B07A1F
+}
+skinparam database {
+    BackgroundColor #E6F5E6
+    BorderColor #3C8A3C
+}
+skinparam ArrowColor #555555
+
+' ---------------------------------------------------------------------
+' Cliente
+' ---------------------------------------------------------------------
+
+node "Smartphone" <<device>> as phone {
+    node "Android / iOS" <<os>> as os {
+        node "React Native Runtime\n(Expo SDK 57, Hermes)" <<executionEnvironment>> as rn {
+            artifact "TOCO app\n(build de release .aab / .ipa)" as app
+            component "Zustand\n(stores en RAM)" as zustand
+        }
+        database "AsyncStorage\n(SQLite en Android,\nficheros en iOS)" as async
+        node "Navegador del sistema\n(expo-web-browser)" <<executionEnvironment>> as browser
+        component "Micrófono" <<hardware>> as mic
+    }
+}
+
+app --> zustand
+app --> async : caché en disco
+app --> mic : react-native-audio-api\n(afinador)
+app ..> browser : abre authUrl
+
+' ---------------------------------------------------------------------
+' Servidor de aplicaciones
+' ---------------------------------------------------------------------
+
+node "Application Server" <<device>> as appserver {
+    node "OpenJDK 23 (JRE)" <<executionEnvironment>> as jre {
+        node "Apache Tomcat embebido\n:8080" <<executionEnvironment>> as tomcat {
+            artifact "TOCO-0.0.1-SNAPSHOT.jar\n(Spring Boot 3.4)" as jar
+        }
+    }
+}
+
+' ---------------------------------------------------------------------
+' Servidor de base de datos
+' ---------------------------------------------------------------------
+
+node "Database Server" <<device>> as dbserver {
+    node "PostgreSQL 14+\n:5432" <<executionEnvironment>> as postgres {
+        database "demo" as demo
+    }
+}
+
+' ---------------------------------------------------------------------
+' Servicios externos
+' ---------------------------------------------------------------------
+
+cloud "Spotify Platform" as spotify {
+    component "Spotify Accounts\n(accounts.spotify.com)" as spotify_accounts
+    component "Spotify Web API\n(api.spotify.com)" as spotify_api
+}
+
+cloud "Gmail" as gmail {
+    component "Servidor SMTP\n:587 (STARTTLS)" as smtp
+}
+
+cloud "Cloudinary" as cloudinary {
+    component "Upload API" as cloudinary_api
+}
+
+cloud "YouTube" as youtube {
+    component "Reproductor embebido\n(iframe)" as youtube_player
+}
+
+' ---------------------------------------------------------------------
+' Comunicaciones
+' ---------------------------------------------------------------------
+
+app --> jar : HTTPS / JSON REST\nAuthorization: Bearer <JWT>
+jar --> demo : JDBC / TCP :5432\n(pool HikariCP)
+jar --> spotify_accounts : HTTPS :443\nOAuth2 (intercambio y renovación de tokens)
+jar --> spotify_api : HTTPS :443\nREST (Bearer de Spotify)
+browser --> spotify_accounts : HTTPS :443\nAuthorization Code Flow
+browser --> jar : HTTPS (redirect_uri)\nGET /api/spotify/callback
+jar --> smtp : SMTP\n(código de verificación)
+app --> cloudinary_api : HTTPS :443\n(imagen de perfil)
+app --> youtube_player : HTTPS :443\n(vídeos de lecciones)
+
+@enduml

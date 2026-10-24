@@ -1,15 +1,25 @@
 import { useEffect, useMemo } from 'react';
 import {
+  useAuthStore,
   useSongEntitiesStore,
   useSongLessonEntitiesStore,
   useChordEntitiesStore,
-  useTabSectionEntitiesStore // <-- Nueva despensa
+  useTabSectionEntitiesStore, // <-- Nueva despensa
+  useUserEntitiesStore,
 } from '../stores/entities';
 import { useSongScreenStore } from '../stores/ui/songScreen.store';
 import * as songRepository from '../repositories/song.repository';
 import * as itemRepository from '../repositories/item.repository';
 import { parseLyrics } from '../utils/song.utils';
-import { ChordDTO, SongLessonDTO, TabSectionDTO } from '../types';
+import { ChordDTO, DifficultyLevel, SongLessonDTO, TabSectionDTO } from '../types';
+import { ORIGINAL_LESSON_MIN_LEVEL } from '../constants/Preferences';
+import { useInstrumentsByIds } from './useInstruments';
+
+/** Orden en que se muestran las dificultades en el selector. */
+const DIFFICULTY_ORDER = [DifficultyLevel.EASY, DifficultyLevel.MEDIUM, DifficultyLevel.ORIGINAL];
+
+/** Clave del instrumento de una lección ('' si no tiene). */
+const instrumentKey = (lesson: SongLessonDTO): string => (lesson.instrumentId != null ? String(lesson.instrumentId) : '');
 
 export const useSong = (songId: string) => {
   // 1. Acceso a las Despensas (RAM)
@@ -22,9 +32,16 @@ export const useSong = (songId: string) => {
 
   // 2. Estado de Pantalla
   const isLoading = useSongScreenStore((state) => state.isLoading);
+  const selectedInstrumentId = useSongScreenStore((state) => state.selectedInstrumentId);
   const selectedDifficulty = useSongScreenStore((state) => state.selectedDifficulty);
   const setLoading = useSongScreenStore((state) => state.setLoading);
+  const setInstrument = useSongScreenStore((state) => state.setInstrument);
   const setDifficulty = useSongScreenStore((state) => state.setDifficulty);
+  const resetSelection = useSongScreenStore((state) => state.reset);
+
+  // Usuario actual: sus instrumentos favoritos y su nivel deciden la lección por defecto
+  const currentUserId = useAuthStore((state) => state.currentUserId);
+  const currentUser = useUserEntitiesStore((state) => (currentUserId ? state.users[currentUserId] : undefined));
 
   // 3. Derivados estables: IDs -> DTOs (sin snapshots nuevos en cada render)
   const allLessons = useMemo<SongLessonDTO[]>(() => {
@@ -37,23 +54,74 @@ export const useSong = (songId: string) => {
 
   // 4. Carga inicial
   useEffect(() => {
+    // Cada canción empieza con la selección por defecto
+    resetSelection();
     const loadData = async () => {
       setLoading(true);
-      await songRepository.getById(songId);
-      setLoading(false);
+      try {
+        await songRepository.getById(songId);
+      } catch (error) {
+        console.error('[useSong] Error cargando la canción:', error);
+      } finally {
+        setLoading(false);
+      }
     };
     loadData();
     // Marca el item como accedido para la sección "Recientes" del Home (fire-and-forget)
     if (songId) itemRepository.markAsAccessed(songId);
   }, [songId]);
 
-  // 5. Lógica Derivada: Lección seleccionada
-  const currentDifficulty = selectedDifficulty || allLessons[0]?.difficulty;
+  // 5. Lógica Derivada: Lección seleccionada (instrumento -> dificultad)
+
+  // Instrumentos con lecciones, en el orden de las lecciones
+  const availableInstrumentIds = useMemo(
+    () => [...new Set(allLessons.map(instrumentKey))],
+    [allLessons]
+  );
+  const instrumentEntities = useInstrumentsByIds(availableInstrumentIds.filter(Boolean));
+
+  // Por defecto, el primer instrumento favorito del usuario que tenga lecciones; si no, el de la primera lección
+  const favouriteInstrumentIds = currentUser?.favouriteInstrumentsIds;
+  const currentInstrumentId = useMemo(() => {
+    if (selectedInstrumentId !== null && availableInstrumentIds.includes(selectedInstrumentId)) {
+      return selectedInstrumentId;
+    }
+    const favourite = (favouriteInstrumentIds ?? []).map(String).find((id) => availableInstrumentIds.includes(id));
+    return favourite ?? availableInstrumentIds[0];
+  }, [selectedInstrumentId, availableInstrumentIds, favouriteInstrumentIds]);
+
+  const instrumentLessons = useMemo(
+    () => allLessons.filter((lesson) => instrumentKey(lesson) === currentInstrumentId),
+    [allLessons, currentInstrumentId]
+  );
+
+  const availableDifficulties = useMemo(
+    () => DIFFICULTY_ORDER.filter((difficulty) => instrumentLessons.some((lesson) => lesson.difficulty === difficulty)),
+    [instrumentLessons]
+  );
+
+  // Si la dificultad elegida no existe para este instrumento se usa la de por defecto:
+  // la original para usuarios avanzados (si la hay) y si no, la de la primera lección
+  const isAdvancedUser = (currentUser?.difficultyLevel ?? 0) >= ORIGINAL_LESSON_MIN_LEVEL;
+  const currentDifficulty = useMemo(() => {
+    if (selectedDifficulty && availableDifficulties.includes(selectedDifficulty)) return selectedDifficulty;
+    if (isAdvancedUser && availableDifficulties.includes(DifficultyLevel.ORIGINAL)) return DifficultyLevel.ORIGINAL;
+    return instrumentLessons[0]?.difficulty;
+  }, [selectedDifficulty, availableDifficulties, isAdvancedUser, instrumentLessons]);
 
   const selectedLesson = useMemo<SongLessonDTO | undefined>(() => {
-    if (allLessons.length === 0) return undefined;
-    return allLessons.find((lesson) => lesson.difficulty === currentDifficulty) || allLessons[0];
-  }, [allLessons, currentDifficulty]);
+    if (instrumentLessons.length === 0) return undefined;
+    return instrumentLessons.find((lesson) => lesson.difficulty === currentDifficulty) || instrumentLessons[0];
+  }, [instrumentLessons, currentDifficulty]);
+
+  // Opciones del selector de instrumento (solo tiene sentido con más de uno)
+  const availableInstruments = useMemo(
+    () => availableInstrumentIds.map((id) => ({
+      id,
+      name: instrumentEntities.find((instrument) => String(instrument.id) === id)?.name ?? 'General',
+    })),
+    [availableInstrumentIds, instrumentEntities]
+  );
 
   // 6. Hidratación de Entidades relacionadas (Chords y Tabs)
   const chords = useMemo<ChordDTO[]>(() => {
@@ -65,12 +133,12 @@ export const useSong = (songId: string) => {
   }, [selectedLesson?.chordIds, allChordsMap]);
 
   const tabSections = useMemo<TabSectionDTO[]>(() => {
-    if (!selectedLesson?.tabSectionIds?.length) return [];
+    if (!selectedLesson?.tabSectionsIds?.length) return [];
 
-    return selectedLesson.tabSectionIds
+    return selectedLesson.tabSectionsIds
         .map((id) => allTabsMap[id])
         .filter((tabSection): tabSection is TabSectionDTO => Boolean(tabSection));
-  }, [selectedLesson?.tabSectionIds, allTabsMap]);
+  }, [selectedLesson?.tabSectionsIds, allTabsMap]);
 
   // 7. Parseo de letras
   const parsedLyrics = useMemo(() => {
@@ -84,7 +152,10 @@ export const useSong = (songId: string) => {
     selectedLesson,
     chords,
     tabSections,
-    availableDifficulties: [...new Set(allLessons.map((lesson) => lesson.difficulty))],
+    availableInstruments,
+    selectedInstrumentId: currentInstrumentId,
+    changeInstrument: setInstrument,
+    availableDifficulties,
     changeDifficulty: setDifficulty,
     parsedLyrics,
   };

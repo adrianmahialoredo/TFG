@@ -8,6 +8,7 @@ This script orchestrates the insertion of all entities in the correct order:
 4. InstrumentGenres (relationship between instruments and genres)
 5. Chords (referenced by the song lessons embedded in songs.json)
 6. Songs (their song lessons and tab sections are created in cascade)
+7. Tunes (tunings of the instruments, used by the tuner)
 
 Run this script after ensuring the backend API is running on http://localhost:8080
 """
@@ -29,6 +30,7 @@ SCRIPTS_ORDER = [
     'insert_instrument_genres.py',
     'insert_chords.py',
     'insert_songs.py',
+    'insert_tunes.py',
 ]
 
 def main():

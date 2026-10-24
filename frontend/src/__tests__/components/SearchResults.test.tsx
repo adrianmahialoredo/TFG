@@ -1,0 +1,53 @@
+import { render, screen, fireEvent } from '@testing-library/react-native';
+import SearchResults from '@/components/SearchResults';
+import { ItemType } from '@/types';
+import type { SearchSection } from '@/hooks/useCatalogSearch';
+
+jest.setTimeout(30000);
+
+const mockNavigate = jest.fn();
+jest.mock('@react-navigation/native', () => ({
+  ...jest.requireActual('@react-navigation/native'),
+  useNavigation: () => ({ navigate: mockNavigate }),
+}));
+
+const sections: SearchSection[] = [
+  {
+    field: 'title',
+    items: [
+      { id: 's1', title: 'Wonderwall', imageUrl: 'http://img/s1.png', type: ItemType.SONG, artist: 'Oasis' },
+      { id: 'l1', title: 'Acordes', imageUrl: 'http://img/l1.png', type: ItemType.LESSON },
+    ],
+  },
+  {
+    field: 'genre',
+    items: [{ id: 'g1', title: 'Rock', imageUrl: 'http://img/g1.png', type: ItemType.GENRE }],
+  },
+] as SearchSection[];
+
+describe('SearchResults', () => {
+  beforeEach(() => mockNavigate.mockClear());
+
+  it('sin secciones muestra el texto de vacío', async () => {
+    await render(<SearchResults sections={[]} emptyText="No hay resultados" />);
+    expect(screen.getByText('No hay resultados')).toBeTruthy();
+  });
+
+  it('muestra un título por sección y sus items', async () => {
+    await render(<SearchResults sections={sections} emptyText="No hay resultados" />);
+    expect(screen.queryByText('No hay resultados')).toBeNull();
+    expect(screen.getByText('Por título')).toBeTruthy();
+    expect(screen.getByText('Por género')).toBeTruthy();
+    expect(screen.getByText('Wonderwall\nOasis · Canción')).toBeTruthy();
+    expect(screen.getByText('Acordes\nLección')).toBeTruthy();
+    expect(screen.getByText('Rock\nGénero')).toBeTruthy();
+  });
+
+  it('al pulsar un item navega a su pantalla de detalle', async () => {
+    await render(<SearchResults sections={sections} emptyText="" />);
+    await fireEvent.press(screen.getByText('Wonderwall\nOasis · Canción'));
+    expect(mockNavigate).toHaveBeenCalledWith('SongScreen', { songId: 's1' });
+    await fireEvent.press(screen.getByText('Rock\nGénero'));
+    expect(mockNavigate).toHaveBeenCalledWith('GenreMainScreen', { genreId: 'g1' });
+  });
+});

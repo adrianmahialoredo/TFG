@@ -442,6 +442,40 @@ class SpotifyAuthServiceImplTest {
         }
 
         @Test
+        void testHandleCallback_IllegalArgumentWhileLinking_IsRethrownUnwrapped() {
+            // Arrange
+            String state = stateOf(service.buildAuthorizationUrl(USER_ID));
+            expectTokenExchange("auth-code", TOKEN_JSON);
+            expectMe("access-1", "{\"id\":\"spotify-42\"}");
+            IllegalArgumentException failure = new IllegalArgumentException("invalid entity");
+            when(userRepository.save(appUser)).thenThrow(failure);
+
+            // Act
+            IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+                    () -> service.handleCallback("auth-code", state));
+
+            // Assert: kept as a 400-style IllegalArgumentException instead of a wrapped RuntimeException
+            assertSame(failure, ex);
+            server.verify();
+        }
+
+        @Test
+        void testHandleCallback_ProfileIdNotAString_ThrowsWrappedRuntimeException() {
+            // Arrange
+            String state = stateOf(service.buildAuthorizationUrl(USER_ID));
+            expectTokenExchange("auth-code", TOKEN_JSON);
+            expectMe("access-1", "{\"id\":42}");
+
+            // Act
+            RuntimeException ex = assertThrows(RuntimeException.class, () -> service.handleCallback("auth-code", state));
+
+            // Assert
+            assertEquals("Error processing Spotify authorization", ex.getMessage());
+            assertInstanceOf(ClassCastException.class, ex.getCause());
+            verify(spotifyUserRepository, never()).save(any());
+        }
+
+        @Test
         void testHandleCallback_ProfileEndpointUnauthorized_ThrowsWrappedClientError() {
             // Arrange
             String state = stateOf(service.buildAuthorizationUrl(USER_ID));

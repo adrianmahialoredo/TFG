@@ -203,11 +203,26 @@ entity "chord_notes" as chord_notes <<join>> {
     note : varchar
 }
 
+entity "tunes" as tunes {
+    * id : bigint <<PK>>
+    --
+    * title : varchar <<NN>>
+    * instrument_id : bigint <<FK, NN>>
+}
+
+entity "tune_notes" as tune_notes <<join>> {
+    * tune_id : bigint <<PK, FK>>
+    * string_index : int <<PK>>
+    --
+    * note : varchar <<NN>>
+}
+
 entity "lesson_sections" as lesson_sections {
     * id : bigserial <<PK>>
     --
     title : varchar
     html_content : text
+    video_url : varchar
     * order_index : int
     lesson_id : bigint <<FK>>
 }
@@ -248,6 +263,10 @@ song_chords }o--|| chords
 song_lessons |o--o{ tab_sections : song_lesson_id
 chords ||--o{ chord_notes
 
+' Afinador
+instruments ||--o{ tunes : instrument_id
+tunes ||--|{ tune_notes : tune_id
+
 ' Lecciones
 genres |o--o{ lessons : genre_id
 instrument_genres |o--o{ lessons : instrument_genre_id
@@ -279,6 +298,12 @@ note bottom of lessons
     (genre_id) y/o a un instrumento-género
     (instrument_genre_id), ordenada por
     index_in_instrument_genre.
+end note
+
+note bottom of tune_notes
+    Una nota por cuerda, de la más grave
+    a la más aguda (string_index = 0, 1...).
+    Columna de orden de @OrderColumn.
 end note
 
 note bottom of settings

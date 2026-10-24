@@ -34,6 +34,17 @@ export const addFavoriteInstrument = async (userId: string, instrumentId: string
   return response.data;
 };
 
+/**
+ * Artistas favoritos del usuario: los que más se repiten en las canciones de sus listas,
+ * del más repetido al menos. `totalArtists` va de 1 a 10.
+ */
+export const getTopArtists = async (userId: string, totalArtists: number): Promise<string[]> => {
+  const response = await apiClient.get(API_ENDPOINTS.USERS.TOP_ARTISTS(userId), {
+    params: { total_artists: totalArtists },
+  });
+  return response.data;
+};
+
 export const removeFavoriteInstrument = async (userId: string, instrumentId: string): Promise<UserDTO> => {
   const response = await apiClient.delete(API_ENDPOINTS.USERS.FAVORITE_INSTRUMENT(userId, instrumentId));
   return response.data;

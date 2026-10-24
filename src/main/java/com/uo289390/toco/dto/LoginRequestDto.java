@@ -1,6 +1,6 @@
 package com.uo289390.toco.dto;
 
-import jakarta.validation.constraints.Email;
+import com.fasterxml.jackson.annotation.JsonAlias;
 import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 
@@ -11,9 +11,13 @@ import lombok.Data;
 @Data
 public class LoginRequestDto {
 
-    @Email(message = "Invalid email format")
-    @NotBlank(message = "Email is required")
-    private String email;
+    /**
+     * Email or username of the user. The JSON field {@code email} is still accepted
+     * (alias), so older clients and the data loading scripts keep working.
+     */
+    @JsonAlias("email")
+    @NotBlank(message = "Email or username is required")
+    private String identifier;
 
     /**
      * Only presence is checked: the strength policy belongs to registration

@@ -61,7 +61,7 @@ class LessonServiceTest {
         new EntityResolver(mock(ChordRepository.class), genreRepository, instrumentRepository,
                 instrumentGenreRepository, mock(ItemRepository.class), mock(ItemListRepository.class), lessonRepository,
                 mock(LessonSectionRepository.class), mock(SongRepository.class), mock(SongLessonRepository.class),
-                mock(SpotifyUserRepository.class), mock(TabSectionRepository.class), mock(UserRepository.class));
+                mock(SpotifyUserRepository.class), mock(TabSectionRepository.class), mock(TuneRepository.class), mock(UserRepository.class));
         lessonService = new LessonServiceImpl(lessonRepository, dtoMapper);
 
         lesson = new Lesson();
@@ -89,6 +89,7 @@ class LessonServiceTest {
         LessonSectionDTO dto = new LessonSectionDTO();
         dto.setTitle(title);
         dto.setHtmlContent("<p>" + title + "</p>");
+        dto.setVideoUrl("https://www.youtube.com/watch?v=" + title.replace(" ", ""));
         dto.setOrderIndex(order);
         return dto;
     }
@@ -311,6 +312,7 @@ class LessonServiceTest {
         LessonSection first = saved.getSections().get(0);
         assertEquals("Intro", first.getTitle());
         assertEquals("<p>Intro</p>", first.getHtmlContent());
+        assertEquals("https://www.youtube.com/watch?v=Intro", first.getVideoUrl());
         assertEquals(0, first.getOrderIndex());
         assertSame(saved, first.getLesson());
         assertEquals("Practice", saved.getSections().get(1).getTitle());
@@ -572,7 +574,7 @@ class LessonServiceTest {
     @Test
     void testUpdate_WithSectionsReplacesThem() {
         // Arrange
-        lesson.addSection(new LessonSection(50L, "Old", "old", null, 0));
+        lesson.addSection(new LessonSection(50L, "Old", "old", null, null, 0));
         LessonDTO dto = lessonDto();
         dto.setSections(List.of(sectionDto("New A", 0), sectionDto("New B", 1)));
         when(lessonRepository.findById(1L)).thenReturn(Optional.of(lesson));
@@ -583,13 +585,15 @@ class LessonServiceTest {
 
         // Assert
         assertEquals(List.of("New A", "New B"), lesson.getSections().stream().map(LessonSection::getTitle).toList());
+        assertEquals(List.of("https://www.youtube.com/watch?v=NewA", "https://www.youtube.com/watch?v=NewB"),
+                lesson.getSections().stream().map(LessonSection::getVideoUrl).toList());
         assertTrue(lesson.getSections().stream().allMatch(s -> s.getLesson() == lesson));
     }
 
     @Test
     void testUpdate_EmptySectionsClearsThem() {
         // Arrange
-        lesson.addSection(new LessonSection(50L, "Old", "old", null, 0));
+        lesson.addSection(new LessonSection(50L, "Old", "old", null, null, 0));
         LessonDTO dto = lessonDto();
         dto.setSections(List.of());
         when(lessonRepository.findById(1L)).thenReturn(Optional.of(lesson));
@@ -605,7 +609,7 @@ class LessonServiceTest {
     @Test
     void testUpdate_NullSectionsKeepsExisting() {
         // Arrange
-        lesson.addSection(new LessonSection(50L, "Old", "old", null, 0));
+        lesson.addSection(new LessonSection(50L, "Old", "old", null, null, 0));
         LessonDTO dto = lessonDto();
         dto.setSections(null);
         when(lessonRepository.findById(1L)).thenReturn(Optional.of(lesson));

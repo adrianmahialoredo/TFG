@@ -1,9 +1,10 @@
 import React from "react";
 import {View, Text, TouchableOpacity, ActivityIndicator, useWindowDimensions} from "react-native";
-import {Ionicons} from "@expo/vector-icons";
+import {ChevronLeft, ChevronRight} from "lucide-react-native";
 import RenderHtml from "react-native-render-html";
 import {LessonSectionDTO} from "../types";
 import {COLORS} from "../constants/Theme";
+import YoutubeVideo from "./YoutubeVideo";
 
 const HTML_BASE_STYLE = { color: COLORS.secondary, fontSize: 15, lineHeight: 22 };
 const HTML_TAGS_STYLES = {
@@ -26,8 +27,9 @@ type Props = {
 };
 
 /**
- * Contenido de una lección: navegación ‹ i/n › entre secciones y el HTML de la sección actual
- * (el HTML ya trae su propio título). Recibe directamente lo que devuelve `useLesson`.
+ * Contenido de una lección: navegación ‹ i/n › entre secciones, el vídeo de apoyo de la sección
+ * actual (si tiene) y su HTML (el HTML ya trae su propio título). Recibe directamente lo que
+ * devuelve `useLesson`.
  */
 export default function LessonSectionViewer({
   sections,
@@ -51,7 +53,7 @@ export default function LessonSectionViewer({
               disabled={!hasPrevious}
               style={{ padding: 4, opacity: hasPrevious ? 1 : 0 }}
           >
-            <Ionicons name="chevron-back" size={18} color={COLORS.primary} />
+            <ChevronLeft size={18} color={COLORS.primary} />
           </TouchableOpacity>
           <Text style={{ color: COLORS.secondary, marginHorizontal: 8 }}>
             {sectionIndex + 1}/{sections.length}
@@ -61,10 +63,13 @@ export default function LessonSectionViewer({
               disabled={!hasNext}
               style={{ padding: 4, opacity: hasNext ? 1 : 0 }}
           >
-            <Ionicons name="chevron-forward" size={18} color={COLORS.primary} />
+            <ChevronRight size={18} color={COLORS.primary} />
           </TouchableOpacity>
         </View>
       )}
+
+      {/* Vídeo de apoyo de la sección (YouTube) */}
+      <YoutubeVideo url={currentSection?.videoUrl} />
 
       {/* Contenido de la sección actual */}
       {currentSection?.htmlContent ? (

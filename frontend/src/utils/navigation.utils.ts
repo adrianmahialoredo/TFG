@@ -22,7 +22,8 @@ export const navigateToItem = (
       navigation.navigate('GenreMainScreen', { genreId: item.id });
       break;
     case ItemType.INSTRUMENT_GENRE:
-      navigation.navigate('InstrumentGenreScreen', {
+      // Siempre la misma vista, se abra desde donde se abra (ver InstrumentGenreLessonScreen)
+      navigation.navigate('InstrumentGenreLesson', {
         instrumentGenreId: item.id,
         instrumentName: item.title,
       });

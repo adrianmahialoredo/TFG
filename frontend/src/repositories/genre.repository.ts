@@ -1,9 +1,10 @@
 import * as genreService from '../services/genre.service';
 import * as genreLocal from '../local/genre.local';
+import * as itemRepository from './item.repository';
 import { useGenreEntitiesStore, useItemEntitiesStore } from "../stores/entities";
 import { GenreDTO, ItemType } from '../types';
 import { toItemSummary } from '../utils/mappers.utils';
-import { createEntityCache } from '../utils/entityCache.utils';
+import { createEntityCache, OnFresh } from '../utils/entityCache.utils';
 
 /** Núcleo de caché de la entidad: RAM -> Disco -> API + Stale-While-Revalidate. */
 const cache = createEntityCache<GenreDTO>({
@@ -77,3 +78,12 @@ export const getAll = async (): Promise<GenreDTO[]> => {
     const ram = useGenreEntitiesStore.getState().genres;
     return ids.map((id) => ram[id]).filter((e): e is GenreDTO => !!e);
 };
+
+// --- RECOMENDACIONES (el backend devuelve IDs; las tarjetas se pintan con el catálogo de items) ---
+
+/**
+ * Géneros más usados en las listas del usuario, completados con sus favoritos, que no están ya en
+ * ellas (tarjeta "Explora este género" del Home). Personalizado: el índice se borra en el logout con el resto de índices de items.
+ */
+export const getMostUsedInItemLists = (userId: string, onFresh?: OnFresh): Promise<string[]> =>
+    itemRepository.getFeed('genres_most_used_in_item_lists', () => genreService.getMostUsedInItemListsIdsByUser(userId), onFresh);

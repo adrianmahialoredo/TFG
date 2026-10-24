@@ -111,6 +111,33 @@ public class GenreRecommendationServiceImpl implements GenreRecommendationServic
         return genres;
     }
 
+    @Override
+    public SequencedSet<Genre> findMostUsedInItemListsForUser(Long id, int limit) {
+        User user = resolveUser(id);
+        SequencedSet<Genre> genres = new LinkedHashSet<>();
+
+        if (limit <= 0) {
+            return genres;
+        }
+
+        // Se excluyen los generos que el usuario ya tiene guardados en sus listas
+        Set<Long> excluding = user.getIdsFromItemListsOfType(Genre.class);
+
+        // Nivel 1: los generos mas usados en las listas
+        List<Genre> fromItemLists = user.getTopGenresFromItemLists(Integer.MAX_VALUE).stream()
+                .filter(genre -> !excluding.contains(genre.getId()))
+                .toList();
+        addCandidates(genres, fromItemLists, limit);
+
+        // Nivel 2 (respaldo, p.ej. sin listas): los generos favoritos del usuario
+        List<Genre> favourites = user.getPreferences().getFavoriteGenres().stream()
+                .filter(genre -> !excluding.contains(genre.getId()))
+                .toList();
+        addCandidates(genres, favourites, limit);
+
+        return genres;
+    }
+
     /**
      * Adds each candidate (in order) until the set reaches {@code upTo}.
      * Genres already recommended are ignored by the set itself.

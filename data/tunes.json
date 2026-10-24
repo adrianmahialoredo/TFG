@@ -1,0 +1,11 @@
+[
+  { "id": 1, "title": "Estándar", "instrumentId": 1, "notes": ["E2", "A2", "D3", "G3", "B3", "E4"] },
+  { "id": 2, "title": "Drop D", "instrumentId": 1, "notes": ["D2", "A2", "D3", "G3", "B3", "E4"] },
+  { "id": 3, "title": "Medio tono abajo", "instrumentId": 1, "notes": ["D#2", "G#2", "C#3", "F#3", "A#3", "D#4"] },
+  { "id": 4, "title": "Open G", "instrumentId": 1, "notes": ["D2", "G2", "D3", "G3", "B3", "D4"] },
+  { "id": 5, "title": "DADGAD", "instrumentId": 1, "notes": ["D2", "A2", "D3", "G3", "A3", "D4"] },
+  { "id": 6, "title": "Estándar", "instrumentId": 3, "notes": ["E1", "A1", "D2", "G2"] },
+  { "id": 7, "title": "Drop D", "instrumentId": 3, "notes": ["D1", "A1", "D2", "G2"] },
+  { "id": 8, "title": "5 cuerdas", "instrumentId": 3, "notes": ["B0", "E1", "A1", "D2", "G2"] },
+  { "id": 9, "title": "Estándar", "instrumentId": 2, "notes": ["G4", "C4", "E4", "A4"] }
+]

@@ -79,6 +79,7 @@ class UserServiceTest {
                 mock(InstrumentGenreRepository.class), mock(ItemRepository.class), mock(ItemListRepository.class),
                 mock(LessonRepository.class), mock(LessonSectionRepository.class), mock(SongRepository.class),
                 mock(SongLessonRepository.class), mock(SpotifyUserRepository.class), mock(TabSectionRepository.class),
+                mock(TuneRepository.class),
                 userRepository);
         userService = new UserServiceImpl(userRepository, passwordEncoder, jwtUtil, dtoMapper, entityMapper);
 
@@ -145,7 +146,7 @@ class UserServiceTest {
     void testRegister_Success() {
         // Arrange
         UserDto dto = userDto();
-        when(userRepository.findByEmail("jane@example.com")).thenReturn(Optional.empty());
+        when(userRepository.existsByEmailIgnoreCase("jane@example.com")).thenReturn(false);
         when(userRepository.findByUsername("jane")).thenReturn(Optional.empty());
         stubFavouritesResolution();
         when(passwordEncoder.encode("Secret1!")).thenReturn("$2a$encoded");
@@ -181,7 +182,7 @@ class UserServiceTest {
         // Arrange
         BCryptPasswordEncoder realEncoder = new BCryptPasswordEncoder();
         userService = new UserServiceImpl(userRepository, realEncoder, jwtUtil, dtoMapper, entityMapper);
-        when(userRepository.findByEmail(anyString())).thenReturn(Optional.empty());
+        when(userRepository.existsByEmailIgnoreCase(anyString())).thenReturn(false);
         when(userRepository.findByUsername(anyString())).thenReturn(Optional.empty());
         stubFavouritesResolution();
         when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
@@ -198,7 +199,7 @@ class UserServiceTest {
     @Test
     void testRegister_DuplicateEmailThrows() {
         // Arrange
-        when(userRepository.findByEmail("jane@example.com")).thenReturn(Optional.of(user));
+        when(userRepository.existsByEmailIgnoreCase("jane@example.com")).thenReturn(true);
 
         // Act & Assert
         IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> userService.register(userDto()));
@@ -209,9 +210,22 @@ class UserServiceTest {
     }
 
     @Test
+    void testRegister_DuplicateEmailWithOtherCaseThrows() {
+        // Arrange
+        UserDto dto = userDto();
+        dto.setEmail(" Jane@Example.COM ");
+        when(userRepository.existsByEmailIgnoreCase("Jane@Example.COM")).thenReturn(true);
+
+        // Act & Assert
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> userService.register(dto));
+        assertEquals("Email already registered", ex.getMessage());
+        verify(userRepository, never()).save(any());
+    }
+
+    @Test
     void testRegister_DuplicateUsernameThrows() {
         // Arrange
-        when(userRepository.findByEmail("jane@example.com")).thenReturn(Optional.empty());
+        when(userRepository.existsByEmailIgnoreCase("jane@example.com")).thenReturn(false);
         when(userRepository.findByUsername("jane")).thenReturn(Optional.of(user));
 
         // Act & Assert
@@ -223,7 +237,7 @@ class UserServiceTest {
     @Test
     void testRegister_UnknownGenreThrows() {
         // Arrange
-        when(userRepository.findByEmail(anyString())).thenReturn(Optional.empty());
+        when(userRepository.existsByEmailIgnoreCase(anyString())).thenReturn(false);
         when(userRepository.findByUsername(anyString())).thenReturn(Optional.empty());
         when(genreRepository.findById(1L)).thenReturn(Optional.empty());
 
@@ -235,7 +249,7 @@ class UserServiceTest {
     @Test
     void testRegister_UnknownInstrumentThrows() {
         // Arrange
-        when(userRepository.findByEmail(anyString())).thenReturn(Optional.empty());
+        when(userRepository.existsByEmailIgnoreCase(anyString())).thenReturn(false);
         when(userRepository.findByUsername(anyString())).thenReturn(Optional.empty());
         when(genreRepository.findById(1L)).thenReturn(Optional.of(rock));
         when(genreRepository.findById(2L)).thenReturn(Optional.of(jazz));
@@ -249,7 +263,7 @@ class UserServiceTest {
     @Test
     void testRegister_RepositoryFailureIsRethrown() {
         // Arrange
-        when(userRepository.findByEmail(anyString())).thenReturn(Optional.empty());
+        when(userRepository.existsByEmailIgnoreCase(anyString())).thenReturn(false);
         when(userRepository.findByUsername(anyString())).thenReturn(Optional.empty());
         stubFavouritesResolution();
         when(passwordEncoder.encode(anyString())).thenReturn("hash");
@@ -282,13 +296,70 @@ class UserServiceTest {
     }
 
     @Test
-    void testLogin_UnknownEmailThrowsBadCredentials() {
+    void testLogin_UnknownEmailOrUsernameThrowsBadCredentials() {
         // Arrange
         when(userRepository.findByEmail("nobody@example.com")).thenReturn(Optional.empty());
+        when(userRepository.findByUsername("nobody@example.com")).thenReturn(Optional.empty());
 
         // Act & Assert
-        assertThrows(BadCredentialsException.class, () -> userService.login("nobody@example.com", "x"));
+        BadCredentialsException ex = assertThrows(BadCredentialsException.class,
+                () -> userService.login("nobody@example.com", "x"));
+        assertEquals("Invalid credentials", ex.getMessage());
         verifyNoInteractions(passwordEncoder, jwtUtil);
+    }
+
+    @Test
+    void testLogin_WithUsername() {
+        // Arrange
+        when(userRepository.findByEmail("john")).thenReturn(Optional.empty());
+        when(userRepository.findByUsername("john")).thenReturn(Optional.of(user));
+        when(passwordEncoder.matches("Secret1!", "$2a$hashed")).thenReturn(true);
+        when(jwtUtil.generateToken(100L, Role.USER)).thenReturn("jwt-token");
+
+        // Act
+        LoginResponse response = userService.login("john", "Secret1!");
+
+        // Assert
+        assertEquals("jwt-token", response.getToken());
+        assertEquals(100L, response.getUser().getId());
+    }
+
+    @Test
+    void testLogin_EmailTakesPrecedenceOverUsername() {
+        // Arrange: the identifier is one user's email; the username lookup is never needed
+        when(userRepository.findByEmail("john@example.com")).thenReturn(Optional.of(user));
+        when(passwordEncoder.matches("Secret1!", "$2a$hashed")).thenReturn(true);
+        when(jwtUtil.generateToken(100L, Role.USER)).thenReturn("jwt-token");
+
+        // Act
+        userService.login("john@example.com", "Secret1!");
+
+        // Assert
+        verify(userRepository, never()).findByUsername(anyString());
+    }
+
+    @Test
+    void testLogin_TrimsTheIdentifier() {
+        // Arrange
+        when(userRepository.findByEmail("john")).thenReturn(Optional.empty());
+        when(userRepository.findByUsername("john")).thenReturn(Optional.of(user));
+        when(passwordEncoder.matches("Secret1!", "$2a$hashed")).thenReturn(true);
+        when(jwtUtil.generateToken(100L, Role.USER)).thenReturn("jwt-token");
+
+        // Act & Assert
+        assertEquals("jwt-token", userService.login("  john ", "Secret1!").getToken());
+    }
+
+    @Test
+    void testLogin_WrongPasswordWithUsernameThrowsBadCredentials() {
+        // Arrange
+        when(userRepository.findByEmail("john")).thenReturn(Optional.empty());
+        when(userRepository.findByUsername("john")).thenReturn(Optional.of(user));
+        when(passwordEncoder.matches("wrong", "$2a$hashed")).thenReturn(false);
+
+        // Act & Assert
+        assertThrows(BadCredentialsException.class, () -> userService.login("john", "wrong"));
+        verifyNoInteractions(jwtUtil);
     }
 
     @Test
@@ -300,7 +371,8 @@ class UserServiceTest {
         // Act & Assert
         BadCredentialsException ex = assertThrows(BadCredentialsException.class,
                 () -> userService.login("john@example.com", "wrong"));
-        assertEquals("Password does not match", ex.getMessage());
+        // Same message as an unknown user: the response does not reveal which accounts exist
+        assertEquals("Invalid credentials", ex.getMessage());
         verifyNoInteractions(jwtUtil);
     }
 
@@ -797,6 +869,76 @@ class UserServiceTest {
     }
 
     @Test
+    void testUpdate_SetsTheDifficultyLevel() {
+        // Arrange
+        UserDto dto = userDto();
+        dto.setDifficultyLevel(3);
+        when(userRepository.findById(100L)).thenReturn(Optional.of(user));
+        stubFavouritesResolution();
+        when(userRepository.save(user)).thenReturn(user);
+
+        // Act
+        Optional<UserDto> result = userService.update(100L, dto);
+
+        // Assert
+        assertEquals(3, user.getDifficultyLevel());
+        assertEquals(Integer.valueOf(3), result.orElseThrow().getDifficultyLevel());
+    }
+
+    @Test
+    void testUpdate_DifficultyLevelBounds_AreAccepted() {
+        // Arrange
+        when(userRepository.findById(100L)).thenReturn(Optional.of(user));
+        stubFavouritesResolution();
+        when(userRepository.save(user)).thenReturn(user);
+        UserDto dto = userDto();
+
+        // Act & Assert
+        dto.setDifficultyLevel(0);
+        userService.update(100L, dto);
+        assertEquals(0, user.getDifficultyLevel());
+
+        dto.setDifficultyLevel(5);
+        userService.update(100L, dto);
+        assertEquals(5, user.getDifficultyLevel());
+    }
+
+    @Test
+    void testUpdate_NullDifficultyLevel_KeepsTheCurrentOne() {
+        // Arrange: a client that does not send the level must not reset it
+        user.setDifficultyLevel(4);
+        when(userRepository.findById(100L)).thenReturn(Optional.of(user));
+        stubFavouritesResolution();
+        when(userRepository.save(user)).thenReturn(user);
+
+        // Act
+        userService.update(100L, userDto());
+
+        // Assert
+        assertEquals(4, user.getDifficultyLevel());
+    }
+
+    @Test
+    void testUpdate_DifficultyLevelOutOfRange_ThrowsAndDoesNotSave() {
+        // Arrange
+        user.setDifficultyLevel(2);
+        when(userRepository.findById(100L)).thenReturn(Optional.of(user));
+        stubFavouritesResolution();
+
+        for (int invalid : new int[] {-1, 6}) {
+            UserDto dto = userDto();
+            dto.setDifficultyLevel(invalid);
+
+            // Act & Assert
+            IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+                    () -> userService.update(100L, dto));
+            assertEquals("Difficulty level must be between 0 and 5", ex.getMessage());
+        }
+        assertEquals(2, user.getDifficultyLevel());
+        verify(userRepository, never()).save(any());
+    }
+
+    @Test
     void testUpdate_IgnoresTheEmail() {
         // Arrange: the email was verified at registration, so a new one in the DTO is not applied
         String verifiedEmail = user.getEmail();
@@ -1042,5 +1184,35 @@ class UserServiceTest {
 
         // Assert: the user's preferences are untouched
         assertEquals(2, user.getPreferences().getFavoriteGenres().size());
+    }
+
+    // -------- Top artists --------
+
+    @Test
+    void testFindTopArtistsForUser_DelegatesToTheUsersLists() {
+        // Arrange
+        User owner = mock(User.class);
+        when(owner.getTopArtistsFromItemLists(3)).thenReturn(List.of("Queen", "Bowie"));
+        when(userRepository.findById(100L)).thenReturn(Optional.of(owner));
+
+        // Act & Assert
+        assertEquals(Optional.of(List.of("Queen", "Bowie")), userService.findTopArtistsForUser(100L, 3));
+    }
+
+    @Test
+    void testFindTopArtistsForUser_MissingUserReturnsEmpty() {
+        // Arrange
+        when(userRepository.findById(999L)).thenReturn(Optional.empty());
+
+        // Act & Assert
+        assertTrue(userService.findTopArtistsForUser(999L, 5).isEmpty());
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(ints = {0, -1, 11})
+    void testFindTopArtistsForUser_TotalOutOfRangeIsRejected(int total) {
+        // Act & Assert
+        assertThrows(IllegalArgumentException.class, () -> userService.findTopArtistsForUser(100L, total));
+        verify(userRepository, never()).findById(anyLong());
     }
 }

@@ -3,6 +3,8 @@ package com.uo289390.toco.dto;
 import com.uo289390.toco.model.Item;
 import lombok.Data;
 
+import java.util.List;
+
 /**
  * Lightweight, read-only view of any item (song, lesson, genre or instrument-genre).
  *
@@ -50,4 +52,19 @@ public class ItemSummaryDTO {
      * Artist of the song, shown as the card subtitle. Only set for songs; {@code null} otherwise.
      */
     private String artist;
+
+    /**
+     * IDs of the genres of the item (songs, lessons and instrument-genres), used by the frontend search.
+     */
+    private List<Long> genreIds = List.of();
+
+    /**
+     * IDs of the instruments of the item (songs, lessons and instrument-genres), used by the frontend search.
+     */
+    private List<Long> instrumentIds = List.of();
+
+    /**
+     * Decade of the song (e.g. "1990s"), used by the frontend search. Only set for songs; {@code null} otherwise.
+     */
+    private String decade;
 }

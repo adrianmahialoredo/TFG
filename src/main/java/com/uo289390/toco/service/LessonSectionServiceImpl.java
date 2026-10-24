@@ -97,6 +97,7 @@ public class LessonSectionServiceImpl implements LessonSectionService {
     private void updateEntity(LessonSection section, LessonSectionDTO dto) {
         section.setTitle(dto.getTitle());
         section.setHtmlContent(dto.getHtmlContent());
+        section.setVideoUrl(dto.getVideoUrl());
         section.setOrderIndex(dto.getOrderIndex());
 
         if (!section.getLesson().getId().equals(dto.getLessonId())) {

@@ -1,0 +1,62 @@
+@startuml DS-CU-10
+title DS-CU-10 - Vincular cuenta de Spotify
+
+' Diagrama de secuencia de análisis (patrón Boundary-Control-Entity)
+autonumber
+hide footbox
+skinparam sequenceMessageAlign center
+skinparam roundcorner 6
+
+actor "Músico" as musico
+boundary "PerfilScreen" as perfil
+boundary "NavegadorExterno" as navegador
+control "GestorSpotifyAuth" as gestor
+entity "Usuario" as usuario
+entity "SpotifyUserCredencial" as credencial
+participant "SpotifyAPI\n<<sistema externo>>" as spotify
+
+musico -> perfil : iniciarVinculacion()
+perfil -> gestor : solicitarURLAutorizacion(jwt)
+note right of gestor : GET /api/spotify/login
+gestor -> gestor : generarState(userId)
+note right of gestor : Aleatorio, de un solo uso,\nválido 10 minutos
+gestor --> perfil : urlAutorizacion
+perfil -> navegador : abrirURLSpotify(url)
+navegador -> spotify : solicitarAutorizacion(clientId, scopes, state)
+spotify --> musico : pedirLoginYPermisos()
+musico -> spotify : concederPermisos()
+
+alt 5a. El músico rechaza los permisos
+    spotify -> navegador : redirigirSinCodigo()
+    navegador --> musico : vinculaciónNoRealizada
+else Permisos concedidos
+    spotify -> gestor : callback(code, state)
+    note right of gestor : GET /api/spotify/callback
+    gestor -> gestor : validarState(state)
+    gestor -> spotify : intercambiarTokens(code, clientSecret)
+    spotify --> gestor : accessToken, refreshToken
+    gestor -> spotify : obtenerPerfil(accessToken)
+    spotify --> gestor : spotifyUserId
+
+    opt 7a. La cuenta de Spotify ya pertenecía a otro usuario
+        gestor -> usuario : desvincular(usuarioAnterior)
+    end
+
+    gestor -> credencial : guardarTokens(spotifyUserId, accessToken, refreshToken)
+    gestor -> usuario : asociarCuenta(credencial)
+    gestor --> navegador : páginaHTMLExito()
+    navegador --> musico : "Vuelve a la app"
+    musico -> perfil : volverALaApp()
+    perfil --> musico : activarCarruselSpotify()
+end
+
+== 9a. Más tarde: el token de acceso ha caducado (1 h) ==
+
+gestor -> credencial : obtenerTokens(userId)
+credencial --> gestor : accessToken caducado
+gestor -> spotify : renovarToken(refreshToken)
+spotify --> gestor : nuevo accessToken
+gestor -> credencial : actualizarToken()
+note right of gestor : Renovación silenciosa\n(Propagation.REQUIRES_NEW)
+
+@enduml

@@ -7,5 +7,7 @@ export interface LessonSectionDTO {
   lessonId: string;
   title: string;
   htmlContent: string;
+  /** Vídeo de apoyo de la sección (enlace de YouTube), opcional */
+  videoUrl?: string;
   orderIndex: number;
 }

@@ -38,7 +38,20 @@ public final class RecommendationConstants {
     public static final int NUMBER_OF_ITEM_LISTS_INSTRUMENTS_USED_IN_BY_USER_LESSON_RECOMMENDATION = 2;
 
     public static final int HOME_RECOMMENDED_SONGS_COUNT = 6;
+
+    // Favourite artists (the most repeated artists of the songs in the user's lists) and their songs
+    public static final int DEFAULT_TOP_ARTISTS_COUNT = 5;
+    public static final int MAX_TOP_ARTISTS_COUNT = 10;
+    public static final int MAX_ARTISTS_IN_SONGS_BY_ARTISTS = 10;
+    public static final int DEFAULT_SONGS_BY_ARTISTS_COUNT = 10;
+    public static final int MAX_SONGS_BY_ARTISTS_COUNT = 50;
     public static final int HOME_RECOMMENDED_LESSONS_COUNT = 3;
     public static final int HOME_RECOMMENDED_INSTRUMENT_GENRES_COUNT = 2;
+
+    /** Candidates for the Home "Prueba esta combinación" card (the app shows the first one not already on the Home). */
+    public static final int FAVOURITE_INSTRUMENT_GENRE_COMBINATIONS_COUNT = 5;
+
+    /** Candidates for the Home "Explora este género" card (the app shows the first one not already on the Home). */
+    public static final int MOST_USED_GENRES_IN_ITEM_LISTS_COUNT = 5;
     public static final int HOME_RECOMMENDED_GENRES_COUNT = 1;
 }

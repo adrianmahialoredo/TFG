@@ -1,5 +1,6 @@
 import React, { useState } from "react";
-import { ScrollView, View, Text, TouchableOpacity, ActivityIndicator, TextInput, Pressable } from "react-native";
+import { View, Text, TouchableOpacity, ActivityIndicator, TextInput, Pressable } from "react-native";
+import FadeScrollView from "../components/FadeScrollView";
 import { Mail, UserRound, Lock, Speech } from "lucide-react-native";
 import { useNavigation } from "@react-navigation/native";
 
@@ -66,12 +67,12 @@ export default function RegisterScreen() {
 
   return (
       <AppLayout backgroundColor="bg-primary">
-        <View className="flex-row items-center my-8 gap-2">
+        <View className="flex-row items-center mt-3 mb-8 gap-2">
           <BackButton onPress={() => navigation.goBack()} size={30} color={COLORS.secondary} />
           <Text className="text-3xl font-bold text-secondary">Registrarse</Text>
         </View>
 
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 120 }}>
+        <FadeScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 120 }}>
 
           <RegisterInput
               placeholder="Nombre completo"
@@ -159,7 +160,7 @@ export default function RegisterScreen() {
                 </View>
             )}
           </Pressable>
-        </ScrollView>
+        </FadeScrollView>
 
         {verifying && (
             <EmailVerificationModal

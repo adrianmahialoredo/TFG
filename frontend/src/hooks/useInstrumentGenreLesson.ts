@@ -3,7 +3,7 @@ import { useInstrumentGenre } from './useInstrumentGenre';
 
 export const useInstrumentGenreLesson = (instrumentGenreId: string) => {
     // Aprovechamos el hook que ya teníamos para obtener las lecciones de la RAM
-    const { instrumentGenre, lessons } = useInstrumentGenre(instrumentGenreId);
+    const { instrumentGenre, lessons, loading } = useInstrumentGenre(instrumentGenreId);
 
     // Estado para la lección activa
     const [activeLessonId, setActiveLessonId] = useState<string | null>(
@@ -18,6 +18,7 @@ export const useInstrumentGenreLesson = (instrumentGenreId: string) => {
         instrumentGenre,
         lessons,
         activeLesson,
-        setActiveLessonId
+        setActiveLessonId,
+        loading
     };
 };

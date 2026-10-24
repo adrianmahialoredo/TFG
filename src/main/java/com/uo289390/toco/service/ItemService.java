@@ -24,6 +24,4 @@ public interface ItemService {
     List<ItemSummaryDTO> findByIds(List<Long> ids);
 
     List<ItemSummaryDTO> search(String query);
-
-    List<ItemSummaryDTO> findRecommendedForItemList(Long itemListId);
 }

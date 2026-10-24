@@ -70,6 +70,27 @@ export const getNewByGenreId = async (genreId: string): Promise<SongDTO[]> => {
   return response.data;
 };
 
+/**
+ * Parámetros de los endpoints por artistas: los artistas van numerados (`artist1`, `artist2`…) en
+ * vez de en un array, que axios serializaría como `artists[]=` y Spring no enlazaría.
+ */
+export const toArtistParams = (artists: string[], limit: number): Record<string, string | number> => ({
+  limit,
+  ...Object.fromEntries(artists.map((artist, index) => [`artist${index + 1}`, artist])),
+});
+
+/** Canciones nuevas de esos artistas, mezclados por turnos (el primero, el más importante). */
+export const getNewByArtists = async (artists: string[], limit: number): Promise<SongDTO[]> => {
+  const response = await apiClient.get(API_ENDPOINTS.SONGS.NEW_BY_ARTISTS, { params: toArtistParams(artists, limit) });
+  return response.data;
+};
+
+/** Canciones populares de esos artistas, mezclados por turnos (el primero, el más importante). */
+export const getPopularByArtists = async (artists: string[], limit: number): Promise<SongDTO[]> => {
+  const response = await apiClient.get(API_ENDPOINTS.SONGS.POPULAR_BY_ARTISTS, { params: toArtistParams(artists, limit) });
+  return response.data;
+};
+
 export const getRecommendedByUser = async (userId: string, limit: number): Promise<SongDTO[]> => {
   const response = await apiClient.get(withLimit(API_ENDPOINTS.SONGS.RECOMMENDED_BY_USER(userId), limit));
   return response.data;

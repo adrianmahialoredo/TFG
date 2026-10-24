@@ -63,5 +63,17 @@ export const useItemListDetail = (itemListId: string) => {
         return updated;
     };
 
-    return { list: list || null, items, loading, error, refresh: load, updateList, updateImage };
+    /** Quita un item de la lista. La Store se actualiza con la respuesta del backend. */
+    const removeItem = async (itemId: string) => {
+        const updated = await itemListRepository.removeItemFromList(itemListId, itemId);
+        if (!updated) {
+            throw new Error('No se pudo quitar el item de la lista');
+        }
+        return updated;
+    };
+
+    /** Elimina la lista. Devuelve true si se eliminó. */
+    const deleteList = useCallback(() => itemListRepository.deleteItemList(itemListId), [itemListId]);
+
+    return { list: list || null, items, loading, error, refresh: load, updateList, updateImage, removeItem, deleteList };
 };

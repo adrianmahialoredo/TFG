@@ -46,11 +46,11 @@ exception/GlobalExceptionHandler  (excepción -> respuesta HTTP)
 ### Jerarquía de `Item`
 
 - `Item` es la base abstracta de `Song`, `Lesson`, `Genre` e `InstrumentGenre` (`@Inheritance(JOINED)`). Comparten espacio de IDs.
-- Los IDs de `Item`, `Instrument`, `Chord` y `SongLesson` se **asignan manualmente** (vienen en los JSON de `data/`); no hay `@GeneratedValue`. Sí lo tienen `User`, `ItemList`, `LessonSection` y `TabSection`.
+- Los IDs de `Item`, `Instrument`, `Chord`, `Tune` y `SongLesson` se **asignan manualmente** (vienen en los JSON de `data/`); no hay `@GeneratedValue`. Sí lo tienen `User`, `ItemList`, `LessonSection` y `TabSection`.
 
 ### Igualdad de entidades
 
-- `Item`, `Instrument`, `Chord` y `SongLesson` implementan `equals`/`hashCode` **por id** (con `instanceof` para que funcione con proxies de Hibernate).
+- `Item`, `Instrument`, `Chord`, `Tune` y `SongLesson` implementan `equals`/`hashCode` **por id** (con `instanceof` para que funcione con proxies de Hibernate).
 - Motivo: las colecciones del dominio son `Set`; sin esto un `Set` podría contener dos instancias de la misma canción.
 - Requisito: el id debe estar asignado **antes** de meter la entidad en un `Set` (se cumple porque los IDs son manuales).
 - Las entidades que se usan en rankings implementan `Identifiable<Long>`.
@@ -66,6 +66,7 @@ Regla: **en el dominio musical nunca hay entidades repetidas**, así que las col
 | `InstrumentGenre.lessons` | `Set` + `@OrderBy("indexInInstrumentGenre ASC")` | Lecciones ordenadas dentro del instrument-genre |
 | `ItemList.items` | `List` **sin duplicados** | Conserva el orden en que el usuario añadió los items. `addItem` ignora repetidos y `setItems` deduplica |
 | `Lesson.sections`, `SongLesson.tabSections`, `Chord.notes` | `List` | Contenido ordenado |
+| `Tune.notes` | `List` + `@OrderColumn("string_index")` | Una nota por cuerda: el orden es el de las cuerdas y puede haber notas repetidas |
 | `User.itemLists` | `List` | Fuera del dominio musical |
 
 En el código de servicios se aplica lo mismo: resultados como `Set`/`LinkedHashSet` (o `SequencedSet` si el orden importa). Excepciones deliberadas: los **rankings** (`getTopXFrom…`) son `List` porque están ordenados y se accede por posición, la lista interna de `getTopN` es `List` porque cuenta repeticiones, y las copias para `Collections.shuffle` necesitan `List`.
@@ -159,7 +160,7 @@ Ejemplos de la cadena completa:
 | `findBySongId` | `findForSong` | `getForSong` | `GET /api/song-lessons/by-song/{songId}` |
 | (navegación `user.getItemLists()`) | `findIdsForUser` | `getIdsForUser` | `GET /api/item-lists/by-user/{userId}/ids` |
 
-Servicios de recomendación: `findForItemList(id, limit)`; `ItemService.findRecommendedForItemList` / `findRecommendedForUser`.
+Servicios de recomendación: `findForItemList(id, limit)`; `ItemRecommendationService.findForItemList(id)` / `findForUser(id)`, que combinan los anteriores.
 
 Métodos privados de ayuda en los `Impl`: `updateFromDto`, `updateEntity`, `addCandidate(s)`… (no deben coincidir con los nombres públicos).
 
@@ -224,6 +225,7 @@ Son carruseles a los que se espera que el usuario entre en cuanto los ve, así q
 | Recomendados para añadir a una lista | `GET /api/recommendations/items/by-item-list/{id}` | Si el usuario añade un item, se espera que después vaya a él |
 | Canciones de un género: populares, clásicas y nuevas | `GET /api/songs/by-genre/{genreId}/popular\|classic\|new` | Al entrar en un género y en "Canciones", lo normal es abrir alguna |
 | Pantalla de canciones: "Populares en <género favorito>" | `GET /api/songs/by-genre/{genreId}/popular` | Mismo caso que el anterior, con uno de los géneros favoritos del usuario |
+| Home: "Novedades de tus artistas" y "Populares de tus artistas" (y sus tarjetas) | `GET /api/songs/by-artists/new`, `GET /api/songs/by-artists/popular` | Canciones de los artistas que el usuario más escucha: alta probabilidad de apertura |
 
 Cualquier carrusel nuevo sigue la regla por defecto (IDs) salvo que se añada explícitamente a esta tabla.
 
@@ -243,7 +245,7 @@ Detalle del lado cliente en [`frontend/bible.md`](frontend/bible.md), sección *
 - Los controladores siempre devuelven `ResponseEntity`.
 - `200 OK`; `201 Created` al crear (`ResponseEntity.status(HttpStatus.CREATED).body(...)`); `204 No Content` al borrar; `404 Not Found` con `ResponseEntity.of(optional)` o con `delete(id) == false`.
 - `GlobalExceptionHandler`: `IllegalArgumentException` → 400, `BadCredentialsException` → 401, `EntityNotFoundException` → 404, errores de validación → 400 con el detalle por campo.
-- `@Valid` solo está activo donde ya se usaba (instrument-genres y auth). Activarlo en el resto requiere revisar antes las restricciones de los DTOs frente a los datos de `data/`.
+- Validación de los bodies: los `create` usan `@Validated(OnCreate.class)` y los `update` `@Valid`, en todos los recursos. En auth, `verification-code` y `login` usan `@Valid` y `register` `@Validated(OnCreate.class)`. Una restricción nueva en un DTO hay que comprobarla antes contra los datos de `data/`, porque los scripts de carga pasan por los mismos endpoints.
 
 ### Estructura de un controlador
 
@@ -284,6 +286,10 @@ Cada método lleva Javadoc con `@param` y `@return` indicando los códigos de re
 - Guardas: nunca `getFirst()` sobre listas posiblemente vacías, nunca índices fuera de rango (for-each sobre los rankings), nunca `resolvePageable(0)`, ni consultas con colecciones vacías cuando se pueden evitar.
 - La aleatoriedad (`Collections.shuffle` sobre las preferencias del usuario) forma parte del algoritmo y se conserva.
 - Parámetros en `RecommendationConstants`.
+- Dónde se usa cada una:
+  - `GET /api/recommendations/items/by-item-list/{id}`: "Para ti" en la pantalla de añadir a una lista (10 canciones, 1 género, 3 instrument-genres y 6 lecciones). La app muestra solo 5 a la vez (`VISIBLE_RECOMMENDATIONS` en `useAddItemScreen`): al añadir una, cuando termina su tic entra la siguiente que estaba en espera. Para que esas 5 mezclen tipos, `ItemRecommendationServiceImpl.findForItemList` baraja el resultado (`Collections.shuffle`, como mucho 20 entidades, antes de mapearlas): es la excepción al "orden de prioridad", y cada petición da un orden distinto. La búsqueda no tiene este límite.
+  - `GET /api/recommendations/items/by-user/{id}`: sección "Recomendaciones" del Home (6, 1, 2 y 3).
+  - `GET /api/recommendations/songs/by-user/{id}`: sección "Según tus gustos" de la pantalla de canciones.
 
 ---
 
@@ -293,12 +299,13 @@ Cada método lleva Javadoc con `@param` y `@return` indicando los códigos de re
 - El token lleva el id del usuario (subject) y su rol (claim `role`); el filtro concede `ROLE_<rol>`. Los tokens antiguos sin `role` cuentan como `USER`. Un cambio de rol se aplica en el siguiente login.
 - Reglas (`SecurityConfig`):
   - Públicas: `/api/auth/**`, `/api/spotify/callback`, `/actuator/health`, `/error` y las listas `GET /api/genres` y `GET /api/instruments` (el formulario de registro elige favoritos antes de tener token; solo la lista exacta: el detalle por id, `by-ids` y las escrituras siguen protegidos).
-  - Solo `ADMIN`: `POST`/`PUT`/`DELETE` sobre el catálogo (`genres`, `songs`, `song-lessons`, `tab-sections`, `chords`, `lessons`, `lesson-sections`, `instruments`, `instrument-genres`), `GET`/`POST /api/users`, `GET /api/item-lists` (todas las listas) y el resto del actuator.
+  - Solo `ADMIN`: `POST`/`PUT`/`DELETE` sobre el catálogo (`genres`, `songs`, `song-lessons`, `tab-sections`, `chords`, `lessons`, `lesson-sections`, `instruments`, `instrument-genres`, `tunes`), `GET`/`POST /api/users`, `GET /api/item-lists` (todas las listas) y el resto del actuator.
   - `POST /api/<recurso>/by-ids` es una lectura: basta con estar autenticado.
   - Todo lo demás exige JWT. Sin token (o con uno inválido) se responde **401**, no 403, para que la app cierre la sesión.
-- Propiedad de los datos, para leer y para modificar (method security, `@PreAuthorize` + `security/OwnershipChecker`): usuario y favoritos (`/api/users/{id}`, `/api/users/{id}/...`, `POST /api/users/by-ids` solo con el propio id), listas (`/api/item-lists/{id}`, `/by-ids`, `/by-user/{userId}/ids`, sus items; al crear o actualizar, el `userId` del body también tiene que ser el del usuario) y recomendaciones personales (`/api/recommendations/.../by-user/{id}`, `/api/recommendations/items/by-item-list/{id}`, `/api/items/recommended/by-item-list/{id}`, `/api/spotify/recommendations/.../{userId}`). `/api/recommendations/lessons/by-genre/{id}` es catálogo. Un `ADMIN` puede actuar sobre cualquiera. Si no es suyo: **403** (`GlobalExceptionHandler` traduce `AccessDeniedException`). Una lista que no existe pasa la comprobación para que el controlador responda 404.
+- Propiedad de los datos, para leer y para modificar (method security, `@PreAuthorize` + `security/OwnershipChecker`): usuario y favoritos (`/api/users/{id}`, `/api/users/{id}/...`, `POST /api/users/by-ids` solo con el propio id), listas (`/api/item-lists/{id}`, `/by-ids`, `/by-user/{userId}/ids`, sus items; al crear o actualizar, el `userId` del body también tiene que ser el del usuario) y recomendaciones personales (`/api/recommendations/.../by-user/{id}`, `/api/recommendations/items/by-item-list/{id}`, `/api/spotify/recommendations/.../{userId}`). `/api/recommendations/lessons/by-genre/{id}` es catálogo. Un `ADMIN` puede actuar sobre cualquiera. Si no es suyo: **403** (`GlobalExceptionHandler` traduce `AccessDeniedException`). Una lista que no existe pasa la comprobación para que el controlador responda 404.
 - Administrador inicial: `config/AdminBootstrap` lo crea al arrancar (o asciende a `ADMIN` al usuario con ese email) a partir de `ADMIN_EMAIL`/`ADMIN_PASSWORD` del `.env`. El registro siempre crea usuarios `USER`. Los scripts de carga inician sesión con él (`scripts/api_auth.py`).
 - `SpotifyAuthController.getLoginUrl` sigue leyendo el usuario del `SecurityContext`.
+- `POST /api/auth/login` admite el email o el nombre de usuario en el campo `identifier` (`email` se acepta como alias, para los scripts y versiones antiguas de la app). `UserServiceImpl.login` busca primero por email y, si no hay nadie, por usuario: el nombre de usuario es texto libre y podría tener forma de email. Usuario inexistente y contraseña errónea dan el mismo 401 con el mismo mensaje (`Invalid credentials`), para no revelar qué cuentas existen. La app no muestra el mensaje del backend ante un 401: siempre enseña "Usuario, email o contraseña incorrectos" (`auth.service.toAuthServiceError`).
 - `POST /api/auth/register` registra y devuelve directamente el `LoginResponse` (token + usuario), igual que `login`. Exige el código de verificación del email (ver abajo).
 
 ### Verificación del email en el registro
@@ -312,6 +319,8 @@ Reglas: el código caduca a los 10 minutos, se descarta tras 5 intentos fallidos
 Envío (`EmailServiceImpl`): SMTP configurado con `MAIL_*` en `.env`. Lee la plantilla HTML y la de texto plano de `templates/email` (generadas desde `emails/` con React Email) y sustituye sus marcadores `{{...}}`. Si no hay `JavaMailSender`, escribe el código en el log. Un fallo de SMTP se traduce en `IllegalStateException` (500) y el código no se guarda, para poder pedirlo otra vez al momento.
 
 El email no se puede cambiar después del registro: el perfil de la app lo muestra como solo lectura y `PUT /api/users/{id}` ignora el que llegue en el body (`UserServiceImpl.update` conserva el guardado y solo comprueba que el nombre de usuario esté libre).
+
+Nivel musical: el usuario lo elige en el perfil con un slider de 0 a 5 (la escala de las estrellas) y se guarda con `PUT /api/users/{id}` (`difficultyLevel`). Es opcional en el body: si no llega se conserva el actual, y fuera de 0-5 se responde 400 (`@Min`/`@Max` de `UserDto` con `@Valid`; `UserServiceImpl` lo vuelve a comprobar). El registro no lo admite: todo usuario empieza en el nivel por defecto (1). Lo usan las recomendaciones y la dificultad por defecto de las canciones.
 
 ### Flujo OAuth2 de Spotify
 
@@ -337,7 +346,7 @@ Limitaciones: los `state` pendientes viven en memoria (una sola instancia del ba
 
 ## 11. Datos iniciales
 
-- `scripts/load_all_data.py` carga los JSON de `data/` llamando a la API en orden: géneros, instrumentos, lecciones, instrument-genres, acordes, canciones. Las lecciones van antes de los instrument-genres porque estos las referencian por `lessonIds` (el índice de cada lección es su posición en ese array).
+- `scripts/load_all_data.py` carga los JSON de `data/` llamando a la API en orden: géneros, instrumentos, lecciones, instrument-genres, acordes, canciones y afinaciones (estas, después de los instrumentos a los que pertenecen). Las lecciones van antes de los instrument-genres porque estos las referencian por `lessonIds` (el índice de cada lección es su posición en ese array).
 - Formato de los JSON: [`DATA_JSON_GUIDE.md`](data.md).
 - Los scripts usan las mismas rutas `/api/...` que la app.
 
@@ -372,12 +381,39 @@ Caché y sincronización en el cliente:
 - Logout: borra de RAM y disco los datos del usuario (su entidad, sus listas e índices personalizados). El contenido público se conserva como caché.
 - Catálogos completos (`genreRepository.getAll`, `instrumentRepository.getAll`): son una lista más (`cache.list('all', ...)`), con su propio índice. No se deducen de las entidades sueltas que haya en disco, que pueden ser solo las que cargó otra pantalla.
 
+Vídeos:
+
+- `SongLesson.videoUrl` y `LessonSection.videoUrl` son enlaces de YouTube. La app los reproduce con `components/YoutubeVideo` (sobre `react-native-youtube-iframe`), que extrae el ID con `utils/youtube.utils.getYoutubeVideoId` (admite `watch?v=`, `youtu.be/`, `embed/`, `shorts/`, `live/` o el ID directamente). Si la URL no es de YouTube, no se pinta nada. `expo-video` no sirve para esto: reproduce ficheros de vídeo, no páginas de YouTube.
+- En Jest no existe el WebView nativo: `jest.setup.js` sustituye el reproductor por un texto `YouTube <id>`.
+
 Sesión:
 
 - Al arrancar, `auth.entities.store` descarta el token guardado si ha caducado (lee el `exp` del JWT con `utils/jwt.utils.ts`, con 30 s de margen) antes de marcar la store como hidratada: la app va directa al login sin lanzar peticiones que acabarían en 401.
 - Si el token caduca con la app abierta, el 401 lo gestiona `apiClient` (cierra la sesión). `entityCache.utils` no avisa de esos 401 (petición con token); sí de los 401 sin token, que indican un endpoint que no es público.
 
 ---
+
+### Artistas favoritos en el Home
+
+Los artistas favoritos de un usuario son los que más se repiten en las canciones de sus listas
+(`User.getTopArtistsFromItemLists(n)`). Igual que los rankings de géneros e instrumentos, una canción que está
+en varias listas cuenta una vez por lista, y en caso de empate se mantiene el orden en que aparecen.
+`UserService.findTopArtistsForUser(userId, n)` los expone en `GET /api/users/{id}/top-artists?total_artists=n`
+(de 1 a 10). El endpoint lleva el id del usuario, como el resto de `/api/users/{id}/...`, para que se pueda
+comprobar que es el propio usuario.
+
+`GET /api/songs/by-artists/{new|popular}?limit=n&artist1=a&artist2=b...` devuelve las canciones marcadas como
+`artistNew` / `artistPopular` de esos artistas (de 1 a 10 artistas, comparados sin distinguir mayúsculas; hasta
+50 canciones, 10 por defecto). Las mezcla por turnos (la 1.ª de cada artista, luego la 2.ª...) en el orden de los
+parámetros, para que el primer artista no llene todo el carrusel. Los artistas van en parámetros numerados y no
+en un array porque axios serializa los arrays como `artists[]=`, que Spring no enlaza.
+
+En la app, `songRepository.getByFavouriteArtists(userId)` pide 5 artistas (una sola vez para los dos carruseles)
+y 12 canciones nuevas y 12 populares. Cada carrusel es una lista Cache-First con índice personalizado, que se
+borra en el logout. `useHomeItems` destaca en una tarjeta la primera canción que no salga ya en Recientes o
+Recomendaciones ("Lo nuevo de <artista>", "Lo más popular de <artista>"), y su carrusel muestra el resto. Una
+canción nueva y popular a la vez no se repite en las dos tarjetas. Se vuelve a pedir cuando cambian las listas
+del usuario. Sin canciones en las listas, los carruseles muestran la card que invita a añadir canciones.
 
 ### Recientes del Home
 
@@ -392,11 +428,50 @@ Sin recientes (primera vez) o sin recomendaciones, el carrusel no se oculta: mue
 (`components/carousels/EmptyCarouselCard`, vía la prop `emptyMessage` de `GenericCarousel`) que invita
 a explorar la app. Solo aparece cuando ha terminado la carga, para no parpadear.
 
+### Afinador
+
+Pantalla `TunerScreen` (CU-11), abierta desde el botón "Afinador" del Home. Las afinaciones son catálogo
+(`Tune`, `GET /api/tunes`); la captura y el análisis del audio son solo del frontend, sin enviar nada al backend.
+
+**Captura del micrófono: `react-native-audio-api`** (Software Mansion). Se eligió tras comparar opciones:
+- `expo-audio` (el del metrónomo) graba a fichero, pero no entrega el audio en vivo.
+- `react-native-pitch-detector` solo da una nota, lleva sin actualizarse desde 2023 y no sirve después para el identificador de acordes.
+- Mandar el audio al backend añade latencia y consumo de red: el afinador tiene que responder en tiempo real.
+- `AudioRecorder.onAudioReady` entrega bloques PCM en `Float32` (4096 muestras, ~93 ms a 44.1 kHz) y la misma vía servirá al "Identificador" de acordes.
+
+**El micrófono real necesita una *development build*.** La librería es un módulo nativo que Expo Go no incluye:
+`npx expo run:android` / `run:ios` (o `eas build --profile development`) compila e instala la app, y después
+`npx expo start` sirve el JS como antes.
+
+**En Expo Go el afinador funciona en modo demostración.** `utils/microphone.utils.ts` define una interfaz `Microphone`
+con dos implementaciones, y `useTuner` elige una con `isRunningInExpoGo()`:
+- Nativa (`createNativeMicrophone`): carga `react-native-audio-api` con `require` al crearse, nunca al importar el fichero. Un `import` arriba haría que la app entera fallase al arrancar en Expo Go, porque la navegación importa la pantalla del afinador. Nadie más debe importar la librería directamente.
+- Simulada (`createSimulatedMicrophone`): genera bloques con el sonido de una cuerda (fundamental más débil que el 2.º armónico, como una cuerda grave real). Cada cuerda empieza desafinada y se va afinando durante 4 s; sin cuerda fijada las recorre una a una. Pasa por el mismo YIN y el mismo hook, así que sirve para probar la pantalla, la aguja y la rueda. No pide permiso. La pantalla muestra un aviso de "Modo demostración".
+
+Con `expo-dev-client` instalado, `npx expo start` abre por defecto la development build. Para abrir en Expo Go se usa `npx expo start --go` (o se pulsa `s` en la consola para cambiar de modo). El plugin de `app.json` añade solo el permiso de micrófono
+(`RECORD_AUDIO` en Android, `NSMicrophoneUsageDescription` en iOS), sin modo en segundo plano ni servicio en primer plano.
+
+Flujo y reparto por capas:
+- `utils/pitch.utils.ts`: detección de la fundamental con **YIN** en JS puro. Un bloque por debajo de `MIN_RMS` (silencio) o sin periodicidad clara (ruido) devuelve `null`. Se usa YIN y no el pico de una FFT porque en las cuerdas graves el 2.º armónico suele ser más fuerte que la fundamental.
+- `utils/tuner.utils.ts`: nota ↔ frecuencia (La4 = 440 Hz, temperamento igual), desviación en cents, cuerda más cercana (comparando en cents) y consejo (`Afinado` dentro de ±5 cents, `Tensar` si está baja, `Destensar` si está alta).
+- `utils/microphone.utils.ts`: fuente de audio (real o simulada, ver arriba). La real configura la sesión de audio de iOS (`record` + `measurement`, sin el procesado de voz) y entrega bloques de 4096 muestras.
+- `hooks/useTuner.ts` (Nivel 6, como `useMetronome` con `expo-audio`): permiso de micrófono, arranque/parada (con cancelación si se para mientras se pide el permiso) y lectura suavizada (mediana de 3 bloques). Sin cuerda fijada compara con la más cercana; `selectString` fija una.
+- `hooks/useTunes.ts`: afinaciones del catálogo (`tuneRepository.getAll`, Cache-First) con su etiqueta "Instrumento (Afinación)", ordenadas por instrumento y por id. La afinación por defecto es la primera de un instrumento favorito del usuario.
+- `components/tuner/`: `TunerStringSelector` (botón por cuerda), `TunerGauge` (semicírculo SVG y aguja con Reanimated; verde si está afinada) y `TuneWheel` (rueda vertical de 3 filas).
+
+Comportamiento: escucha al entrar en la pantalla y para al salir (los tabs no se desmontan). Cambiar de afinación
+deja de escuchar; se vuelve a escuchar tocando el medidor o una cuerda. Sin permiso se ofrece abrir los ajustes.
+
+En Jest, `jest.setup.js` usa el mock que trae la librería (`react-native-audio-api/mock`). `jest-expo` simula
+Expo Go (`isRunningInExpoGo()` es `true`), así que `useTuner.test.ts` fija la fuente de audio en cada caso: un
+grabador falso al que se le inyectan bloques sintéticos, o el micrófono simulado con temporizadores falsos.
+`pitch.utils.test.ts` prueba YIN con senoidales y armónicos, y `microphone.utils.test.ts` las dos fuentes.
+
 ## 13. Pendiente
 
-- `GET /api/items/recommended/ids` (sección "Recomendaciones" del Home) y `GET /api/songs/recommended/ids` ("Según tus gustos") los usa el frontend pero ningún controlador los expone.
 - Recomendaciones de Spotify: `GET /api/spotify/recommendations/items/{userId}` (`List<ItemDTO>`) y `.../songs/{userId}` (`List<SongDTO>`) están en desarrollo; el frontend aún no los usa. Devuelven DTOs completos (excepción de negocio, §7). `findSpotify` de canciones es un marcador que devuelve vacío.
-- `ItemRecommendationService` (algoritmo real por niveles) solo está expuesto en `GET /api/recommendations/items/by-item-list/{id}`; `GET /api/items/recommended/by-item-list/{id}` usa un marcador (los 20 items más nuevos) y el frontend no lo llama.
-- `LessonRecommendationService` devuelve vacío.
 - `GET /api/instruments/by-genre/{genreId}` lo usa el frontend pero no existe en el backend.
 - Comprobar en ejecución las consultas `IdNotIn` con colecciones vacías (Hibernate 6 debería resolverlas, no se ha probado).
+- Afinador: probarlo en un dispositivo real con la *development build* (Android e iOS). Los tests y el modo demostración de Expo Go cubren la detección y la pantalla, pero no el micrófono real, el permiso ni la sesión de audio de iOS. Vigilar el tiempo de YIN en el hilo de JS con los bloques de 4096 muestras (~4 M operaciones por bloque); si se nota, reducir la ventana o mover el análisis a un worklet.
+- Afinador: el resaltado de la rueda de afinaciones es solo de la fila central; queda pendiente un efecto de profundidad (escala y opacidad graduales) si se quiere más parecido a un selector de iOS.
+- Identificador de acordes (botón del Home sin funcionalidad): reutilizar el flujo de micrófono de `useTuner` con un análisis de cromagrama.

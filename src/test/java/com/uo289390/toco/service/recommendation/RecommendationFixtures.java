@@ -26,6 +26,7 @@ import com.uo289390.toco.repository.SongLessonRepository;
 import com.uo289390.toco.repository.SongRepository;
 import com.uo289390.toco.repository.SpotifyUserRepository;
 import com.uo289390.toco.repository.TabSectionRepository;
+import com.uo289390.toco.repository.TuneRepository;
 import com.uo289390.toco.repository.UserRepository;
 import com.uo289390.toco.utils.EntityResolver;
 
@@ -125,6 +126,7 @@ final class RecommendationFixtures {
                 mock(SongLessonRepository.class),
                 mock(SpotifyUserRepository.class),
                 mock(TabSectionRepository.class),
+                mock(TuneRepository.class),
                 userRepository);
     }
 }

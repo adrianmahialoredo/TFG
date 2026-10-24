@@ -69,10 +69,9 @@ public class InstrumentGenreRecommendationServiceImpl implements InstrumentGenre
     @Override
     public SequencedSet<InstrumentGenre> findForUser(Long id, int limit) {
         User user = resolveUser(id);
-        SequencedSet<InstrumentGenre> instrumentGenres = new LinkedHashSet<>();
 
         if (limit <= 0) {
-            return instrumentGenres;
+            return new LinkedHashSet<>();
         }
 
         // Candidatos: los generos/instrumentos mas usados en las listas del usuario, completados con sus favoritos
@@ -86,6 +85,31 @@ public class InstrumentGenreRecommendationServiceImpl implements InstrumentGenre
                 user.getPreferences().getFavoriteInstruments(),
                 RecommendationConstants.NUMBER_OF_FAVOURITE_INSTRUMENTS_USED_IN_BY_USER_INSTRUMENT_GENRE_RECOMMENDATION
         );
+
+        return findCombinations(user, genreIds, instrumentIds, limit);
+    }
+
+    @Override
+    public SequencedSet<InstrumentGenre> findFavouriteCombinationsForUser(Long id, int limit) {
+        User user = resolveUser(id);
+
+        if (limit <= 0) {
+            return new LinkedHashSet<>();
+        }
+
+        // Candidatos: solo los generos e instrumentos favoritos del usuario
+        Set<Long> genreIds = candidateIds(List.of(), user.getPreferences().getFavoriteGenres(), Integer.MAX_VALUE);
+        Set<Long> instrumentIds = candidateIds(List.of(), user.getPreferences().getFavoriteInstruments(), Integer.MAX_VALUE);
+
+        return findCombinations(user, genreIds, instrumentIds, limit);
+    }
+
+    /**
+     * Instrument-genres that combine any of the given genres with any of the given instruments and are not
+     * in the user's lists: first those up to the user's level, then completed with the rest.
+     */
+    private SequencedSet<InstrumentGenre> findCombinations(User user, Set<Long> genreIds, Set<Long> instrumentIds, int limit) {
+        SequencedSet<InstrumentGenre> instrumentGenres = new LinkedHashSet<>();
 
         // Sin generos o sin instrumentos no hay ninguna combinacion posible
         if (genreIds.isEmpty() || instrumentIds.isEmpty()) {

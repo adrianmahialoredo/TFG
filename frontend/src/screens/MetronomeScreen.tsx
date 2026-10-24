@@ -1,6 +1,7 @@
 import ProfileHeader from "../components/ProfileHeader";
 import AppLayout from "../components/AppLayout";
-import {Text, View, ScrollView} from "react-native";
+import {Text, View} from "react-native";
+import FadeScrollView from "../components/FadeScrollView";
 import {COLORS} from "../constants/Theme";
 import React, {useCallback, useRef, useState} from "react";
 import {useFocusEffect} from "@react-navigation/native";
@@ -56,7 +57,7 @@ export default function MetronomeScreen() {
                 <ProfileHeader title={"Metrónomo"} />
 
                 {/* Scroll con hueco abajo para la tab bar (absoluta), como el resto de pantallas */}
-                <ScrollView
+                <FadeScrollView
                     showsVerticalScrollIndicator={false}
                     contentContainerStyle={{paddingBottom: 120}}
                 >
@@ -82,7 +83,7 @@ export default function MetronomeScreen() {
                             selected={isHiHat}
                         />
                     </View>
-                </ScrollView>
+                </FadeScrollView>
             </View>
         </AppLayout>
     );

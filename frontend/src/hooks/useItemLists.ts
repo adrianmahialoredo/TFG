@@ -22,8 +22,13 @@ export const useItemLists = (userId: string | number |undefined) => {
         if (!userId) return;
         const load = async () => {
             setLoading(true);
-            await itemListRepository.getByUserId(userId.toString());
-            setLoading(false);
+            try {
+                await itemListRepository.getByUserId(userId.toString());
+            } catch (error) {
+                console.error('[useItemLists] Error cargando listas:', error);
+            } finally {
+                setLoading(false);
+            }
         };
         load();
     }, [userId]);

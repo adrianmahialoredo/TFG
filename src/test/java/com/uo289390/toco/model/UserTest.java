@@ -193,4 +193,55 @@ class UserTest {
         assertTrue(user.getTopGenresFromItemLists(3).isEmpty());
         assertTrue(user.getTopInstrumentsFromItemLists(3).isEmpty());
     }
+
+    // -------- Top artists --------
+
+    private static Song songBy(long id, String artist) {
+        Song song = new Song();
+        song.setId(id);
+        song.setArtist(artist);
+        return song;
+    }
+
+    @Test
+    void getTopArtistsFromItemLists_ordersByRepetitionsAcrossLists() {
+        addList(songBy(1L, "Queen"), songBy(2L, "Bowie"), songBy(3L, "Queen"));
+        addList(songBy(4L, "Bowie"), songBy(5L, "Bowie"), songBy(6L, "Oasis"));
+
+        assertEquals(List.of("Bowie", "Queen", "Oasis"), user.getTopArtistsFromItemLists(5));
+        assertEquals(List.of("Bowie"), user.getTopArtistsFromItemLists(1));
+    }
+
+    @Test
+    void getTopArtistsFromItemLists_tiesKeepTheOrderOfFirstAppearance() {
+        addList(songBy(1L, "Oasis"), songBy(2L, "Blur"), songBy(3L, "Pulp"));
+
+        assertEquals(List.of("Oasis", "Blur"), user.getTopArtistsFromItemLists(2));
+    }
+
+    @Test
+    void getTopArtistsFromItemLists_sameSongInTwoLists_countsTwice() {
+        Song shared = songBy(1L, "Queen");
+        addList(shared, songBy(2L, "Bowie"));
+        addList(shared, songBy(3L, "Bowie"), songBy(4L, "Queen"));
+
+        // Queen: 3 (the shared song counts once per list); Bowie: 2
+        assertEquals(List.of("Queen", "Bowie"), user.getTopArtistsFromItemLists(2));
+    }
+
+    @Test
+    void getTopArtistsFromItemLists_ignoresBlankArtistsAndNonSongItems() {
+        Lesson lesson = new Lesson();
+        lesson.setId(9L);
+        addList(songBy(1L, " "), songBy(2L, null), songBy(3L, " Queen "), lesson);
+
+        assertEquals(List.of("Queen"), user.getTopArtistsFromItemLists(5));
+    }
+
+    @Test
+    void getTopArtistsFromItemLists_withoutSongsOrNonPositiveN_returnsEmpty() {
+        assertTrue(user.getTopArtistsFromItemLists(5).isEmpty());
+        addList(songBy(1L, "Queen"));
+        assertTrue(user.getTopArtistsFromItemLists(0).isEmpty());
+    }
 }

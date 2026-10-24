@@ -16,6 +16,7 @@ import com.uo289390.toco.repository.SongLessonRepository;
 import com.uo289390.toco.repository.SongRepository;
 import com.uo289390.toco.repository.SpotifyUserRepository;
 import com.uo289390.toco.repository.TabSectionRepository;
+import com.uo289390.toco.repository.TuneRepository;
 import com.uo289390.toco.repository.UserRepository;
 import com.uo289390.toco.utils.EntityResolver;
 
@@ -52,6 +53,7 @@ final class EntityResolverTestSupport {
                 pick(SongLessonRepository.class, repositories),
                 pick(SpotifyUserRepository.class, repositories),
                 pick(TabSectionRepository.class, repositories),
+                pick(TuneRepository.class, repositories),
                 pick(UserRepository.class, repositories));
     }
 

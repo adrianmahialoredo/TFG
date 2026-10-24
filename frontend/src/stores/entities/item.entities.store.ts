@@ -18,7 +18,12 @@ export const useItemEntitiesStore = create<ItemEntitiesState>((set) => ({
         set((state) => ({
             items: {
                 ...state.items,
-                ...Object.fromEntries(newItems.map((item) => [item.id.toString(), item])),
+                // Se fusiona con el resumen previo: un resumen derivado de un DTO completo puede
+                // no traer todos los metadatos de búsqueda que mandó el backend (y viceversa).
+                ...Object.fromEntries(newItems.map((item) => {
+                    const id = item.id.toString();
+                    return [id, { ...state.items[id], ...item }];
+                })),
             },
         })),
 

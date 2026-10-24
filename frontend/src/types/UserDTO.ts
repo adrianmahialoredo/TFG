@@ -8,4 +8,5 @@ export interface UserDTO {
   favouriteGenresIds?: Array<string | number>;
   favouriteInstrumentsIds?: Array<string | number>;
   spotifyConnected?: boolean; // Lo calcula el backend; se ignora al enviarlo
+  difficultyLevel?: number; // Nivel musical autopercibido (0 a 5, como las estrellas); se edita en el perfil
 }

@@ -78,7 +78,7 @@ class ItemRecommendationServiceImplTest {
     }
 
     @Test
-    void testFindForItemList_AggregatesAllTypesInOrderWithConfiguredCounts() {
+    void testFindForItemList_AggregatesAllTypesShuffledWithConfiguredCounts() {
         // Arrange
         List<ItemDTO> mapped = List.of(new SongDTO(), new LessonDTO());
         when(songRecommendationService.findForItemList(ID, RecommendationConstants.RECOMMENDED_SONGS_COUNT)).thenReturn(setOf(List.of(song)));
@@ -93,12 +93,42 @@ class ItemRecommendationServiceImplTest {
         // Assert
         assertSame(mapped, result);
         verify(dtoMapper).itemsToItemDTOs(itemsCaptor.capture());
-        assertEquals(List.of(song, genre, instrumentGenre, lesson), new ArrayList<>(itemsCaptor.getValue()));
+        // Every type is there, each once, in a random order (shuffled to mix the types)
+        List<Item> mappedItems = new ArrayList<>(itemsCaptor.getValue());
+        assertEquals(4, mappedItems.size());
+        assertEquals(new LinkedHashSet<>(List.of(song, genre, instrumentGenre, lesson)), new LinkedHashSet<>(mappedItems));
         InOrder inOrder = inOrder(songRecommendationService, genreRecommendationService, instrumentGenreRecommendationService, lessonRecommendationService);
         inOrder.verify(songRecommendationService).findForItemList(ID, RecommendationConstants.RECOMMENDED_SONGS_COUNT);
         inOrder.verify(genreRecommendationService).findForItemList(ID, RecommendationConstants.RECOMMENDED_GENRES_COUNT);
         inOrder.verify(instrumentGenreRecommendationService).findForItemList(ID, RecommendationConstants.RECOMMENDED_INSTRUMENT_GENRES_COUNT);
         inOrder.verify(lessonRecommendationService).findForItemList(ID, RecommendationConstants.RECOMMENDED_LESSONS_COUNT);
+    }
+
+    @Test
+    void testFindForItemList_MixesTheTypes() {
+        // Arrange: 10 songs then 6 lessons; in priority order the first 5 would always be songs
+        List<Song> songs = new ArrayList<>();
+        for (int i = 1; i <= 10; i++) songs.add(song(i));
+        List<Lesson> lessons = new ArrayList<>();
+        for (int i = 11; i <= 16; i++) lessons.add(lesson(i));
+        when(songRecommendationService.findForItemList(anyLong(), anyInt())).thenReturn(setOf(songs));
+        when(genreRecommendationService.findForItemList(anyLong(), anyInt())).thenReturn(new LinkedHashSet<>());
+        when(instrumentGenreRecommendationService.findForItemList(anyLong(), anyInt())).thenReturn(new LinkedHashSet<>());
+        when(lessonRecommendationService.findForItemList(anyLong(), anyInt())).thenReturn(setOf(lessons));
+        when(dtoMapper.itemsToItemDTOs(any())).thenReturn(List.of());
+
+        // Act: the chance of 20 shuffles all leaving songs first is negligible (~(1/8008)^20)
+        boolean mixed = false;
+        for (int attempt = 0; attempt < 20 && !mixed; attempt++) {
+            service.findForItemList(ID);
+            verify(dtoMapper, atLeastOnce()).itemsToItemDTOs(itemsCaptor.capture());
+            List<Item> result = new ArrayList<>(itemsCaptor.getValue());
+            assertEquals(16, result.size());
+            mixed = result.subList(0, 5).stream().anyMatch(Lesson.class::isInstance);
+        }
+
+        // Assert
+        assertTrue(mixed, "Some lesson should appear among the first 5 items");
     }
 
     @Test

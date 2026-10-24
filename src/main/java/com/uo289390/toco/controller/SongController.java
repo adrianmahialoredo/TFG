@@ -11,7 +11,14 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.validation.annotation.Validated;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+import static com.uo289390.toco.utils.RecommendationConstants.MAX_ARTISTS_IN_SONGS_BY_ARTISTS;
 
 /**
  * REST controller for songs.
@@ -28,6 +35,8 @@ import java.util.List;
  * - GET    /api/songs/by-genre/{genreId}/new     Retrieve the new songs of a genre
  * - GET    /api/songs/popular?limit={n}          Retrieve the popular songs
  * - GET    /api/songs/new?limit={n}              Retrieve the new songs
+ * - GET    /api/songs/by-artists/new?limit={n}&artist1={a}&artist2={b}...     Retrieve the new songs of some artists
+ * - GET    /api/songs/by-artists/popular?limit={n}&artist1={a}&artist2={b}... Retrieve the popular songs of some artists
  * - GET    /api/songs/recommended/ids?limit={n}  Retrieve the IDs of the recommended songs for the user (not implemented yet)
  * - GET    /api/songs/spotify?limit={n}          Retrieve the songs recommended by Spotify
  * - POST   /api/songs                            Create a song
@@ -150,6 +159,37 @@ public class SongController {
     }
 
     /**
+     * Retrieves the new songs of some artists, mixing the artists in the order of their parameters.
+     * The artists go in numbered parameters ({@code artist1}, {@code artist2}... up to {@code artist10}),
+     * so they can be sent without array serialization.
+     *
+     * @param limit  maximum number of songs (10 by default, at most 50)
+     * @param params all the query parameters, from which the {@code artistN} ones are read
+     * @return 200 OK with the songs, or 400 Bad Request without artists, with an {@code artistN}
+     *         out of 1-10 or with the limit out of range
+     */
+    @GetMapping("/by-artists/new")
+    public ResponseEntity<List<SongDTO>> getNewForArtists(@RequestParam(required = false) Integer limit,
+                                                          @RequestParam Map<String, String> params) {
+        return ResponseEntity.ok(songService.findNewForArtists(artistsFrom(params), limit));
+    }
+
+    /**
+     * Retrieves the popular songs of some artists, mixing the artists in the order of their parameters
+     * ({@code artist1}, {@code artist2}... up to {@code artist10}).
+     *
+     * @param limit  maximum number of songs (10 by default, at most 50)
+     * @param params all the query parameters, from which the {@code artistN} ones are read
+     * @return 200 OK with the songs, or 400 Bad Request without artists, with an {@code artistN}
+     *         out of 1-10 or with the limit out of range
+     */
+    @GetMapping("/by-artists/popular")
+    public ResponseEntity<List<SongDTO>> getPopularForArtists(@RequestParam(required = false) Integer limit,
+                                                              @RequestParam Map<String, String> params) {
+        return ResponseEntity.ok(songService.findPopularForArtists(artistsFrom(params), limit));
+    }
+
+    /**
      * Creates a song, with its lessons and tab sections.
      *
      * @param dto the song to create
@@ -181,5 +221,30 @@ public class SongController {
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         return songService.delete(id) ? ResponseEntity.noContent().build() : ResponseEntity.notFound().build();
+    }
+
+    /**
+     * Name of the numbered artist parameters: {@code artist1}, {@code artist2}...
+     */
+    private static final Pattern ARTIST_PARAM = Pattern.compile("artist(\\d{1,9})");
+
+    /**
+     * Reads the {@code artistN} query parameters, ordered by their number (artist1 first).
+     *
+     * @throws IllegalArgumentException if a number is out of 1-{@code MAX_ARTISTS_IN_SONGS_BY_ARTISTS}
+     */
+    private static List<String> artistsFrom(Map<String, String> params) {
+        TreeMap<Integer, String> byNumber = new TreeMap<>();
+        params.forEach((name, value) -> {
+            Matcher matcher = ARTIST_PARAM.matcher(name);
+            if (!matcher.matches()) return;
+            int number = Integer.parseInt(matcher.group(1));
+            if (number < 1 || number > MAX_ARTISTS_IN_SONGS_BY_ARTISTS) {
+                throw new IllegalArgumentException(
+                        "Artist parameters go from artist1 to artist" + MAX_ARTISTS_IN_SONGS_BY_ARTISTS + ": " + name);
+            }
+            byNumber.put(number, value);
+        });
+        return new ArrayList<>(byNumber.values());
     }
 }

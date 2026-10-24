@@ -1,0 +1,86 @@
+@startuml DS-CU-01
+title DS-CU-01 - Registrar nuevo usuario
+
+' Diagrama de secuencia de análisis (patrón Boundary-Control-Entity)
+autonumber
+hide footbox
+skinparam sequenceMessageAlign center
+skinparam roundcorner 6
+
+actor "Visitante" as visitante
+boundary "RegistroScreen" as pantalla
+boundary "ModalVerificacionEmail" as modal
+control "GestorAutenticacion" as gestor
+entity "CodigoVerificacion" as codigo
+entity "Usuario" as usuario
+entity "AlmacenSeguro" as almacen
+participant "ServidorCorreo\n<<sistema externo>>" as correo
+
+visitante -> pantalla : accederRegistro()
+pantalla --> visitante : mostrarFormulario(email, username, password, favoritos)
+visitante -> pantalla : solicitarRegistro(datos)
+pantalla -> pantalla : validarFormato()
+
+alt 4a. Datos con formato inválido
+    pantalla --> visitante : marcarCamposErroneos()
+else Datos válidos
+
+    == Envío del código de verificación ==
+
+    pantalla -> gestor : solicitarCodigo(email)
+    note right of gestor : POST /api/auth/verification-code
+    gestor -> usuario : comprobarEmailUnico(email)
+    usuario --> gestor : resultado
+
+    alt 6a. El email ya está registrado
+        gestor --> pantalla : error "Email already registered"
+        pantalla --> visitante : informarEmailEnUso()\nsugerirIniciarSesion()
+    else Se pidió otro código hace menos de 60 s
+        gestor --> pantalla : 429 Too Many Requests
+        pantalla --> visitante : pedirEsperarAntesDeReenviar()
+    else Email libre
+        gestor -> codigo : generarCodigo(email)
+        note right of codigo : 6 dígitos, válido 10 minutos,\nmáximo 5 intentos fallidos
+        gestor -> correo : enviarCodigo(email, codigo)
+        gestor --> pantalla : codigoEnviado
+        pantalla -> modal : abrir(email)
+        modal --> visitante : pedirCodigo()
+
+        opt El visitante no recibe el código
+            visitante -> modal : reenviarCodigo()
+            modal -> gestor : solicitarCodigo(email)
+            gestor -> codigo : generarCodigo(email)
+            gestor -> correo : enviarCodigo(email, codigo)
+        end
+
+        == Registro con el código ==
+
+        visitante -> modal : introducirCodigo(codigo)
+        modal -> gestor : registrarUsuario(datos, codigo)
+        note right of gestor : POST /api/auth/register
+        gestor -> codigo : comprobarCodigo(email, codigo)
+
+        alt Código incorrecto, caducado o demasiados intentos
+            codigo --> gestor : código no válido
+            gestor --> modal : error de verificación
+            modal --> visitante : mostrarErrorCodigo()\n(o pedir uno nuevo)
+        else Código correcto
+            codigo --> gestor : ok
+            gestor -> usuario : comprobarEmailYUsernameUnicos()
+            usuario --> gestor : ok
+            gestor -> gestor : cifrarPassword(pass)
+            gestor -> usuario : persistirUsuario(datos, rol = USER)
+            usuario --> gestor : usuario
+            gestor -> codigo : consumir(email)
+            gestor -> gestor : generarJWT(id, rol)
+            gestor --> modal : LoginResponse(token, perfil)
+            modal -> almacen : guardarSesionLocal(token, perfil)
+            note right of almacen : AuthStore + UserEntitiesStore\n(en RAM y disco)
+            modal ->> gestor : precargarCatalogoItems()
+            note right of gestor : GET /api/items\n(en segundo plano)
+            modal --> visitante : redirigirPantallaPrincipal()
+        end
+    end
+end
+
+@enduml

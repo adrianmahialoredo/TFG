@@ -13,7 +13,7 @@ type EmptyCarouselCardProps = {
 export default function EmptyCarouselCard({ message, minHeight }: EmptyCarouselCardProps) {
   return (
     <View
-      className="bg-primary/15 border border-primary/60 rounded-xl px-6 justify-center"
+      className="bg-primary/10 border border-primary/40 rounded-xl px-6 justify-center"
       style={{ minHeight }}
     >
       <Text className="text-primary text-base text-center leading-snug">{message}</Text>

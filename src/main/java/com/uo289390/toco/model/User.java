@@ -21,7 +21,10 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
+import java.util.Map;
+import java.util.Optional;
 
 import static com.uo289390.toco.utils.Utils.getTopNMostRepeated;
 
@@ -201,5 +204,34 @@ public class User implements UserDetails {
             instruments.addAll(itemList.getInstrumentOccurrencesFromItems());
         }
         return getTopNMostRepeated(instruments, topN);
+    }
+
+    /**
+     * Returns the artists that appear most in the songs of the user's lists (their favourite artists).
+     * A song that is in several lists counts once per list, like the genre and instrument rankings.
+     * Ties keep the order in which the artists first appear in the lists.
+     *
+     * @param topN the maximum number of artists to return
+     * @return the artist names ordered from most to least repeated, without duplicates
+     */
+    public List<String> getTopArtistsFromItemLists(int topN) {
+        if (topN <= 0) {
+            return List.of();
+        }
+        Map<String, Integer> occurrences = new LinkedHashMap<>();
+        for (ItemList itemList : itemLists) {
+            for (Song song : itemList.getSongs()) {
+                Optional.ofNullable(song.getArtist())
+                        .map(String::trim)
+                        .filter(artist -> !artist.isEmpty())
+                        .ifPresent(artist -> occurrences.merge(artist, 1, Integer::sum));
+            }
+        }
+        // Stable sort: equal counts keep the insertion (first appearance) order
+        return occurrences.entrySet().stream()
+                .sorted(Map.Entry.<String, Integer>comparingByValue().reversed())
+                .limit(topN)
+                .map(Map.Entry::getKey)
+                .toList();
     }
 }

@@ -1,0 +1,52 @@
+@startuml DS-CU-09
+title DS-CU-09 - Consultar recomendaciones adaptativas
+
+' Diagrama de secuencia de análisis (patrón Boundary-Control-Entity)
+autonumber
+hide footbox
+skinparam sequenceMessageAlign center
+skinparam roundcorner 6
+
+actor "Músico" as musico
+boundary "RecomendacionesView" as vista
+control "MotorRecomendacion" as motor
+entity "ItemList" as lista
+entity "Usuario" as usuario
+entity "Item" as item
+
+musico -> vista : abrirRecomendaciones()
+note right of musico : "Recomendaciones" en Inicio\no "Para ti" dentro de una lista
+vista -> motor : pedirRecomendaciones(origenId)
+note right of motor : GET /api/recommendations/items/by-user/{id}\no .../by-item-list/{id}
+
+motor -> usuario : obtenerFavoritosYNivel(userId)
+usuario --> motor : géneros, instrumentos, nivel
+motor -> lista : obtenerItems(origenId)
+lista --> motor : ítems ya incluidos
+motor -> motor : calcularTopGenerosEInstrumentos()
+note right of motor : getTopNMostRepeated
+
+alt 4a. Lista nueva o usuario sin historial
+    motor -> motor : saltarANivelesDeRespaldo(favoritos, nivel)
+else Hay historial
+    motor -> motor : ejecutarAlgoritmoNiveles()
+    note right of motor
+        Nivel 1: coincidencia estricta
+        Nivel 2: reparto
+        Nivel 3: favoritos y nivel de destreza
+        Nivel 4: general
+    end note
+end
+
+loop Por cada nivel, hasta completar 20 ítems
+    motor -> item : buscarCandidatos(criterios, filtrarExclusiones(idsPrevios))
+    note right of item : Cláusulas ...IdNotIn: lo ya elegido\no ya incluido en listas no consume\nel límite consultado
+    item --> motor : candidatos
+end
+
+motor -> motor : unificar(SequencedSet)
+motor --> vista : retornarItemsPolimorficos()
+note right of vista : SongDTO, LessonDTO, GenreDTO,\nInstrumentGenreDTO...
+vista --> musico : mostrarTarjetasCarrusel()
+
+@enduml

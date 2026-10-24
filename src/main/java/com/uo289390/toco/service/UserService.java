@@ -19,7 +19,17 @@ public interface UserService {
 
     UserDto register(UserDto userDto);
 
-    LoginResponse login(String email, String password);
+    /**
+     * Logs a user in with their email or their username.
+     * The identifier is looked up as an email first and then as a username.
+     *
+     * @param identifier the email or the username of the user
+     * @param password   the raw password
+     * @return the JWT and the user
+     * @throws org.springframework.security.authentication.BadCredentialsException if no user
+     *         matches or the password is wrong (the same error in both cases)
+     */
+    LoginResponse login(String identifier, String password);
 
     UserDto create(UserDto userDto);
 
@@ -30,6 +40,18 @@ public interface UserService {
     Optional<List<Long>> findFavoriteGenreIdsForUser(Long userId);
 
     Optional<List<Long>> findFavoriteInstrumentIdsForUser(Long userId);
+
+    /**
+     * Retrieves the favourite artists of a user: the artists that appear most in the songs of
+     * their lists (see {@link com.uo289390.toco.model.User#getTopArtistsFromItemLists(int)}).
+     *
+     * @param userId       the ID of the user
+     * @param totalArtists how many artists to return (1 to {@code MAX_TOP_ARTISTS_COUNT})
+     * @return the artist names from most to least repeated (empty if the lists have no songs),
+     *         or empty if the user does not exist
+     * @throws IllegalArgumentException if {@code totalArtists} is out of range
+     */
+    Optional<List<String>> findTopArtistsForUser(Long userId, int totalArtists);
 
     Optional<UserDto> addFavoriteGenre(Long userId, Long genreId);
 

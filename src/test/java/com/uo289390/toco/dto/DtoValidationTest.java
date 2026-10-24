@@ -66,6 +66,21 @@ class DtoValidationTest {
         }
 
         @Test
+        void difficultyLevel_isOptionalAndBetween0And5() {
+            dto.setDifficultyLevel(null);
+            assertTrue(invalidFields(dto).isEmpty());
+            dto.setDifficultyLevel(0);
+            assertTrue(invalidFields(dto).isEmpty());
+            dto.setDifficultyLevel(5);
+            assertTrue(invalidFields(dto).isEmpty());
+
+            dto.setDifficultyLevel(-1);
+            assertEquals(Set.of("difficultyLevel"), invalidFields(dto));
+            dto.setDifficultyLevel(6);
+            assertEquals(Set.of("difficultyLevel"), invalidFields(dto));
+        }
+
+        @Test
         void missingPassword_isOnlyRejectedOnCreate() {
             dto.setPassword(null);
 
@@ -186,7 +201,7 @@ class DtoValidationTest {
         @BeforeEach
         void setUp() {
             dto = new LoginRequestDto();
-            dto.setEmail("user@example.com");
+            dto.setIdentifier("user@example.com");
             dto.setPassword("Password1!");
         }
 
@@ -197,11 +212,19 @@ class DtoValidationTest {
 
         @ParameterizedTest
         @NullAndEmptySource
-        @ValueSource(strings = { "invalid" })
-        void invalidEmail_isRejected(String email) {
-            dto.setEmail(email);
+        @ValueSource(strings = { "   " })
+        void blankIdentifier_isRejected(String identifier) {
+            dto.setIdentifier(identifier);
 
-            assertEquals(Set.of("email"), invalidFields(dto));
+            assertEquals(Set.of("identifier"), invalidFields(dto));
+        }
+
+        @ParameterizedTest
+        @ValueSource(strings = { "user@example.com", "johnny", "j.doe_99" })
+        void emailOrUsername_isAccepted(String identifier) {
+            dto.setIdentifier(identifier);
+
+            assertTrue(invalidFields(dto).isEmpty());
         }
 
         @ParameterizedTest
@@ -512,6 +535,15 @@ class DtoValidationTest {
             dto.setOrderIndex(-1);
 
             assertEquals(Set.of("orderIndex"), invalidFields(dto));
+        }
+
+        @Test
+        void videoUrl_isOptionalButMustBeAUrl() {
+            dto.setVideoUrl("https://www.youtube.com/watch?v=abc123");
+            assertTrue(invalidFields(dto).isEmpty());
+
+            dto.setVideoUrl("no es una url");
+            assertEquals(Set.of("videoUrl"), invalidFields(dto));
         }
     }
 

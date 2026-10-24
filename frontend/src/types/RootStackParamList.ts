@@ -6,10 +6,10 @@ export type RootStackParamList = {
   SongScreen: { songId: string };
   LessonScreen: { lessonId: string };
   GenreMainScreen: {genreId: string};
-  InstrumentGenreScreen: {instrumentGenreId: string, instrumentName: string};
   InstrumentGenreLesson: { instrumentGenreId: string; instrumentName: string };
   ListScreen: { itemListId: string };
   AddItemScreen: { itemListId: string };
   ProfileScreen: undefined;
   MetronomeScreen: undefined;
+  TunerScreen: undefined;
 };

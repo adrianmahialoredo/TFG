@@ -1,6 +1,6 @@
 import React from "react";
 import {View} from "react-native";
-import {Ionicons} from "@expo/vector-icons";
+import {Star} from "lucide-react-native";
 import {COLORS} from "../constants/Theme";
 
 type Props = {
@@ -14,11 +14,12 @@ export default function DifficultyStars({ level }: Props) {
   return (
     <View className="flex-row justify-center">
       {[...Array(5)].map((_, i) => (
-        <Ionicons
+        // Iconos SVG de lucide (como el resto de la app): no cargan ninguna fuente
+        <Star
           key={i}
-          name={i < filledStars ? 'star' : 'star-outline'}
           size={18}
           color={COLORS.primary}
+          fill={i < filledStars ? COLORS.primary : 'none'}
         />
       ))}
     </View>

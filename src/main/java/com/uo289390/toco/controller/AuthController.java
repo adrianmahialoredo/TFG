@@ -24,7 +24,7 @@ import org.springframework.validation.annotation.Validated;
  * Endpoints:
  * - POST   /api/auth/verification-code Send a code to the email of a future registration
  * - POST   /api/auth/register          Register a user (with that code) and log them in
- * - POST   /api/auth/login             Log a user in
+ * - POST   /api/auth/login             Log a user in (with their email or username)
  *
  * Register and login return a {@link LoginResponse} with the JWT and the user.
  *
@@ -77,14 +77,15 @@ public class AuthController {
     }
 
     /**
-     * Logs a user in.
+     * Logs a user in with their email or their username (field {@code identifier};
+     * {@code email} is accepted as an alias).
      *
      * @param dto the credentials of the user
      * @return 200 OK with the JWT and the user
      */
     @PostMapping("/login")
     public ResponseEntity<LoginResponse> login(@Valid @RequestBody LoginRequestDto dto) {
-        LoginResponse response = userService.login(dto.getEmail(), dto.getPassword());
+        LoginResponse response = userService.login(dto.getIdentifier(), dto.getPassword());
         log.debug("JWT generated successfully during login flow");
         return ResponseEntity.ok(response);
     }

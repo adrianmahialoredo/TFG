@@ -2,6 +2,7 @@ package com.uo289390.toco.dto;
 
 import jakarta.validation.constraints.*;
 import lombok.Data;
+import org.hibernate.validator.constraints.URL;
 
 /**
  * Data Transfer Object for lesson section information.
@@ -36,6 +37,12 @@ public class LessonSectionDTO {
      */
     @NotBlank(message = "Section content is required")
     private String htmlContent;
+
+    /**
+     * Optional URL of a support video for the section (a YouTube link).
+     */
+    @URL(message = "Video URL must be a valid URL")
+    private String videoUrl;
 
     /**
      * The ID of the lesson this section belongs to.

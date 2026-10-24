@@ -52,6 +52,15 @@ class UserRepositoryTest {
     }
 
     @Test
+    void existsByEmailIgnoreCase_matchesAnyCase() {
+        userRepository.saveAndFlush(user("alice"));
+
+        assertTrue(userRepository.existsByEmailIgnoreCase("alice@example.com"));
+        assertTrue(userRepository.existsByEmailIgnoreCase("ALICE@Example.com"));
+        assertFalse(userRepository.existsByEmailIgnoreCase("missing@example.com"));
+    }
+
+    @Test
     void findByUsername_findsExistingUser() {
         userRepository.saveAndFlush(user("bob"));
 

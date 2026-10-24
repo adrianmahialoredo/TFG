@@ -1,5 +1,6 @@
 import React, {useState, useEffect, useMemo} from "react";
-import { ScrollView, View, Image, TouchableOpacity, Modal, Pressable, Text } from "react-native";
+import { View, Image, TouchableOpacity, Modal, Pressable, Text } from "react-native";
+import FadeScrollView from "../components/FadeScrollView";
 import { useNavigation, NavigationProp } from '@react-navigation/native';
 import * as Clipboard from 'expo-clipboard';
 import { Copy } from "lucide-react-native";
@@ -14,12 +15,13 @@ import CreateListMiniModal from "../components/CreateListMiniModal";
 import FavoritesPickerModal from "../components/FavoritesPickerModal";
 import { SpotifyButton } from "../components/buttons/SpotifyButton";
 import { useProfile } from "../hooks/useProfile";
-import { useAuth } from "../hooks/useAuth";
+import { useAuth } from "../context/AuthContext";
 import {useItemLists} from "../hooks/useItemLists";
 import { RootStackParamList } from "../types";
 import { useAppAlert } from "../context/AlertModalContext";
 import { MIN_FAVOURITE_GENRES, MIN_FAVOURITE_INSTRUMENTS } from "../constants/Preferences";
 import UserAvatar from "../components/UserAvatar";
+import DifficultyLevelSlider from "../components/DifficultyLevelSlider";
 
 export default function ProfileScreen() {
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
@@ -40,6 +42,7 @@ export default function ProfileScreen() {
     name: user?.name || "",
     username: user?.username || "",
     email: user?.email || "",
+    difficultyLevel: user?.difficultyLevel ?? 0,
   }));
 
   const { lists, creating, createList } = useItemLists(user?.id);
@@ -101,21 +104,33 @@ export default function ProfileScreen() {
   const [profileModalVisible, setProfileModalVisible] = useState(false);
   const [viewImageModal, setViewImageModal] = useState(false);
 
+  // El modal sigue abierto (con "Subiendo foto...") hasta que la foto se sube; si falla, se avisa
+  const handlePickImage = async () => {
+    try {
+      if (await pickAndUploadImage()) setProfileModalVisible(false);
+    } catch (err) {
+      console.error('[ProfileScreen] Error subiendo la foto de perfil:', err);
+      showAlert({ title: 'Error', message: 'No se pudo actualizar la foto de perfil' });
+    }
+  };
+
   useEffect(() => {
     if (user) {
       setForm(prev => {
         // SOLO actualizamos si los valores realmente han cambiado respecto al user de la store
-        if (prev.name === user.name && prev.username === user.username && prev.email === user.email) {
+        if (prev.name === user.name && prev.username === user.username && prev.email === user.email
+            && prev.difficultyLevel === (user.difficultyLevel ?? 0)) {
           return prev;
         }
         return {
           name: user.name || '',
           username: user.username || '',
           email: user.email || '',
+          difficultyLevel: user.difficultyLevel ?? 0,
         };
       });
     }
-  }, [user?.id, user?.name, user?.username, user?.email]);
+  }, [user?.id, user?.name, user?.username, user?.email, user?.difficultyLevel]);
 
   const handleSaveProfile = async () => {
     // El backend rechaza el perfil sin el mínimo de favoritos (Preferences.MIN_NUMBER_OF_FAVOURITE_*)
@@ -150,10 +165,10 @@ export default function ProfileScreen() {
 
   return (
       <AppLayout>
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 120 }}>
+        <FadeScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 120 }}>
 
           {/* CABECERA: FOTO Y USERNAME */}
-          <View className="items-center mt-8">
+          <View className="items-center mt-2">
             <TouchableOpacity onPress={() => setProfileModalVisible(true)}>
               <UserAvatar user={user} size={128} className="mb-4 border-2 border-secondary" />
             </TouchableOpacity>
@@ -198,6 +213,12 @@ export default function ProfileScreen() {
                 onChange={() => {}}
                 readOnly
             />
+            {/* Nivel musical autopercibido: se guarda con "Guardar ajustes" */}
+            <DifficultyLevelSlider
+                value={form.difficultyLevel}
+                onChange={(level) => setForm({ ...form, difficultyLevel: level })}
+                disabled={isLoading}
+            />
           </View>
 
           <View className="h-[5px] bg-primary my-1 mx-4" />
@@ -238,7 +259,7 @@ export default function ProfileScreen() {
             </TouchableOpacity>
           </View>
 
-        </ScrollView>
+        </FadeScrollView>
 
         {/* MODALES EXTRAÍDOS */}
         {favoritesKind && (
@@ -257,10 +278,11 @@ export default function ProfileScreen() {
               setViewImageModal(true);
               setProfileModalVisible(false);
             }}
-            onPickImage={pickAndUploadImage} // Ahora el hook se encarga del Picker
+            onPickImage={handlePickImage}
+            isLoading={isLoading}
         />
 
-        <Modal visible={viewImageModal} transparent animationType="fade">
+        <Modal visible={viewImageModal} transparent animationType="fade" onRequestClose={() => setViewImageModal(false)}>
           <Pressable className="flex-1 bg-black justify-center items-center" onPress={() => setViewImageModal(false)}>
             {user.profileImageUrl ? (
               <Image

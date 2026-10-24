@@ -8,6 +8,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.SequencedSet;
@@ -32,7 +34,11 @@ public class ItemRecommendationServiceImpl implements ItemRecommendationService 
         items.addAll(instrumentGenreRecommendationService.findForItemList(id, RecommendationConstants.RECOMMENDED_INSTRUMENT_GENRES_COUNT));
         items.addAll(lessonRecommendationService.findForItemList(id, RecommendationConstants.RECOMMENDED_LESSONS_COUNT));
 
-        return dtoMapper.itemsToItemDTOs(items);
+        // Mixed types: the app shows only the first few at a time, which in priority order
+        // would always be songs. Shuffling the (at most 20) entities is cheaper than the mapping.
+        List<Item> shuffled = new ArrayList<>(items);
+        Collections.shuffle(shuffled);
+        return dtoMapper.itemsToItemDTOs(shuffled);
     }
 
     @Override

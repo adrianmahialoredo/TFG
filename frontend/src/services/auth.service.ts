@@ -50,7 +50,7 @@ const REGISTER_BACKEND_MESSAGES: Record<string, string> = {
 };
 
 /**
- * En el registro no se oculta nada: "Email o contraseña incorrectos" solo tiene sentido en el
+ * En el registro no se oculta nada: "Usuario, email o contraseña incorrectos" solo tiene sentido en el
  * login, y en el registro escondía el motivo real (p.ej. una regla de validación del backend).
  */
 const toRegisterServiceError = (error: unknown): AuthServiceError => {
@@ -64,6 +64,11 @@ const toRegisterServiceError = (error: unknown): AuthServiceError => {
       'No se pudo completar el registro';
     return new AuthServiceError(message, 400, payload.errors);
   }
+  // Un 401/403 en el registro no es un fallo de credenciales (no hay credenciales que comprobar):
+  // no debe acabar en el mensaje del login.
+  if (axios.isAxiosError(error) && (error.response?.status === 401 || error.response?.status === 403)) {
+    return new AuthServiceError('No se pudo completar el registro', error.response.status);
+  }
   return toAuthServiceError(error, 'No se pudo completar el registro');
 };
 
@@ -73,15 +78,21 @@ const toAuthServiceError = (error: unknown, fallbackMessage: string): AuthServic
     const payload = (error.response?.data || {}) as AuthErrorPayload;
     const fieldError = pickFieldError(payload.errors);
 
-    if (status === 400 || status === 401) {
+    // 401 = credenciales incorrectas: siempre el mensaje genérico, sin el texto del backend
+    // (no debe revelar si el usuario existe ni salir en inglés).
+    if (status === 401) {
+      return new AuthServiceError('Usuario, email o contraseña incorrectos', status, payload.errors);
+    }
+
+    if (status === 400) {
       const backendMessage = payload.message?.toLowerCase() || '';
       const shouldHideValidationDetail =
         backendMessage.includes('validation') || Boolean(payload.errors?.password);
 
       return new AuthServiceError(
         shouldHideValidationDetail
-          ? 'Email o contrasena incorrectos'
-          : fieldError || payload.message || 'Email o contrasena incorrectos',
+          ? 'Usuario, email o contraseña incorrectos'
+          : fieldError || payload.message || 'Usuario, email o contraseña incorrectos',
         status,
         payload.errors
       );
@@ -102,15 +113,16 @@ const toAuthServiceError = (error: unknown, fallbackMessage: string): AuthServic
 };
 
 /**
- * Login: Autentica un usuario con email y contraseña
+ * Login: Autentica un usuario con su email o su nombre de usuario y la contraseña
+ * (el backend busca primero por email y después por usuario).
  */
 export const login = async (
-  email: string,
+  identifier: string,
   password: string
 ): Promise<{ token: string; user: UserDTO }> => {
   try {
     const response = await apiClient.post(API_ENDPOINTS.AUTH.LOGIN, {
-      email,
+      identifier: identifier.trim(),
       password,
     });
 

@@ -1,6 +1,7 @@
 import AppLayout from "../components/AppLayout";
 import ProfileHeader from "../components/ProfileHeader";
-import { ScrollView, View, Text, ActivityIndicator } from "react-native";
+import { View, Text, ActivityIndicator } from "react-native";
+import FadeScrollView from "../components/FadeScrollView";
 import Animated, { FadeOut, LinearTransition } from "react-native-reanimated";
 import { useRoute, RouteProp } from "@react-navigation/native";
 import SearchBar from "../components/SearchBar";
@@ -27,12 +28,12 @@ export default function AddItemScreen() {
       <View className="bg-background flex-1 pt-2">
         {/* Icono de perfil y titulo */}
         <ProfileHeader title="Añadir a lista" />
-        <ScrollView
+        <FadeScrollView
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{ paddingBottom: 120 }}
         >
           {/* Barra de búsqueda */}
-          <View className="bg-background mt-3 mb-10">
+          <View className="bg-background mt-1 mb-10">
             <SearchBar value={query} onChangeText={setQuery} />
           </View>
 
@@ -71,7 +72,7 @@ export default function AddItemScreen() {
               </Text>
             </View>
           )}
-        </ScrollView>
+        </FadeScrollView>
       </View>
     </AppLayout>
   );

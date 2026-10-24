@@ -67,7 +67,7 @@ class ItemListServiceTest {
         new EntityResolver(mock(ChordRepository.class), mock(GenreRepository.class), mock(InstrumentRepository.class),
                 mock(InstrumentGenreRepository.class), itemRepository, itemListRepository, mock(LessonRepository.class),
                 mock(LessonSectionRepository.class), mock(SongRepository.class), mock(SongLessonRepository.class),
-                mock(SpotifyUserRepository.class), mock(TabSectionRepository.class), userRepository);
+                mock(SpotifyUserRepository.class), mock(TabSectionRepository.class), mock(TuneRepository.class), userRepository);
         itemListService = new ItemListServiceImpl(itemListRepository, songService, dtoMapper, entityMapper);
 
         user = new User();

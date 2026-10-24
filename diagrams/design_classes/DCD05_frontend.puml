@@ -1,0 +1,254 @@
+@startuml DCD-05
+title DCD-05 - Diagrama de clases de diseño: frontend (React Native)
+
+' Arquitectura en 7 niveles de frontend/src (architecture.md §12 y frontend/bible.md),
+' mostrada con el recorrido de la pantalla de canción (SongScreen). El código es
+' TypeScript funcional: cada "clase" es un módulo, hook o store de Zustand, con sus
+' funciones exportadas como operaciones. Cada recurso (genre, lesson, itemList, tune...)
+' repite el mismo patrón: <x>Service -> <x>Local -> <x>Repository -> use<X>EntitiesStore.
+' Un nivel solo depende de los de debajo; types, constants y utils son transversales.
+skinparam classAttributeIconSize 0
+skinparam roundcorner 6
+skinparam nodesep 40
+skinparam ranksep 55
+skinparam packageStyle rectangle
+skinparam class {
+    BackgroundColor<<screen>> #E3F0FF
+    BorderColor<<screen>> #3D6FA8
+    BackgroundColor<<hook>> #EAF2FB
+    BorderColor<<hook>> #3D6FA8
+    BackgroundColor<<context>> #EAF2FB
+    BorderColor<<context>> #3D6FA8
+    BackgroundColor<<store>> #F3EAFB
+    BorderColor<<store>> #7A4FA8
+    BackgroundColor<<repository>> #E6F5E6
+    BorderColor<<repository>> #3C8A3C
+    BackgroundColor<<local>> #FFF4E0
+    BorderColor<<local>> #B07A1F
+    BackgroundColor<<service>> #FDF7E3
+    BorderColor<<service>> #B07A1F
+    BackgroundColor<<utils>> #F3F3F3
+    BackgroundColor<<external>> #FFFFFF
+    BorderColor<<external>> #888888
+}
+hide empty members
+
+' =====================================================================
+' Nivel 7 - UI
+' =====================================================================
+
+package "Nivel 7 - UI (screens, components)" {
+    class SongScreen <<screen>> {
+        + render() : JSX.Element
+    }
+    note right of SongScreen : Solo pinta y consume hooks:\nselector de instrumento y dificultad,\nletra con acordes, vídeo, tablaturas
+}
+
+' =====================================================================
+' Nivel 6 - Hooks y Context
+' =====================================================================
+
+package "Nivel 6 - Hooks / Context" {
+    class useSong <<hook>> {
+        + useSong(songId : string)
+        --
+        song : SongDTO
+        loading : boolean
+        selectedLesson : SongLessonDTO
+        chords : ChordDTO[]
+        tabSections : TabSectionDTO[]
+        availableInstruments / availableDifficulties
+        parsedLyrics
+        changeInstrument(id : string) : void
+        changeDifficulty(d : DifficultyLevel) : void
+    }
+    note right of useSong : Convierte IDs en objetos (useMemo)\nleyendo siempre de las stores
+
+    class AuthProvider <<context>> {
+        user : UserDTO | null
+        token : string | null
+        isAuthenticated : boolean
+        isReady : boolean
+        login(identifier : string, password : string) : Promise<void>
+        logout() : Promise<void>
+        - loadInitialData() : void
+    }
+}
+
+' =====================================================================
+' Niveles 5 y 4 - Stores (Zustand)
+' =====================================================================
+
+package "Nivel 5 - Screen Store" {
+    class useSongScreenStore <<store>> {
+        isLoading : boolean
+        selectedInstrumentId : string | null
+        selectedDifficulty : DifficultyLevel | null
+        setInstrument(id : string) : void
+        setDifficulty(d : DifficultyLevel) : void
+        reset() : void
+    }
+}
+
+package "Nivel 4 - Entity Stores" {
+    class useSongEntitiesStore <<store>> {
+        songs : Record<string, SongDTO>
+        setSongs(songs : SongDTO[]) : void
+        updateSong(id : string, data : Partial<SongDTO>) : void
+        removeSongs(ids : string[]) : void
+        clearSongs() : void
+    }
+    class "useSongLessonEntitiesStore /\nuseChordEntitiesStore /\nuseTabSectionEntitiesStore" as contentStores <<store>> {
+        songLessons / chords / tabSections : Record<string, T>
+    }
+    class useItemEntitiesStore <<store>> {
+        items : Record<string, ItemSummaryDTO>
+        setItems(items : ItemSummaryDTO[]) : void
+    }
+    class useRecentItemsStore <<store>> {
+        markAsAccessed(userId : string, id : string) : void
+    }
+    class useAuthStore <<store>> {
+        token : string | null
+        currentUserId : string | null
+        isAuthenticated : boolean
+        isHydrated : boolean
+        setAuth(token : string, userId : string) : void
+        clearAuth() : void
+    }
+    note bottom of useAuthStore : persist (AsyncStorage 'auth-store').\nAl hidratarse descarta el token caducado
+}
+
+' =====================================================================
+' Nivel 3 - Repositories
+' =====================================================================
+
+package "Nivel 3 - Repositories" {
+    class songRepository <<repository>> {
+        + getById(id : string) : Promise<SongDTO | null>
+        + getAllById(ids : string[]) : Promise<SongDTO[]>
+        + hydrate(songs : SongDTO[]) : string[]
+        + getPopular(onFresh?) : Promise<string[]>
+        + getNewByGenreId(genreId : string, onFresh?) : Promise<string[]>
+        + getByFavouriteArtists(userId : string) : Promise<...>
+        {method} ...
+    }
+    class "songLessonRepository /\nchordRepository /\ntabSectionRepository" as contentRepos <<repository>> {
+        + getAllById(ids : string[]) : Promise<T[]>
+    }
+    class itemRepository <<repository>> {
+        + getCatalog(onFresh?) : Promise<string[]>
+        + getAllById(ids : string[]) : Promise<ItemSummaryDTO[]>
+        + markAsAccessed(id : string) : void
+    }
+    class authRepository <<repository>> {
+        + login(identifier : string, password : string) : Promise<{token, user}>
+        + logout() : Promise<void>
+    }
+
+    class "EntityCache<T>" as EntityCache <<utils>> {
+        + getAllById(ids : string[]) : Promise<T[]>
+        + hydrate(entities : T[], cacheKey?) : string[]
+        + list(cacheKey, fetchList, onFresh?) : Promise<string[]>
+        + idList(cacheKey, fetchIds, onFresh?) : Promise<string[]>
+        + feed(cacheKey, load, onFresh?) : Promise<string[]>
+        + markFresh(ids : string[]) : void
+        + revalidate(ids : string[]) : void
+    }
+    note right of EntityCache
+        utils/entityCache.utils.createEntityCache(config).
+        Por id: RAM -> disco -> API.
+        Listas: índice guardado al instante y la red
+        refresca después avisando con onFresh
+        (stale-while-revalidate).
+    end note
+}
+
+' =====================================================================
+' Nivel 2 - Local
+' =====================================================================
+
+package "Nivel 2 - Local" {
+    class songLocal <<local>> {
+        + saveSingle(song : SongDTO) : Promise<void>
+        + getById(id : string) : Promise<SongDTO | null>
+        + saveBatch(songs : SongDTO[]) : Promise<void>
+        + getAllById(ids : string[]) : Promise<{cached, missing}>
+        + saveQueryIndex(key : string, ids : string[]) : Promise<void>
+        + getQueryIndex(key : string) : Promise<string[] | null>
+        + removeQueryIndexes(keys : string[]) : Promise<void>
+    }
+    class storageLocal <<local>> {
+        + storeData(key : string, value : T) : Promise<void>
+        + getData(key : string) : Promise<T | null>
+        + removeData(key : string) : Promise<void>
+    }
+}
+
+' =====================================================================
+' Nivel 1 - Services
+' =====================================================================
+
+package "Nivel 1 - Services" {
+    class songService <<service>> {
+        + getById(id : string) : Promise<SongDTO>
+        + getAllById(ids : string[]) : Promise<SongDTO[]>
+        + getPopular(limit?) : Promise<SongDTO[]>
+        + getNewByGenreId(genreId : string) : Promise<SongDTO[]>
+        {method} ...
+    }
+    class authService <<service>> {
+        + login(identifier : string, password : string) : Promise<{token, user}>
+        + register(...) : Promise<{token, user}>
+        + requestVerificationCode(email : string) : Promise<void>
+    }
+    class apiClient <<service>> {
+        + get / post / put / delete
+        --
+        interceptor petición: Authorization: Bearer <token>
+        interceptor respuesta: 401 con sesión -> clearAuth()
+    }
+    note bottom of apiClient : Instancia compartida de axios.\nTodas las URLs salen de config/apiConfig.ts\n(API_ENDPOINTS)
+}
+
+class AsyncStorage <<external>>
+class "Backend REST\n(/api/...)" as Backend <<external>>
+
+' =====================================================================
+' Dependencias
+' =====================================================================
+
+SongScreen --> useSong
+
+useSong --> songRepository
+useSong --> itemRepository : markAsAccessed
+useSong --> useSongEntitiesStore
+useSong --> contentStores
+useSong --> useSongScreenStore
+useSong --> useAuthStore
+
+AuthProvider --> authRepository
+AuthProvider --> itemRepository : getCatalog
+AuthProvider --> useAuthStore
+
+songRepository --> EntityCache
+songRepository --> contentRepos : lessonIds -> chordIds, tabSectionIds
+contentRepos --> contentStores
+songRepository --> songService
+songRepository --> songLocal
+songRepository --> useSongEntitiesStore
+songRepository --> useItemEntitiesStore : resumen del catálogo
+itemRepository --> useItemEntitiesStore
+itemRepository --> useRecentItemsStore
+authRepository --> authService
+authRepository --> useAuthStore
+
+songLocal --> storageLocal
+storageLocal --> AsyncStorage
+
+songService --> apiClient
+authService --> apiClient
+apiClient ..> useAuthStore : token / clearAuth
+apiClient ..> Backend : HTTP / JSON
+
+@enduml

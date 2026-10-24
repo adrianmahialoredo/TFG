@@ -1,0 +1,189 @@
+@startuml DSD-CU-01
+title DSD-CU-01 - Registrar usuario
+
+' Diagrama de secuencia de diseño: realización de CU-01 (análisis en
+' diagrams/use_cases/description/CU01_registrar_usuario.puml).
+' Fuentes: frontend/src/screens/RegisterScreen.tsx, components/EmailVerificationModal.tsx,
+' hooks/useRegister.ts, context/AuthContext.tsx, repositories/auth.repository.ts,
+' services/auth.service.ts, services/apiClient.ts, stores/entities/auth.entities.store.ts,
+' stores/entities/user.entities.store.ts, navigation/AppNavigator.tsx;
+' AuthController.java, EmailVerificationServiceImpl.java, EmailServiceImpl.java,
+' UserServiceImpl.java, UserRepository.java, JwtUtil.java, EntityResolver.java,
+' GlobalExceptionHandler.java, SecurityConfig.java.
+' Diferencias con el análisis: no hay "sugerir iniciar sesión" cuando el email ya existe
+' (solo se muestra el error); el 429 reabre el modal del código en vez de solo pedir
+' esperar; la precarga del catálogo no la lanza la pantalla de registro, sino el
+' efecto de AuthProvider al guardarse el token.
+autonumber
+hide footbox
+skinparam sequenceMessageAlign center
+skinparam roundcorner 6
+skinparam maxMessageSize 260
+skinparam BoxPadding 10
+
+actor "Visitante" as actor
+
+box "App (React Native)" #F3F8FF
+    participant "RegisterScreen\n(+ EmailVerificationModal)\n<<Nivel 7>>" as screen
+    participant "useRegister\n<<Nivel 6>>" as hook
+    participant "authRepository\n<<Nivel 3>>" as repo
+    participant "authService\n<<Nivel 1>>" as service
+    participant "useUserEntitiesStore\nuseAuthStore\n<<Nivel 4>>" as store
+end box
+
+box "Backend (Spring Boot)" #FFF9F0
+    participant "AuthController\n<<controller>>" as controller
+    participant "EmailVerificationServiceImpl\n<<service>>" as verification
+    participant "EmailServiceImpl\n<<service>>" as emailService
+    participant "UserServiceImpl\n<<service>>" as userService
+    participant "UserRepository\n<<repository>>" as userRepo
+    participant "JwtUtil\n<<security>>" as jwt
+end box
+
+box "Servicios externos" #F3F3F3
+    participant "Servidor SMTP\n<<sistema externo>>" as smtp
+end box
+
+note over controller : /api/auth/** es público (SecurityConfig):\nlas peticiones no llevan JWT.\nLos errores los traduce GlobalExceptionHandler:\nIllegalArgumentException -> 400,\nIllegalStateException -> 500.
+
+actor -> screen : rellena nombre, email, usuario,\ncontraseña (x2) y favoritos
+note right of screen : GenrePicker / InstrumentPicker leen\nGET /api/genres y GET /api/instruments\n(públicos) con useGenres / useInstruments
+actor -> screen : pulsa "Crear cuenta"
+screen -> hook : handleRegister() -> requestCode(form)
+hook -> hook : validate(form)
+
+alt Formato inválido (nombre, email, usuario, contraseña,\nconfirmación o mínimo de favoritos)
+    hook --> screen : throw Error(mensaje)
+    screen --> actor : showAlert({ title: 'Error', message })
+else Formulario válido
+
+    == Envío del código de verificación ==
+
+    hook -> repo : requestVerificationCode(email.trim())
+    repo -> service : requestVerificationCode(email)
+    service -> controller : POST /api/auth/verification-code\n{ email }
+    controller -> verification : sendCode(email)
+    verification -> userRepo : existsByEmailIgnoreCase(key)
+    userRepo --> verification : boolean
+
+    alt El email ya está registrado
+        verification --> controller : IllegalArgumentException("Email already registered")
+        controller --> service : 400 Bad Request\n{ message: "Email already registered" }
+        service --> repo : AuthServiceError("Ya existe una cuenta con ese email", 400)
+        repo --> hook : throw
+        hook --> screen : throw
+        screen --> actor : showAlert({ title: 'Error', message })
+    else Se pidió otro código hace menos de 60 s (RESEND_COOLDOWN)
+        verification --> controller : ResponseStatusException(TOO_MANY_REQUESTS)
+        controller --> service : 429 Too Many Requests
+        service --> repo : AuthServiceError("Espera un minuto antes de pedir otro código", 429)
+        repo --> hook : throw
+        hook --> screen : throw (status 429)
+        screen -> screen : setCodeError('Ya te enviamos un código hace poco...')\nsetVerifying(true)
+        screen --> actor : muestra EmailVerificationModal\n(el código anterior sigue siendo válido)
+    else Email libre
+        verification -> verification : generateCode()
+        note right of verification : 6 dígitos con SecureRandom.\nCaduca a los 10 min (CODE_TTL),\nmáximo 5 fallos (MAX_ATTEMPTS)
+        verification -> emailService : sendVerificationCode(email, code, 10)
+        emailService -> emailService : fill(plantillas .txt y .html, { code, minutes })
+        emailService -> smtp : JavaMailSender.send(message)
+
+        alt Fallo SMTP (MessagingException / MailException)
+            smtp --> emailService : error
+            emailService --> verification : IllegalStateException
+            verification --> controller : IllegalStateException\n(el código no se guarda)
+            controller --> service : 500 Internal Server Error
+            service --> screen : AuthServiceError("No se pudo enviar el email\nde verificación...", 500)\n(vía repo y hook)
+            screen --> actor : showAlert({ title: 'Error', message })
+        else Enviado
+            smtp --> emailService : ok
+            note right of emailService : Sin JavaMailSender configurado\nel código solo se escribe en el log
+            emailService --> verification : ok
+            verification -> verification : pendingCodes.put(key, PendingCode(code, now))
+            verification --> controller : ok
+            controller --> service : 204 No Content
+            service --> repo : void
+            repo --> hook : void
+            hook --> screen : void
+            screen -> screen : setCodeError(null)\nsetVerifying(true)
+            screen --> actor : muestra EmailVerificationModal(email)
+            smtp ->> actor : email con el código
+
+            opt El visitante no recibe el código (tras la cuenta atrás de 60 s)
+                actor -> screen : pulsa "Reenviar código"
+                screen -> hook : onResend() -> resendCode(email)
+                hook -> repo : requestVerificationCode(email.trim())
+                note over repo, verification : Mismo flujo que el envío inicial:\nPOST /api/auth/verification-code -> 204 No Content (o 400 / 429)
+                repo --> screen : void (vía hook)
+                screen -> screen : setCode('')\nsetSecondsLeft(60)
+            end
+
+            == Registro con el código ==
+
+            actor -> screen : escribe el código de 6 dígitos
+            screen -> screen : handleChange(value): 6 cifras -> onSubmit(code)
+            screen -> hook : handleCodeSubmit(code) -> register(form, code)
+            hook -> hook : validate(form)
+            hook -> repo : register({ ...form, email: email.trim() }, code)
+            repo -> repo : quita confirmPassword
+            repo -> service : register(registerData, verificationCode)
+            service -> controller : POST /api/auth/register\n{ email, username, name, password,\nfavouriteGenresIds, favouriteInstrumentsIds,\nverificationCode }
+            note right of controller : @Validated(OnCreate.class) UserDto:\nun campo inválido -> 400 { errors: { campo: ... } }
+            controller -> verification : checkCode(email, verificationCode)
+
+            alt Código vacío, no pedido, caducado, incorrecto o 5 fallos
+                verification --> controller : IllegalArgumentException("Invalid verification code" |\n"Verification code expired" | "Too many wrong verification codes" | ...)
+                controller --> service : 400 Bad Request { message }
+                service --> repo : AuthServiceError(mensaje en español, 400)
+                repo --> hook : throw
+                hook --> screen : throw
+                screen -> screen : setCodeError(error.message)
+                screen --> actor : el modal muestra el error y vacía el campo\n(puede reintentar o pedir otro código)
+            else Código correcto
+                verification --> controller : ok
+                controller -> userService : register(dto)
+                userService -> userRepo : existsByEmailIgnoreCase(email)
+                userRepo --> userService : false
+                userService -> userRepo : findByUsername(username)
+                userRepo --> userService : Optional<User>
+
+                alt El nombre de usuario ya existe
+                    userService --> controller : IllegalArgumentException("Username already taken")
+                    controller --> service : 400 Bad Request { message }
+                    service --> screen : AuthServiceError("Ese nombre de usuario ya está en uso", 400)\n(vía repo y hook)
+                    screen --> actor : el modal muestra el error\n(el código no se ha consumido: se puede\ncorregir el usuario y reintentar)
+                else Usuario libre
+                    userService -> userService : entityMapper.userDtoToUser(dto,\nresolveGenres(ids), resolveInstruments(ids))
+                    note right of userService : EntityResolver resuelve los\ngéneros e instrumentos favoritos
+                    userService -> userService : setPassword(passwordEncoder.encode(password))\nsetRole(Role.USER)
+                    userService -> userRepo : save(user)
+                    userRepo --> userService : User
+                    userService --> controller : UserDto (dtoMapper.userToUserDto)
+                    controller -> verification : consume(email)
+                    controller -> userService : login(email, password)
+                    userService -> userRepo : findByEmail(email)
+                    userRepo --> userService : Optional<User>
+                    userService -> userService : passwordEncoder.matches(password, hash)
+                    userService -> jwt : generateToken(user.getId(), user.getRole())
+                    jwt --> userService : token (subject = id, claim role)
+                    userService --> controller : LoginResponse(token,\ndtoMapper.userToUserResponseDto(user))
+                    controller --> service : 201 Created\nLoginResponse { token, user }
+                    service --> repo : { token, user }
+                    repo -> store : useUserEntitiesStore.setUsers([user])
+                    repo -> repo : userLocal.saveBatch([user])
+                    note right of repo : Disco (AsyncStorage)
+                    repo -> store : useAuthStore.setAuth(token, userId)
+                    note right of store : AuthStore persistida en AsyncStorage\n('auth-store'): solo token y currentUserId
+                    repo --> hook : { token, user }
+                    hook --> screen : { token, user }
+                    screen -> screen : setVerifying(false)
+                    screen --> actor : showAlert('Exito', 'Creando tu perfil musical...')
+                    store ->> screen : isAuthenticated = true
+                    note over screen, store : AppNavigator cambia a BottomTab (no se navega a mano).\nEl efecto de AuthProvider ve el nuevo token y llama a\nloadInitialData(): itemRepository.getCatalog() en segundo plano\n(GET /api/items) y genreRepository.getAll() (ver DSD-CU-02).
+                end
+            end
+        end
+    end
+end
+
+@enduml

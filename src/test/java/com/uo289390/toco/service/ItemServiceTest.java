@@ -8,7 +8,6 @@ import java.util.List;
 import java.util.Optional;
 
 import com.uo289390.toco.model.Item;
-import com.uo289390.toco.model.ItemList;
 import com.uo289390.toco.model.Lesson;
 import com.uo289390.toco.model.Song;
 import com.uo289390.toco.repository.*;
@@ -24,7 +23,6 @@ import com.uo289390.toco.dto.ItemSummaryDTO;
 import com.uo289390.toco.utils.EntityResolver;
 import com.uo289390.toco.utils.mapper.DtoMapper;
 
-import jakarta.persistence.EntityNotFoundException;
 
 /**
  * Unit tests for {@link ItemServiceImpl}.
@@ -52,7 +50,7 @@ class ItemServiceTest {
         new EntityResolver(mock(ChordRepository.class), mock(GenreRepository.class), mock(InstrumentRepository.class),
                 mock(InstrumentGenreRepository.class), itemRepository, itemListRepository, mock(LessonRepository.class),
                 mock(LessonSectionRepository.class), mock(SongRepository.class), mock(SongLessonRepository.class),
-                mock(SpotifyUserRepository.class), mock(TabSectionRepository.class), mock(UserRepository.class));
+                mock(SpotifyUserRepository.class), mock(TabSectionRepository.class), mock(TuneRepository.class), mock(UserRepository.class));
         itemService = new ItemServiceImpl(itemRepository, dtoMapper);
 
         song = new Song();
@@ -168,50 +166,7 @@ class ItemServiceTest {
         assertTrue(itemService.search("zzz").isEmpty());
     }
 
-    @Test
-    void testFindRecommendedForItemList_EmptyList_ReturnsLatestItems() {
-        // Arrange
-        when(itemListRepository.findById(10L)).thenReturn(Optional.of(new ItemList()));
-        when(itemRepository.findTop20ByIdNotInOrderByCreatedAtDesc(any())).thenReturn(List.of(lesson, song));
 
-        // Act
-        List<ItemSummaryDTO> result = itemService.findRecommendedForItemList(10L);
 
-        // Assert
-        assertEquals(List.of(2L, 1L), result.stream().map(ItemSummaryDTO::getId).toList());
-        // Empty exclusions are replaced by a placeholder: "NOT IN ()" is not valid SQL
-        verify(itemRepository).findTop20ByIdNotInOrderByCreatedAtDesc(List.of(-1L));
-    }
 
-    @Test
-    void testFindRecommendedForItemList_ExcludesItemsAlreadyInTheList() {
-        // Arrange (regression: the list used to be resolved but ignored)
-        ItemList list = new ItemList();
-        list.getItems().add(song);
-        when(itemListRepository.findById(10L)).thenReturn(Optional.of(list));
-        when(itemRepository.findTop20ByIdNotInOrderByCreatedAtDesc(any())).thenReturn(List.of(lesson));
-
-        // Act
-        List<ItemSummaryDTO> result = itemService.findRecommendedForItemList(10L);
-
-        // Assert
-        assertEquals(List.of(2L), result.stream().map(ItemSummaryDTO::getId).toList());
-        verify(itemRepository).findTop20ByIdNotInOrderByCreatedAtDesc(List.of(song.getId()));
-    }
-
-    @Test
-    void testFindRecommendedForItemList_MissingListThrows() {
-        // Arrange
-        when(itemListRepository.findById(10L)).thenReturn(Optional.empty());
-
-        // Act & Assert
-        assertThrows(EntityNotFoundException.class, () -> itemService.findRecommendedForItemList(10L));
-        verify(itemRepository, never()).findTop20ByIdNotInOrderByCreatedAtDesc(any());
-    }
-
-    @Test
-    void testFindRecommendedForItemList_NullIdThrows() {
-        // Act & Assert
-        assertThrows(IllegalArgumentException.class, () -> itemService.findRecommendedForItemList(null));
-    }
 }

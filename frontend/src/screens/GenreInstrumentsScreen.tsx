@@ -1,7 +1,8 @@
 import React from "react";
-import { View, ScrollView, Text } from "react-native";
+import { View, Text } from "react-native";
+import FadeScrollView from "../components/FadeScrollView";
 import { ToolButton } from "../components/buttons/ToolButton";
-import { Guitar, Keyboard, Drum, Music } from 'lucide-react-native';
+import InstrumentIcon from "../components/InstrumentIcon";
 import InstrumentGenreLessonScreen from "./InstrumentGenreLessonScreen";
 import { useGenreInstruments } from "../hooks/useGenreInstruments";
 import { InstrumentGenreDTO } from "../types";
@@ -15,19 +16,6 @@ function chunkArray<T>(arr: T[], size: number): T[][] {
   }
   return chunks;
 }
-
-const INSTRUMENT_ICONS: Record<string, React.ReactNode> = {
-  'guitarra': <Guitar size={85} color="white" strokeWidth={1} />,
-  'piano': <Keyboard size={85} color="white" strokeWidth={1} />,
-  'bateria': <Drum size={85} color="white" strokeWidth={1} />,
-  'bajo': <Guitar size={85} color="white" strokeWidth={1} />,
-};
-
-const getIconForName = (name?: string): React.ReactNode => {
-  const normalized = name?.toLowerCase() || '';
-  const key = Object.keys(INSTRUMENT_ICONS).find(k => normalized.includes(k));
-  return key ? INSTRUMENT_ICONS[key] : <Music size={85} color="white" strokeWidth={1} />;
-};
 
 interface GenreInstrumentsProps {
   genreId: string;
@@ -69,9 +57,9 @@ export default function GenreInstrumentsScreen({ genreId }: GenreInstrumentsProp
   }
 
   return (
-      <ScrollView
+      <FadeScrollView
           className="bg-background"
-          contentContainerStyle={{ paddingBottom: 100, paddingTop: 20 }}
+          contentContainerStyle={{ paddingBottom: 100, paddingTop: 8 }}
       >
         {/* Listado de Instrumentos del Género */}
         <View className="px-4 mb-8">
@@ -84,7 +72,7 @@ export default function GenreInstrumentsScreen({ genreId }: GenreInstrumentsProp
                     >
                       <ToolButton
                           label={ig.title ?? "S/N"}
-                          icon={getIconForName(ig.title)}
+                          icon={<InstrumentIcon name={ig.title} size={85} color="white" />}
                           buttonMarginRight={0}
                           labelMarginRight={0}
                           onPress={() => selectInstrument(ig.id)}
@@ -102,6 +90,6 @@ export default function GenreInstrumentsScreen({ genreId }: GenreInstrumentsProp
               genreId={genreId}
           />
         </View>
-      </ScrollView>
+      </FadeScrollView>
   );
 }

@@ -2,6 +2,7 @@ package com.uo289390.toco.dto;
 
 import com.uo289390.toco.model.Item;
 
+import jakarta.validation.constraints.Pattern;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.ToString;
@@ -31,6 +32,12 @@ public class SongDTO extends ItemDTO {
      * The artist that performs the song.
      */
     private String artist;
+
+    /**
+     * Decade of the song, in the format "1990s". On update, {@code null} (field omitted) keeps the current one.
+     */
+    @Pattern(regexp = "^(19|20)\\d0s$|^$", message = "Decade must be in format like '1980s', '1990s', '2000s', etc. or empty")
+    private String decade;
 
     /**
      * List of IDs of the genres associated with the song.

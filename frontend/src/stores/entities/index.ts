@@ -1,6 +1,7 @@
 // All entity stores
 export * from './song.entities.store';
 export * from './tabSection.entities.store';
+export * from './tune.entities.store';
 export * from './lessonSection.entities.store';
 export * from './songLesson.entities.store';
 export * from './lesson.entities.store';

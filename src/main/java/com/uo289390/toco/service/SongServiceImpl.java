@@ -14,12 +14,17 @@ import com.uo289390.toco.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import com.uo289390.toco.dto.SongDTO;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.util.*;
 import java.util.stream.Collectors;
 
+import static com.uo289390.toco.utils.Utils.idsToExclude;
 import static com.uo289390.toco.utils.Utils.resolvePageable;
+import static com.uo289390.toco.utils.RecommendationConstants.DEFAULT_SONGS_BY_ARTISTS_COUNT;
+import static com.uo289390.toco.utils.RecommendationConstants.MAX_ARTISTS_IN_SONGS_BY_ARTISTS;
+import static com.uo289390.toco.utils.RecommendationConstants.MAX_SONGS_BY_ARTISTS_COUNT;
 import static com.uo289390.toco.utils.EntityResolver.resolveGenres;
 import static com.uo289390.toco.utils.EntityResolver.resolveInstrument;
 import static com.uo289390.toco.utils.EntityResolver.resolveInstruments;
@@ -77,6 +82,7 @@ public class SongServiceImpl implements SongService {
 
         // 2. Campos específicos de Song
         song.setArtist(dto.getArtist());
+        song.setDecade(dto.getDecade());
 
         // 3. Relaciones ManyToMany (Géneros e Instrumentos)
         if (dto.getGenreIds() != null) {
@@ -168,6 +174,16 @@ public class SongServiceImpl implements SongService {
     }
 
     @Override
+    public List<SongDTO> findNewForArtists(List<String> artists, Integer limit) {
+        return findForArtists(artists, limit, songRepository::findByArtistIgnoreCaseAndArtistNewTrueAndIdNotIn);
+    }
+
+    @Override
+    public List<SongDTO> findPopularForArtists(List<String> artists, Integer limit) {
+        return findForArtists(artists, limit, songRepository::findByArtistIgnoreCaseAndArtistPopularTrueAndIdNotIn);
+    }
+
+    @Override
     public List<SongDTO> findPopularForGenre(Long genreId) {
         return songRepository.findByGenresIdAndGenrePopularTrue(genreId).stream()
                 .map(dtoMapper::songToSongDto)
@@ -202,6 +218,9 @@ public class SongServiceImpl implements SongService {
         if (dto.getLevel() > 0) {
             song.setLevel(dto.getLevel());
         }
+        if (dto.getDecade() != null) {
+            song.setDecade(dto.getDecade());
+        }
         if (dto.getGenreIds() != null) {
             song.setGenres(resolveGenres(dto.getGenreIds()));
         }
@@ -235,5 +254,58 @@ public class SongServiceImpl implements SongService {
                 .map(dtoMapper::songToSongDto)
                 .collect(Collectors.toList());
     }
-}
 
+    // ------------------------------
+    // SONGS BY ARTISTS
+    // ------------------------------
+
+    /**
+     * Query of the songs of one artist (new, popular...), with exclusions and a limit.
+     */
+    @FunctionalInterface
+    private interface ArtistSongsQuery {
+        List<Song> find(String artist, Collection<Long> excludedIds, Pageable pageable);
+    }
+
+    /**
+     * Songs of several artists mixed in turns (round robin), so that the first artist does not fill
+     * the whole limit: first song of each artist, then the second of each one... in the given order.
+     */
+    private List<SongDTO> findForArtists(List<String> artists, Integer limit, ArtistSongsQuery query) {
+        int total = limit == null ? DEFAULT_SONGS_BY_ARTISTS_COUNT : limit;
+        if (total < 1 || total > MAX_SONGS_BY_ARTISTS_COUNT) {
+            throw new IllegalArgumentException("limit must be between 1 and " + MAX_SONGS_BY_ARTISTS_COUNT);
+        }
+        Set<String> names = new LinkedHashSet<>();
+        Optional.ofNullable(artists).orElseGet(List::of).stream()
+                .filter(Objects::nonNull)
+                .map(String::trim)
+                .filter(name -> !name.isEmpty())
+                .forEach(names::add);
+        if (names.isEmpty()) {
+            throw new IllegalArgumentException("At least one artist is required");
+        }
+        if (names.size() > MAX_ARTISTS_IN_SONGS_BY_ARTISTS) {
+            throw new IllegalArgumentException("At most " + MAX_ARTISTS_IN_SONGS_BY_ARTISTS + " artists are allowed");
+        }
+
+        // Each artist could fill the limit on their own if the others have no songs
+        List<Iterator<Song>> songsByArtist = names.stream()
+                .map(name -> query.find(name, idsToExclude(Set.of()), resolvePageable(total)).iterator())
+                .toList();
+
+        SequencedSet<Song> result = new LinkedHashSet<>();
+        boolean added = true;
+        while (result.size() < total && added) {
+            added = false;
+            for (Iterator<Song> songs : songsByArtist) {
+                if (result.size() >= total) break;
+                if (songs.hasNext()) {
+                    result.add(songs.next());
+                    added = true;
+                }
+            }
+        }
+        return result.stream().map(dtoMapper::songToSongDto).toList();
+    }
+}

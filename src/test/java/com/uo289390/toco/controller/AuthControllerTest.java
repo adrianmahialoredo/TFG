@@ -78,7 +78,7 @@ class AuthControllerTest {
 
     private LoginRequestDto validLogin() {
         LoginRequestDto dto = new LoginRequestDto();
-        dto.setEmail("john@example.com");
+        dto.setIdentifier("john@example.com");
         dto.setPassword(VALID_PASSWORD);
         return dto;
     }
@@ -387,15 +387,40 @@ class AuthControllerTest {
     }
 
     @Test
-    void login_invalidEmail_returnsBadRequest() throws Exception {
+    void login_withUsername_reachesService() throws Exception {
         LoginRequestDto dto = validLogin();
-        dto.setEmail("john");
+        dto.setIdentifier("johnny");
+        when(userService.login("johnny", VALID_PASSWORD)).thenReturn(loginResponse());
+
+        mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json(dto)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.token").value("jwt-token"));
+    }
+
+    @Test
+    void login_legacyEmailField_isStillAccepted() throws Exception {
+        // Old clients and scripts/api_auth.py send {"email": ...}
+        when(userService.login("john@example.com", VALID_PASSWORD)).thenReturn(loginResponse());
+
+        mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"email\":\"john@example.com\",\"password\":\"" + VALID_PASSWORD + "\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.token").value("jwt-token"));
+    }
+
+    @Test
+    void login_missingIdentifier_returnsBadRequest() throws Exception {
+        LoginRequestDto dto = validLogin();
+        dto.setIdentifier(" ");
 
         mockMvc.perform(post("/api/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(json(dto)))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.errors.email").value("Invalid email format"));
+                .andExpect(jsonPath("$.errors.identifier").value("Email or username is required"));
 
         verifyNoInteractions(userService);
     }

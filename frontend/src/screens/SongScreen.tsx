@@ -1,16 +1,25 @@
 import React from 'react';
-import { View, Text, Image, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
-import { useVideoPlayer, VideoView } from 'expo-video';
+import { View, Text, Image, ActivityIndicator, TouchableOpacity } from 'react-native';
+import FadeScrollView from '../components/FadeScrollView';
 import { useRoute, RouteProp } from '@react-navigation/native';
 import AppLayout from '../components/AppLayout';
 import ProfileHeader from '../components/ProfileHeader';
 import DifficultyStars from '../components/DifficultyStars';
+import OptionSelector from '../components/OptionSelector';
+import YoutubeVideo from '../components/YoutubeVideo';
+import ChordModal from '../components/ChordModal';
 import {ChordDTO, RootStackParamList, TabSectionDTO} from '../types';
 import { useSong } from '../hooks/useSong';
 import { DifficultyLevel } from '../types';
 import { LyricLine } from '../utils/song.utils';
 
 type SongScreenRouteProp = RouteProp<RootStackParamList, 'SongScreen'>;
+
+const DIFFICULTY_LABELS: Record<DifficultyLevel, string> = {
+  [DifficultyLevel.EASY]: 'Fácil',
+  [DifficultyLevel.MEDIUM]: 'Intermedio',
+  [DifficultyLevel.ORIGINAL]: 'Original',
+};
 
 export default function SongScreen() {
   const route = useRoute<SongScreenRouteProp>();
@@ -22,14 +31,16 @@ export default function SongScreen() {
     selectedLesson,
     chords,
     tabSections,
+    availableInstruments,
+    selectedInstrumentId,
+    changeInstrument,
     availableDifficulties,
     changeDifficulty,
     parsedLyrics,
   } = useSong(songId);
 
-  // expo-video: el player se crea siempre (las reglas de hooks no permiten hacerlo tras los return)
-  // y cambia de fuente cuando cambia la lección seleccionada. Sin vídeo, la fuente es null.
-  const player = useVideoPlayer(selectedLesson?.videoUrl ?? null);
+  // Acorde abierto en el modal de detalle (null = cerrado)
+  const [selectedChord, setSelectedChord] = React.useState<ChordDTO | null>(null);
 
   if (loading) {
     return (
@@ -67,7 +78,7 @@ export default function SongScreen() {
         {/* Icono de perfil y titulo */}
         <ProfileHeader title="Canciones" />
         
-        <ScrollView className="bg-background p-4 flex-1">
+        <FadeScrollView className="bg-background p-4 flex-1">
           {/* Información de la canción */}
           <View className="items-center mb-1 mx-4">
             <Image
@@ -84,37 +95,25 @@ export default function SongScreen() {
             <DifficultyStars level={song.level} />
           </View>
 
-          {/* Video */}
-          {selectedLesson.videoUrl && (
-            <VideoView
-              player={player}
-              nativeControls
-              contentFit="fill"
-              style={{ width: 180, height: 99, borderRadius: 12, marginBottom: 16, alignSelf: 'center' }}
+          {/* Vídeo de la lección (YouTube) */}
+          <YoutubeVideo url={selectedLesson.videoUrl} />
+
+          {/* Selector de instrumento (solo si hay lecciones para más de uno) */}
+          {availableInstruments.length > 1 && (
+            <OptionSelector
+              options={availableInstruments.map((instrument) => ({ value: instrument.id, label: instrument.name }))}
+              selected={selectedInstrumentId}
+              onSelect={changeInstrument}
             />
           )}
 
           {/* Selector de dificultad */}
-          <View className="flex-row justify-center space-x-2 mb-4 mt-2 flex-wrap">
-            {availableDifficulties.map((difficulty: DifficultyLevel) => (
-              <TouchableOpacity
-                key={difficulty}
-                onPress={() => changeDifficulty(difficulty)}
-                className={`px-4 py-1 rounded-full mb-2 ${
-                  difficulty === selectedLesson?.difficulty
-                    ? 'bg-yellow-600'
-                    : 'bg-gray-700'
-                }`}
-              >
-                <Text className="text-white font-semibold">
-                  {difficulty === DifficultyLevel.EASY
-                    ? 'Fácil'
-                    : difficulty === DifficultyLevel.MEDIUM
-                    ? 'Intermedio'
-                    : 'Original'}
-                </Text>
-              </TouchableOpacity>
-            ))}
+          <View className="mb-4 mt-2">
+            <OptionSelector
+              options={availableDifficulties.map((difficulty) => ({ value: difficulty, label: DIFFICULTY_LABELS[difficulty] }))}
+              selected={selectedLesson.difficulty}
+              onSelect={changeDifficulty}
+            />
           </View>
 
           {/* Acordes */}
@@ -123,14 +122,27 @@ export default function SongScreen() {
               <Text className="text-primary text-lg font-bold mb-3 text-center">Acordes</Text>
               <View className="flex-row flex-wrap gap-1 justify-center">
                 {chords.map((chord: ChordDTO) => (
-                  <View key={chord.id} className="items-center mb-3">
-                    <Image
-                      source={{ uri: chord.imageUrl }}
-                      className="w-16 h-20 rounded-md"
-                      resizeMode="contain"
-                    />
+                  // Al pulsar un acorde se abre su detalle. Estilos en línea: con className
+                  // NativeWind pisa la opacidad animada del TouchableOpacity
+                  <TouchableOpacity
+                    key={chord.id}
+                    onPress={() => setSelectedChord(chord)}
+                    activeOpacity={0.7}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Ver acorde ${chord.name}`}
+                    style={{ alignItems: 'center', marginBottom: 12 }}
+                  >
+                    {/* Los diagramas son líneas oscuras sobre fondo transparente: sin un fondo
+                        claro detrás no se ven sobre el fondo negro de la app */}
+                    <View className="bg-secondary rounded-md p-1">
+                      <Image
+                        source={{ uri: chord.imageUrl }}
+                        className="w-16 h-20"
+                        resizeMode="contain"
+                      />
+                    </View>
                     <Text className="text-secondary text-base mt-1">{chord.name}</Text>
-                  </View>
+                  </TouchableOpacity>
                 ))}
               </View>
             </View>
@@ -178,8 +190,10 @@ export default function SongScreen() {
               ))}
             </View>
           )}
-        </ScrollView>
+        </FadeScrollView>
       </View>
+
+      <ChordModal chord={selectedChord} onClose={() => setSelectedChord(null)} />
     </AppLayout>
   );
 }

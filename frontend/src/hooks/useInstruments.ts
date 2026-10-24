@@ -11,8 +11,13 @@ export const useInstruments = (query: string = "") => {
     useEffect(() => {
         const load = async () => {
             setLoading(true);
-            await instrumentRepository.getAll();
-            setLoading(false);
+            try {
+                await instrumentRepository.getAll();
+            } catch (error) {
+                console.error('[useInstruments] Error cargando instrumentos:', error);
+            } finally {
+                setLoading(false);
+            }
         };
         load();
     }, []);

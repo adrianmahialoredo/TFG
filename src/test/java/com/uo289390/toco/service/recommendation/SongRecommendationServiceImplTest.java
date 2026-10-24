@@ -282,6 +282,22 @@ class SongRecommendationServiceImplTest {
         }
 
         @Test
+        void testFindForItemList_InstrumentGenreWithoutGenre_FallsBackToUserPreferences() {
+            // Arrange
+            InstrumentGenre withoutGenre = instrumentGenre(300, null, instrument(12));
+            when(itemList.getOnlyInstrumentGenre()).thenReturn(Optional.of(withoutGenre));
+            when(user.getPreferences()).thenReturn(preferences(List.of(genre(1)), List.of(instrument(11))));
+            when(songRepository.findDistinctByGenresInAndInstrumentsInAndIdNotIn(any(), any(), any(), any())).thenReturn(songs(9));
+
+            // Act
+            SequencedSet<Song> result = service.findForItemList(ITEM_LIST_ID, 2);
+
+            // Assert
+            assertEquals(songs(9), List.copyOf(result));
+            verify(songRepository, never()).findDistinctByGenresIdAndInstrumentsInAndIdNotIn(anyLong(), any(), any(), any());
+        }
+
+        @Test
         void testFindForItemList_Level3b_UsesLimitedRandomFavourites() {
             // Arrange
             List<Genre> favouriteGenres = List.of(genre(1), genre(2), genre(3), genre(4));
@@ -426,6 +442,38 @@ class SongRecommendationServiceImplTest {
                 assertEquals(1, pageableCaptor.getValue().getPageSize());
             }
             verify(songRepository, never()).findByInstrumentsIdAndLevelLessThanEqualAndIdNotIn(eq(15L), anyInt(), any(), any());
+        }
+
+        @Test
+        void testFindForUser_FavouriteInstrumentAlreadyInListTops_IsNotRepeated() {
+            // Arrange (half of 4 = 2 split among 2 distinct instruments -> 1 each)
+            int listInstrumentsTopN = RecommendationConstants.NUMBER_OF_INSTRUMENTS_USED_IN_BY_USER_SONG_RECOMMENDATION - 1;
+            when(user.getTopInstrumentsFromItemLists(listInstrumentsTopN)).thenReturn(List.of(instrument(11)));
+            when(user.getPreferences()).thenReturn(preferences(List.of(), List.of(instrument(11), instrument(12))));
+
+            // Act
+            service.findForUser(USER_ID, 4);
+
+            // Assert
+            verify(songRepository, times(1)).findByInstrumentsIdAndLevelLessThanEqualAndIdNotIn(eq(11L), eq(USER_LEVEL), any(), pageableCaptor.capture());
+            assertEquals(1, pageableCaptor.getValue().getPageSize());
+            verify(songRepository, times(1)).findByInstrumentsIdAndLevelLessThanEqualAndIdNotIn(eq(12L), eq(USER_LEVEL), any(), pageableCaptor.capture());
+            assertEquals(1, pageableCaptor.getValue().getPageSize());
+        }
+
+        @Test
+        void testFindForUser_RemainderGoesToTheFirstInstruments() {
+            // Arrange (half of 6 = 3 split among 2 instruments -> 2, 1)
+            when(user.getPreferences()).thenReturn(preferences(List.of(), List.of(instrument(11), instrument(12))));
+
+            // Act
+            service.findForUser(USER_ID, 6);
+
+            // Assert
+            verify(songRepository).findByInstrumentsIdAndLevelLessThanEqualAndIdNotIn(eq(11L), eq(USER_LEVEL), any(), pageableCaptor.capture());
+            assertEquals(2, pageableCaptor.getValue().getPageSize());
+            verify(songRepository).findByInstrumentsIdAndLevelLessThanEqualAndIdNotIn(eq(12L), eq(USER_LEVEL), any(), pageableCaptor.capture());
+            assertEquals(1, pageableCaptor.getValue().getPageSize());
         }
 
         @Test

@@ -52,22 +52,27 @@ export const useProfile = () => {
     };
 
     /**
-     * Esta es la función que faltaba: Gestiona la UI de la galería y la subida
+     * Abre la galería y sube la foto elegida.
+     * @returns true si se subió; false si el usuario canceló
+     * @throws si falla la subida (la pantalla avisa al usuario)
      */
-    const pickAndUploadImage = async () => {
-        try {
-            const result = await ImagePicker.launchImageLibraryAsync({
-                allowsEditing: true,
-                aspect: [1, 1],
-                quality: 0.5, // Comprimimos para no saturar el servidor
-            });
+    const pickAndUploadImage = async (): Promise<boolean> => {
+        const result = await ImagePicker.launchImageLibraryAsync({
+            allowsEditing: true,
+            aspect: [1, 1],
+            quality: 0.5, // Comprimimos para no saturar el servidor
+        });
 
-            if (!result.canceled && result.assets[0].uri && currentUserId) {
-                setIsLoading(true);
-                await userRepository.updateProfileImage(currentUserId, result.assets[0].uri);
-            }
+        const uri = result.canceled ? undefined : result.assets[0]?.uri;
+        if (!uri || !currentUserId) return false;
+
+        setIsLoading(true);
+        try {
+            await userRepository.updateProfileImage(currentUserId, uri);
+            return true;
         } catch (err) {
             setError('No se pudo actualizar la foto de perfil');
+            throw err;
         } finally {
             setIsLoading(false);
         }

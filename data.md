@@ -180,6 +180,48 @@ Estado actual: `[]` (vacio).
 
 ---
 
+## 9) `data/lessons.json`
+Entidad/DTO: `Lesson` / `LessonDTO` (las secciones viajan dentro, como `LessonSectionDTO`)
+
+Estructura (por item):
+- `id` (number, obligatorio: los IDs de `Item` se asignan a mano)
+- `title` (string, obligatorio)
+- `level` (number, 1-5)
+- `imageUrl` (string, opcional; si falta y pertenece a un genero, se usa la imagen del genero)
+- `belongsToGenre` + `genreId`, `belongsToInstrument` + `instrumentId` (opcionales)
+- `popular`, `genrePopular`, `instrumentPopular` (boolean)
+- `sections` (array, obligatorio, no vacio), cada una con:
+  - `title` (string, obligatorio)
+  - `htmlContent` (string, obligatorio; HTML con su propio titulo)
+  - `orderIndex` (number, desde 0)
+  - `videoUrl` (string, opcional): enlace de YouTube de apoyo (`https://www.youtube.com/watch?v=...`, `https://youtu.be/...`). La app lo muestra encima del contenido de la seccion.
+
+Notas:
+- Se cargan antes que `instrument_genres.json`: los instrument-genres referencian las lecciones por `lessonIds`.
+- Igual que `song_lessons.videoUrl`, el video debe ser de YouTube: la app extrae el ID del video de la URL.
+
+---
+
+## 10) `data/tunes.json`
+Entidad/DTO: `Tune` / `TuneDTO`. Afinaciones que ofrece el afinador.
+
+Estructura (por item):
+- `id` (number, obligatorio): asignado a mano, como el resto del catálogo. Dentro de un instrumento, la app las muestra por id: la estándar va primero.
+- `title` (string, obligatorio, max 50): nombre de la afinación (`Estándar`, `Drop D`...). La app muestra `Instrumento (title)`.
+- `instrumentId` (number, obligatorio): debe existir en `instruments.json`.
+- `notes` (array string, obligatorio, no vacío): una nota por cuerda, **de la más grave a la más aguda**, en notación científica: nombre en mayúscula, `#` opcional y octava 0-8 (`E2`, `F#3`). No se admiten bemoles (`Bb2` se escribe `A#2`) ni notas sin octava.
+
+Ejemplo real:
+```json
+{ "id": 2, "title": "Drop D", "instrumentId": 1, "notes": ["D2", "A2", "D3", "G3", "B3", "E4"] }
+```
+
+Notas:
+- Se cargan las últimas (`scripts/insert_tunes.py`), después de los instrumentos.
+- La frecuencia de cada nota no se guarda: la calcula la app (La4 = 440 Hz).
+
+---
+
 ## Coherencia y relaciones
 - `instrument_genres.instrumentId` debe existir en `instruments.json`.
 - `instrument_genres.genreId` debe existir en `genres.json`.
@@ -187,12 +229,14 @@ Estado actual: `[]` (vacio).
 - `song_lessons.instrumentId` debe existir en `instruments.json`.
 - `tab_sections.songLessonId` debe existir en `song_lessons.json`.
 - `item_lists.itemIds` deben referir IDs de Items (Song, Lesson, Genre, InstrumentGenre) ya creados.
+- `tunes.instrumentId` debe existir en `instruments.json`.
 
 ---
 
 ## Datos actuales en `data/`
 - `chords.json`: contiene datos reales.
 - `genres.json`: contiene datos reales (con IDs de video, no URLs completas).
+- `tunes.json`: afinaciones de guitarra (estándar, Drop D, medio tono abajo, Open G, DADGAD), bajo (estándar, Drop D, 5 cuerdas) y ukelele (estándar).
 - Resto: arrays vacios.
 
 

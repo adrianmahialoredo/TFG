@@ -30,6 +30,7 @@ import static com.uo289390.toco.utils.EntityResolver.resolveGenres;
 import static com.uo289390.toco.utils.EntityResolver.resolveInstrument;
 import static com.uo289390.toco.utils.EntityResolver.resolveInstruments;
 import static com.uo289390.toco.utils.EntityResolver.findUser;
+import static com.uo289390.toco.utils.RecommendationConstants.MAX_TOP_ARTISTS_COUNT;
 
 /**
  * Default implementation of {@link UserService}.
@@ -46,6 +47,13 @@ import static com.uo289390.toco.utils.EntityResolver.findUser;
 @Transactional(readOnly = true)
 public class UserServiceImpl implements UserService {
 
+    /** Range of the self-assessed musical level (same scale as the item stars). */
+    static final int MIN_DIFFICULTY_LEVEL = 0;
+    static final int MAX_DIFFICULTY_LEVEL = 5;
+
+    /** Login error for both an unknown user and a wrong password. */
+    static final String INVALID_CREDENTIALS = "Invalid credentials";
+
     private final UserRepository userRepository;
     private final BCryptPasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
@@ -58,7 +66,7 @@ public class UserServiceImpl implements UserService {
         log.info("Registering new user with email: {}", userDto.getEmail());
 
         // Checked before saving: the unique constraints would end in a generic 500
-        if (userRepository.findByEmail(userDto.getEmail()).isPresent()) {
+        if (userDto.getEmail() != null && userRepository.existsByEmailIgnoreCase(userDto.getEmail().trim())) {
             throw new IllegalArgumentException("Email already registered");
         }
         if (userRepository.findByUsername(userDto.getUsername()).isPresent()) {
@@ -85,30 +93,35 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public LoginResponse login(String email, String password) {
-        log.debug("Login attempt for email: {}", email);
+    public LoginResponse login(String identifier, String password) {
+        String login = identifier == null ? "" : identifier.trim();
+        log.debug("Login attempt for: {}", login);
         try {
-            User user = userRepository.findByEmail(email)
+            // Email first: a username is free text and could look like an email.
+            // Same message for an unknown user and a wrong password, so the response
+            // does not reveal which accounts exist.
+            User user = userRepository.findByEmail(login)
+                    .or(() -> userRepository.findByUsername(login))
                     .orElseThrow(() -> {
-                        log.warn("Login attempt with non-existent email: {}", email);
-                        return new BadCredentialsException("User not found");
+                        log.warn("Login attempt with non-existent email or username: {}", login);
+                        return new BadCredentialsException(INVALID_CREDENTIALS);
                     });
             if (!passwordEncoder.matches(password, user.getPassword())) {
-                log.warn("Failed login attempt for user: {} - password mismatch", email);
-                throw new BadCredentialsException("Password does not match");
+                log.warn("Failed login attempt for user: {} - password mismatch", login);
+                throw new BadCredentialsException(INVALID_CREDENTIALS);
             }
 
             String token = jwtUtil.generateToken(user.getId(), user.getRole());
-            log.info("Successful login for user: {}", email);
+            log.info("Successful login for user: {}", login);
 
             UserResponseDTO userResponse = dtoMapper.userToUserResponseDto(user);
 
             return new LoginResponse(token, userResponse);
         } catch (BadCredentialsException e) {
-            log.warn("Bad credentials for user: {}", email);
+            log.warn("Bad credentials for user: {}", login);
             throw e;
         } catch (Exception e) {
-            log.error("Error during login for user {}: {}", email, e.getMessage(), e);
+            log.error("Error during login for user {}: {}", login, e.getMessage(), e);
             throw e;
         }
     }
@@ -166,6 +179,15 @@ public class UserServiceImpl implements UserService {
                 .map(user -> user.getPreferences().getFavoriteGenres().stream()
                         .map(Genre::getId)
                         .collect(Collectors.toList()));
+    }
+
+    @Override
+    public Optional<List<String>> findTopArtistsForUser(Long userId, int totalArtists) {
+        if (totalArtists < 1 || totalArtists > MAX_TOP_ARTISTS_COUNT) {
+            throw new IllegalArgumentException("total_artists must be between 1 and " + MAX_TOP_ARTISTS_COUNT);
+        }
+        log.debug("Fetching the top {} artists for user id: {}", totalArtists, userId);
+        return findUser(userId).map(user -> user.getTopArtistsFromItemLists(totalArtists));
     }
 
     @Override
@@ -267,6 +289,9 @@ public class UserServiceImpl implements UserService {
                         existingUser.getPreferences().setFavoriteInstruments(updatedUser.getPreferences().getFavoriteInstruments());
                         existingUser.setUsername(updatedUser.getUsername());
                         existingUser.setProfileImageUrl(updatedUser.getProfileImageUrl());
+                        Optional.ofNullable(updatedUserDto.getDifficultyLevel())
+                                .map(UserServiceImpl::validDifficultyLevel)
+                                .ifPresent(existingUser::setDifficultyLevel);
 
                         if (updatedUser.getPassword() != null && !updatedUser.getPassword().isEmpty()) {
                             existingUser.setPassword(passwordEncoder.encode(updatedUser.getPassword()));
@@ -335,6 +360,18 @@ public class UserServiceImpl implements UserService {
             throw new IllegalArgumentException(
                     "A user must have at least " + Preferences.MIN_NUMBER_OF_FAVOURITE_INSTRUMENTS + " favourite instruments");
         }
+    }
+
+    /**
+     * Checks the self-assessed level sent from the profile (0 to 5, like the item stars).
+     * {@code @Valid} is not active on this endpoint, so the range is enforced here (400 if not).
+     */
+    private static int validDifficultyLevel(int level) {
+        if (level < MIN_DIFFICULTY_LEVEL || level > MAX_DIFFICULTY_LEVEL) {
+            throw new IllegalArgumentException("Difficulty level must be between "
+                    + MIN_DIFFICULTY_LEVEL + " and " + MAX_DIFFICULTY_LEVEL);
+        }
+        return level;
     }
 
     // -------- DTO Mapping --------

@@ -341,4 +341,55 @@ class SongControllerTest {
         mockMvc.perform(delete("/api/songs/1"))
                 .andExpect(status().isNotFound());
     }
+
+    // ---------- GET /api/songs/by-artists/new | popular ----------
+
+    @Test
+    void getNewForArtists_readsTheNumberedArtistsInOrder() throws Exception {
+        when(songService.findNewForArtists(List.of("Queen", "Bowie", "Oasis"), 12)).thenReturn(List.of(song));
+
+        mockMvc.perform(get("/api/songs/by-artists/new")
+                        .param("limit", "12")
+                        .param("artist3", "Oasis")
+                        .param("artist1", "Queen")
+                        .param("artist2", "Bowie"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(1)));
+
+        verify(songService).findNewForArtists(List.of("Queen", "Bowie", "Oasis"), 12);
+    }
+
+    @Test
+    void getPopularForArtists_withoutLimit_passesNull() throws Exception {
+        when(songService.findPopularForArtists(List.of("Queen"), null)).thenReturn(List.of());
+
+        mockMvc.perform(get("/api/songs/by-artists/popular").param("artist1", "Queen"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(0)));
+
+        verify(songService).findPopularForArtists(eq(List.of("Queen")), isNull());
+    }
+
+    @Test
+    void getNewForArtists_artistNumberOutOfRange_returnsBadRequest() throws Exception {
+        mockMvc.perform(get("/api/songs/by-artists/new").param("artist1", "Queen").param("artist11", "Bowie"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Artist parameters go from artist1 to artist10: artist11"));
+
+        mockMvc.perform(get("/api/songs/by-artists/popular").param("artist0", "Queen"))
+                .andExpect(status().isBadRequest());
+
+        verify(songService, never()).findNewForArtists(any(), any());
+        verify(songService, never()).findPopularForArtists(any(), any());
+    }
+
+    @Test
+    void getNewForArtists_serviceRejection_returnsBadRequest() throws Exception {
+        when(songService.findNewForArtists(List.of(), null))
+                .thenThrow(new IllegalArgumentException("At least one artist is required"));
+
+        mockMvc.perform(get("/api/songs/by-artists/new"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("At least one artist is required"));
+    }
 }

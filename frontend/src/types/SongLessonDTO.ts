@@ -19,6 +19,6 @@ export interface SongLessonDTO {
   chordedLyrics: string; // formato "[chord] lyric line 1\n[chord] lyric line 2\n..."
   videoUrl?: string;
   chordIds: string[];
-  tabSectionIds?: string[];
+  tabSectionsIds?: string[]; // Mismo nombre que en el backend (SongLessonDTO.tabSectionsIds)
 }
 

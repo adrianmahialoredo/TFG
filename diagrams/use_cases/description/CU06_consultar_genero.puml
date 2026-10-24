@@ -1,0 +1,61 @@
+@startuml DS-CU-06
+title DS-CU-06 - Consultar espacio de género
+
+' Diagrama de secuencia de análisis (patrón Boundary-Control-Entity)
+autonumber
+hide footbox
+skinparam sequenceMessageAlign center
+skinparam roundcorner 6
+
+actor "Músico" as musico
+boundary "GenreScreen" as pantalla
+control "GestorGeneros" as gestor
+entity "Genre" as genre
+entity "Song" as song
+entity "InstrumentGenre" as ig
+entity "Lesson" as lesson
+
+musico -> pantalla : abrirEspacioGenero(id)
+pantalla -> gestor : obtenerDetalleGenero(id)
+gestor -> genre : obtener(id)
+genre --> gestor : GenreDTO(banner, descripción,\nwelcomeIntroVideoId, welcomeSongVideoId)
+gestor --> pantalla : género
+pantalla --> musico : mostrarCabecera()
+
+pantalla -> gestor : cargarCarruselesCanciones(id)
+gestor -> song : obtenerPopulares(genreId)
+song --> gestor : SongDTO[]
+gestor -> song : obtenerClasicas(genreId)
+song --> gestor : SongDTO[]
+gestor -> song : obtenerNuevas(genreId)
+song --> gestor : SongDTO[]
+gestor --> pantalla : carruseles
+pantalla --> musico : mostrarCarruselesCanciones()
+
+musico -> pantalla : abrirPestanaInstrumentos()
+pantalla -> gestor : obtenerInstrumentGenres(genreId)
+gestor -> ig : obtenerPorGenero(genreId)
+note right of ig : GET /api/instrument-genres/by-genre/{id}
+ig --> gestor : InstrumentGenreDTO[]
+gestor --> pantalla : módulos
+pantalla --> musico : mostrarModulosInstrumento()
+
+musico -> pantalla : seleccionarInstrumento(instrumentGenreId)
+pantalla -> gestor : cargarLeccionesItinerario(instrumentGenreId)
+gestor -> lesson : obtenerPorInstrumentGenre(instrumentGenreId)
+lesson --> gestor : LessonDTO[]
+gestor -> gestor : ordenarPor(indexInInstrumentGenre)
+gestor --> pantalla : itinerario
+pantalla --> musico : mostrarItinerario()
+
+opt 6a. El músico selecciona una lección del itinerario
+    musico -> pantalla : seleccionarLeccion(lessonId)
+    pantalla -> gestor : obtenerLeccion(lessonId)
+    gestor -> lesson : obtener(lessonId)
+    lesson --> gestor : LessonDTO + LessonSection[]
+    gestor --> pantalla : lección
+    pantalla --> musico : navegarVisorLeccion(seccionesOrdenadas)
+    note right of pantalla : Cada sección muestra su vídeo\nde apoyo de YouTube (si tiene)\ny su contenido HTML
+end
+
+@enduml

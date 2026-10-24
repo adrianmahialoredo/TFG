@@ -154,25 +154,8 @@ class ItemControllerTest {
 
         verify(itemService, org.mockito.Mockito.never()).search(anyString());
     }
-
-    @Test
-    void getRecommendedForItemList_returnsRecommendations() throws Exception {
-        when(itemService.findRecommendedForItemList(9L)).thenReturn(List.of(summary(3L, "Lesson", Item.Type.Lesson)));
-
-        mockMvc.perform(get("/api/items/recommended/by-item-list/9"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].id").value(3));
-    }
-
-    @Test
-    void getRecommendedForItemList_unknownList_returnsNotFound() throws Exception {
-        when(itemService.findRecommendedForItemList(9L))
-                .thenThrow(new jakarta.persistence.EntityNotFoundException("Item list not found"));
-
-        mockMvc.perform(get("/api/items/recommended/by-item-list/9"))
-                .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.message").value("Item list not found"));
-    }
+
+
 
     @Test
     void unknownSubPath_returnsNotFound() throws Exception {

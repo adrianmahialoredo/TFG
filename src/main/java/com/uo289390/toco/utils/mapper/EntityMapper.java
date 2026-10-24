@@ -92,6 +92,7 @@ public class EntityMapper {
         section.setId(dto.getId());
         section.setTitle(dto.getTitle());
         section.setHtmlContent(dto.getHtmlContent());
+        section.setVideoUrl(dto.getVideoUrl());
         section.setOrderIndex(dto.getOrderIndex());
         section.setLesson(lesson);
         return section;
@@ -133,6 +134,15 @@ public class EntityMapper {
         section.setContent(dto.getContent());
         section.setSongLesson(songLesson);
         return section;
+    }
+
+    public Tune tuneDtoToTune(TuneDTO dto, Instrument instrument) {
+        Tune tune = new Tune();
+        tune.setId(dto.getId());
+        tune.setTitle(dto.getTitle());
+        tune.setInstrument(instrument);
+        tune.setNotes(new ArrayList<>(dto.getNotes()));
+        return tune;
     }
 
     public User userDtoToUser(UserDto dto, Set<Genre> favouriteGenres, Set<Instrument> favouriteInstruments) {

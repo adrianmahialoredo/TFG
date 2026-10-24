@@ -11,8 +11,13 @@ export const useGenres = (query: string = "") => {
     useEffect(() => {
         const load = async () => {
             setLoading(true);
-            await genreRepository.getAll();
-            setLoading(false);
+            try {
+                await genreRepository.getAll();
+            } catch (error) {
+                console.error('[useGenres] Error cargando géneros:', error);
+            } finally {
+                setLoading(false);
+            }
         };
         load();
     }, []);

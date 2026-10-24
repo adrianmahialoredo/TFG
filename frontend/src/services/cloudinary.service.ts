@@ -1,3 +1,4 @@
+import axios from 'axios';
 import { CLOUDINARY_CONFIG } from '../config/cloudinaryConfig';
 
 type CloudinaryUploadResponse = {
@@ -42,16 +43,26 @@ export const uploadProfileImageToCloudinary = async (imageUri: string): Promise<
     formData.append('folder', folder);
   }
 
-  const response = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, {
-    method: 'POST',
-    body: formData,
-  });
-
-  const data = (await response.json()) as CloudinaryUploadResponse;
-
-  if (!response.ok) {
-    const errorMessage = data.error?.message || 'Error subiendo imagen a Cloudinary.';
-    throw new Error(errorMessage);
+  // Con axios (XMLHttpRequest) y no con fetch: el fetch global de Expo no admite la parte
+  // `{ uri, name, type }` de React Native en el FormData ("Unsupported FormDataPart implementation").
+  // Sin cliente de la app: Cloudinary no debe recibir el token ni la baseURL del backend.
+  let data: CloudinaryUploadResponse;
+  try {
+    const response = await axios.post<CloudinaryUploadResponse>(
+      `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`,
+      formData,
+      {
+        headers: { 'Content-Type': 'multipart/form-data' },
+        // El FormData se envía tal cual (axios no debe intentar serializarlo)
+        transformRequest: (body) => body,
+      },
+    );
+    data = response.data;
+  } catch (error) {
+    const cloudinaryMessage = axios.isAxiosError<CloudinaryUploadResponse>(error)
+      ? error.response?.data?.error?.message
+      : undefined;
+    throw new Error(cloudinaryMessage || 'Error subiendo imagen a Cloudinary.');
   }
 
   if (!data.secure_url || !data.secure_url.startsWith('https://')) {

@@ -1,0 +1,110 @@
+@startuml DP-02
+title DP-02 - Diagrama de paquetes del frontend
+
+' Dependencias reales entre carpetas de frontend/src, sacadas de los imports
+' del código. Una flecha A ..> B significa "A importa algo de B".
+' No se dibujan las dependencias hacia los paquetes transversales
+' (types, constants, utils), que usan casi todos los niveles.
+' Capas y reglas: architecture.md (§12) y frontend/bible.md.
+' Backend en DP01_paquetes_backend.puml.
+skinparam roundcorner 6
+skinparam packageStyle folder
+set separator none
+skinparam nodesep 40
+skinparam ranksep 55
+skinparam defaultTextAlignment center
+skinparam package {
+    BackgroundColor<<frontend>> #F3F8FF
+    BorderColor<<frontend>> #3D6FA8
+    BackgroundColor<<transversal>> #F3F3F3
+    BorderColor<<transversal>> #888888
+}
+skinparam ArrowColor #555555
+
+package "frontend/src" <<frontend>> {
+
+    package "navigation" as f_navigation {
+    }
+
+    package "Nivel 7 - UI" as f_ui {
+        package "screens" as f_screens {
+        }
+        package "components" as f_components {
+        }
+    }
+
+    package "Nivel 6 - Hooks" as f_level6 {
+        package "hooks" as f_hooks {
+        }
+        package "context" as f_context {
+        }
+    }
+
+    package "Nivel 5 - Screen Store" as f_level5 {
+        package "stores/ui" as f_stores_ui {
+        }
+    }
+
+    package "Nivel 4 - Entity Store" as f_level4 {
+        package "stores/entities" as f_stores_entities {
+        }
+    }
+
+    package "Nivel 3 - Repository" as f_level3 {
+        package "repositories" as f_repositories {
+        }
+    }
+
+    package "Nivel 2 - Local" as f_level2 {
+        package "local" as f_local {
+        }
+    }
+
+    package "Nivel 1 - Service" as f_level1 {
+        package "services" as f_services {
+        }
+    }
+
+    package "Transversales" <<transversal>> as f_transversal {
+        package "config" as f_config {
+        }
+        package "types" as f_types {
+        }
+        package "constants" as f_constants {
+        }
+        package "utils" as f_utils {
+        }
+    }
+}
+
+f_navigation ..> f_screens
+f_navigation ..> f_context
+
+f_screens ..> f_components
+f_screens ..> f_hooks
+f_screens ..> f_context
+f_components ..> f_hooks
+f_components ..> f_context
+
+f_hooks ..> f_repositories
+f_hooks ..> f_stores_entities
+f_hooks ..> f_stores_ui
+f_hooks ..> f_context
+f_context ..> f_repositories
+f_context ..> f_stores_entities
+
+f_repositories ..> f_services
+f_repositories ..> f_local
+f_repositories ..> f_stores_entities
+
+f_services ..> f_config
+f_services ..> f_stores_entities : <<token de sesión>>
+
+legend bottom left
+  |= Paquete |= Contenido |
+  | repositories | Por id: RAM -> disco -> API, con stale-while-revalidate (utils/entityCache.utils) |
+  | services | apiClient (axios): añade el JWT y cierra la sesión ante un 401 |
+  | types, constants, utils | Transversales: los usan casi todos los niveles (dependencias no dibujadas) |
+endlegend
+
+@enduml

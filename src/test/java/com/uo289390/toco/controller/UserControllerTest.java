@@ -449,4 +449,45 @@ class UserControllerTest {
         mockMvc.perform(patch("/api/users/3"))
                 .andExpect(status().isMethodNotAllowed());
     }
+
+    // ---------- GET /api/users/{id}/top-artists ----------
+
+    @Test
+    void getTopArtists_withoutParameter_asksForFive() throws Exception {
+        when(userService.findTopArtistsForUser(2L, 5)).thenReturn(Optional.of(List.of("Queen", "Bowie")));
+
+        mockMvc.perform(get("/api/users/2/top-artists"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(2))
+                .andExpect(jsonPath("$[0]").value("Queen"));
+    }
+
+    @Test
+    void getTopArtists_passesTotalArtists() throws Exception {
+        when(userService.findTopArtistsForUser(2L, 10)).thenReturn(Optional.of(List.of()));
+
+        mockMvc.perform(get("/api/users/2/top-artists").param("total_artists", "10"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(0));
+
+        verify(userService).findTopArtistsForUser(2L, 10);
+    }
+
+    @Test
+    void getTopArtists_outOfRange_returnsBadRequest() throws Exception {
+        when(userService.findTopArtistsForUser(2L, 11))
+                .thenThrow(new IllegalArgumentException("total_artists must be between 1 and 10"));
+
+        mockMvc.perform(get("/api/users/2/top-artists").param("total_artists", "11"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("total_artists must be between 1 and 10"));
+    }
+
+    @Test
+    void getTopArtists_missingUser_returnsNotFound() throws Exception {
+        when(userService.findTopArtistsForUser(2L, 5)).thenReturn(Optional.empty());
+
+        mockMvc.perform(get("/api/users/2/top-artists"))
+                .andExpect(status().isNotFound());
+    }
 }

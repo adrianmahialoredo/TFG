@@ -1,0 +1,101 @@
+@startuml DS-CU-08
+title DS-CU-08 - Añadir/eliminar ítems en listas
+
+' Diagrama de secuencia de análisis (patrón Boundary-Control-Entity)
+autonumber
+hide footbox
+skinparam sequenceMessageAlign center
+skinparam roundcorner 6
+
+actor "Músico" as musico
+boundary "ListaScreen" as listaScreen
+boundary "AnadirItemsScreen" as anadirScreen
+control "GestorListas" as gestor
+control "GestorCatalogo" as catalogo
+control "MotorRecomendacion" as motor
+entity "ItemList" as lista
+entity "Item\n(polimórfico)" as item
+
+musico -> listaScreen : abrirLista(listId)
+listaScreen --> musico : mostrarItemsDeLaLista()
+musico -> listaScreen : solicitarAnadir()
+listaScreen -> anadirScreen : abrir(listId)
+
+anadirScreen -> motor : pedirRecomendaciones(listId)
+note right of motor : GET /api/recommendations/items/by-item-list/{id}\n(ver CU-09)
+motor --> anadirScreen : recomendaciones
+anadirScreen -> catalogo : obtenerCatalogo()
+note right of catalogo : Resumen del catálogo ya en caché\ndesde el arranque (ver CU-04)
+catalogo --> anadirScreen : ItemSummaryDTO[]
+anadirScreen -> anadirScreen : ocultarItemsYaEnLaLista()
+anadirScreen --> musico : mostrarRecomendaciones("Para ti")
+
+opt 3a. El músico busca un ítem concreto
+    musico -> anadirScreen : ingresarTextoBusqueda(query)
+    anadirScreen -> catalogo : filtrarEnMemoriaLocal(query)
+    note right of catalogo : Todos los tipos de ítem;\npor título y artista, sin acentos
+    catalogo --> anadirScreen : coincidencias
+    anadirScreen -> anadirScreen : ocultarItemsYaEnLaLista()
+    anadirScreen --> musico : mostrarResultados()
+end
+
+musico -> anadirScreen : seleccionarItem(itemId)
+anadirScreen --> musico : marcarComoAnadido()
+note right of anadirScreen : Respuesta optimista: tic inmediato\ny el ítem desaparece de la vista
+anadirScreen -> gestor : anadirItem(listId, itemId)
+note right of gestor : POST /api/item-lists/{listId}/items/{itemId}
+gestor -> lista : comprobarPropiedad(listId, userId)
+
+alt 6a. El músico no es el propietario de la lista
+    gestor --> anadirScreen : 403 Forbidden
+else Es el propietario
+    gestor -> item : obtener(itemId)
+    item --> gestor : item
+    gestor -> lista : validarDuplicado(item)
+    alt 7a. El ítem ya estaba en la lista
+        lista --> gestor : se ignora\n(se mantiene la posición original)
+    else Ítem nuevo
+        gestor -> lista : asociarItemALista(item)
+        note right of lista : Se añade al final,\nconservando el orden
+    end
+    lista --> gestor : ItemListDTO
+    gestor --> anadirScreen : 200 OK + ItemListDTO
+    anadirScreen -> anadirScreen : actualizarEstadoLocal(lista)
+    note right of anadirScreen : RAM y disco
+end
+
+opt 8a. La petición falla
+    anadirScreen -> anadirScreen : revertirMarcaAnadido(itemId)
+    anadirScreen --> musico : mostrarError("No se pudo añadir el item a la lista")
+end
+
+musico -> anadirScreen : volver()
+anadirScreen -> listaScreen : volver()
+listaScreen --> musico : mostrarListaActualizada()
+
+== 1a. Quitar un ítem de la lista ==
+
+musico -> listaScreen : quitarItem(itemId)
+listaScreen --> musico : solicitarConfirmacion()
+
+alt El músico cancela
+    musico -> listaScreen : cancelar()
+else El músico confirma
+    musico -> listaScreen : confirmar()
+    listaScreen -> gestor : eliminarItem(listId, itemId)
+    note right of gestor : DELETE /api/item-lists/{listId}/items/{itemId}
+    gestor -> lista : comprobarPropiedad(listId, userId)
+    alt La petición falla (sin red, 403 o lista inexistente)
+        gestor --> listaScreen : error
+        listaScreen --> musico : mostrarError("No se pudo quitar el item de la lista")
+    else Éxito
+        gestor -> lista : desvincularItem(itemId)
+        lista --> gestor : ItemListDTO
+        gestor --> listaScreen : 200 OK + ItemListDTO
+        listaScreen -> listaScreen : actualizarEstadoLocal(lista)
+        note right of listaScreen : RAM y disco
+        listaScreen --> musico : refrescarVista()
+    end
+end
+
+@enduml

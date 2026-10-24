@@ -1,0 +1,138 @@
+@startuml DSD-CU-12
+title DSD-CU-12 - Utilizar metrónomo
+
+' Diagrama de secuencia de diseño: realización de CU-12 (análisis en
+' diagrams/use_cases/description/CU12_metronomo.puml).
+' Fuentes: frontend/src/screens/MetronomeScreen.tsx, hooks/useMetronome.ts (useMetronome y
+' useTapTempo), components/metronome/(MetronomeSlider, MetronomeTempoButton, MetronomePulse,
+' MetronomeBeatIndicator, MetronomeActionButton).tsx, navigation/BottomTabs.tsx, screens/HomeScreen.tsx.
+' Solo frontend: no hay llamadas al backend ni configuración guardada.
+' Diferencias con el análisis:
+'  - Rango de tempo 30-300 BPM (MIN_TEMPO/MAX_TEMPO de MetronomeSlider), no 40-240; por defecto 120.
+'  - No se puede elegir el compás: es fijo de 4 tiempos (BEATS_PER_BAR = 4), con el primero acentuado.
+'  - El sonido solo alterna entre 'click' y 'hihat' (botón "Hi-Hat").
+'  - No hay entidad de configuración persistida: tempo y sonido son estado (useState) de la pantalla;
+'    se conservan mientras la pantalla siga montada (los tabs no se desmontan).
+'  - Además del deslizador y el tap tempo, hay botones de ajuste fino (-10, -1, +1, +10).
+'  - El temporizador no es de alta precisión ni de audio: es setTimeout de JS que calcula cada golpe
+'    a partir del instante teórico del anterior (Date.now()), así el retraso no se acumula.
+'  - La animación no va por el estado de la pantalla: se lanza por ref (pulse / setBeat) en cada golpe.
+autonumber
+hide footbox
+skinparam sequenceMessageAlign center
+skinparam roundcorner 6
+skinparam maxMessageSize 260
+skinparam BoxPadding 10
+
+actor "Músico" as actor
+
+box "App (React Native)" #F3F8FF
+    participant "MetronomeScreen\n<<Nivel 7>>" as screen
+    participant "MetronomeSlider\n(+ MetronomeTempoButton)\n<<Nivel 7>>" as slider
+    participant "MetronomePulse\n<<Nivel 7>>" as pulse
+    participant "MetronomeBeatIndicator\n<<Nivel 7>>" as beats
+    participant "useTapTempo\n<<Nivel 6>>" as tapHook
+    participant "useMetronome\n<<Nivel 6>>" as metro
+end box
+
+box "Librerías" #F3F3F3
+    participant "expo-audio\n(AudioPlayer)\n<<sistema externo>>" as audio
+end box
+
+== Apertura ==
+
+actor -> screen : pulsa "Metrónomo" en el Home\n(navigate('MetronomeScreen'))
+screen -> screen : tempo = DEFAULT_TEMPO (120)\nsound = 'click'
+screen -> metro : useMetronome(tempo, sound, handleBeat)
+activate metro
+metro -> audio : setAudioModeAsync({ playsInSilentMode: true,\ninterruptionMode: 'mixWithOthers' })
+loop Por cada sonido (click, hihat) y variante (normal, accent)
+    metro -> audio : createAudioPlayer(file)\nplayer.volume = volume * MASTER_VOLUME
+end
+metro -> metro : soundsRef = loaded; ready = true
+note right of metro : Si falla la carga solo se registra el error:\nel pulso visual funciona igual
+deactivate metro
+screen -> tapHook : useTapTempo()
+screen -> slider : <MetronomeSlider tempo onTempoChange={setTempo}>
+slider --> actor : "Tempo  BPM 30-300", "120 BPM", -10 -1 +1 +10
+
+== Ajuste del tempo ==
+
+alt Deslizador
+    actor -> slider : arrastra el slider
+    slider -> slider : updateTempo(value) -> clampTempo(value)
+    slider -> screen : onTempoChange(bpm) = setTempo(bpm)
+else Botones de ajuste fino
+    actor -> slider : pulsa -10 / -1 / +1 / +10 (MetronomeTempoButton)
+    slider -> screen : onTempoChange(clampTempo(tempo ± n))
+else 3a. Tap Tempo
+    loop Por cada pulsación de "TAP TEMPO" (MetronomeActionButton)
+        actor -> screen : pulsa TAP TEMPO -> handleTap()
+        screen -> tapHook : tap()
+        tapHook -> tapHook : now = Date.now()\nsi han pasado > TAP_RESET_MS (2 s) desde el último: taps = []\ntaps.push(now), conserva los 5 últimos (TAP_SAMPLES + 1)
+        alt Menos de 2 toques
+            tapHook --> screen : null
+        else
+            tapHook -> tapHook : averageInterval = (último - primero) / (n - 1)
+            tapHook --> screen : Math.round(60000 / averageInterval)
+            screen -> screen : setTempo(clampTempo(bpm))
+        end
+    end
+end
+screen -> metro : useMetronome(tempo, ...) (re-render)
+metro -> metro : tempoRef.current = tempo
+note right of metro : Si está sonando, el nuevo tempo\nse aplica desde el siguiente golpe
+screen -> slider : tempo
+slider --> actor : muestra "<tempo> BPM"
+
+== Sonido ==
+
+opt Alternar Hi-Hat
+    actor -> screen : pulsa "Hi-Hat"
+    screen -> screen : setSound(sound === 'hihat' ? 'click' : 'hihat')
+    screen -> metro : useMetronome(..., sound, ...) -> soundRef.current = sound
+end
+
+== Inicio y bucle de golpes ==
+
+actor -> pulse : toca el círculo central (play)
+pulse -> screen : onToggle() -> handleToggle()
+screen -> metro : toggle()
+metro -> metro : start(): beatRef = 0;\nnextBeatAtRef = Date.now(); isPlaying = true
+metro -> metro : tick()
+loop Mientras timerRef no sea null (hasta que se detiene)
+    metro -> metro : beatInBar = beatRef % BEATS_PER_BAR (4)
+    alt beatInBar === 0
+        metro ->> audio : sounds[soundRef].accent.seekTo(0).then(play())
+    else
+        metro ->> audio : sounds[soundRef].normal.seekTo(0).then(play())
+    end
+    note right of audio : No se espera a la reproducción\npara no retrasar el siguiente golpe
+    metro -> screen : onBeat(beatInBar) = handleBeat(beatInBar)
+    screen -> pulse : pulseRef.pulse(beatInBar)
+    pulse --> actor : onda (Reanimated, mayor si es el 1.er tiempo)
+    screen -> beats : beatIndicatorRef.setBeat(beatInBar)
+    beats --> actor : ilumina el punto del tiempo actual
+    metro -> metro : beatRef += 1\nnextBeatAtRef += 60000 / tempoRef
+    metro ->> metro : timerRef = setTimeout(tick,\nmax(0, nextBeatAtRef - Date.now()))
+    note right of metro : Temporizador de JS (setTimeout) que se programa\ndesde el instante teórico del golpe anterior,\nno desde "ahora": el retraso no se acumula
+end
+
+== Detención ==
+
+alt El músico lo detiene
+    actor -> pulse : toca el círculo central (stop)
+    pulse -> screen : onToggle() -> handleToggle()
+    screen -> beats : setBeat(null)
+    screen -> metro : toggle() -> stop()
+else Sale de la pantalla (limpieza de useFocusEffect)
+    actor -> screen : sale del metrónomo
+    screen -> metro : stop()
+    screen -> beats : setBeat(null)
+end
+metro -> metro : clearTimeout(timerRef); timerRef = null;\nisPlaying = false
+metro --> screen : isPlaying = false
+screen --> actor : "Toca para empezar"
+note over metro, audio : Al desmontar el hook: clearTimeout y releaseAll(sounds)\n(player.remove() de cada AudioPlayer)
+
+@enduml

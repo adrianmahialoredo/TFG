@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
-import { ScrollView, View, ActivityIndicator, Text } from 'react-native';
+import { View, ActivityIndicator, Text } from 'react-native';
+import FadeScrollView from '../components/FadeScrollView';
 import SongsCarousel from '../components/carousels/SongsCarousel';
 import { useGenreSongs } from '../hooks/useGenreSongs';
 
@@ -34,8 +35,8 @@ export default function GenreSongsScreen({ genreId }: GenreSongsProps) {
   }
 
   return (
-      <ScrollView
-          className="flex-1 mt-4"
+      <FadeScrollView
+          className="flex-1 mt-1"
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{ paddingBottom: 120 }}
       >
@@ -53,6 +54,6 @@ export default function GenreSongsScreen({ genreId }: GenreSongsProps) {
               Próximamente más canciones...
             </Text>
         )}
-      </ScrollView>
+      </FadeScrollView>
   );
 }

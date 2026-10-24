@@ -1,0 +1,57 @@
+@startuml DS-CU-12
+title DS-CU-12 - Utilizar metrónomo
+
+' Diagrama de secuencia de análisis (patrón Boundary-Control-Entity)
+autonumber
+hide footbox
+skinparam sequenceMessageAlign center
+skinparam roundcorner 6
+
+actor "Músico" as musico
+boundary "MetronomoScreen" as pantalla
+control "MotorRitmo" as gestor
+entity "ConfiguracionRitmica" as config
+entity "SalidaAudio" as audio
+
+musico -> pantalla : abrirMetronomo()
+pantalla -> gestor : obtenerConfiguracion()
+gestor -> config : obtener()
+config --> gestor : bpm, compás, sonido
+gestor --> pantalla : configuración
+pantalla --> musico : mostrarControles(BPM 40-240, compás, sonido)
+
+alt Ajuste con el deslizador
+    musico -> pantalla : ajustarBPM(bpm)
+    pantalla -> gestor : fijarBPM(bpm)
+    gestor -> config : actualizarBPM(acotar(bpm, 40, 240))
+else 3a. Tap Tempo
+    loop Por cada pulsación
+        musico -> pantalla : pulsarTapTempo()
+        pantalla -> gestor : registrarPulsacion(instante)
+    end
+    gestor -> gestor : promediarIntervalos()
+    gestor -> config : actualizarBPM(bpmCalculado)
+end
+gestor --> pantalla : bpm
+pantalla --> musico : mostrarBPM()
+
+musico -> pantalla : seleccionarCompasYSonido(compás, sonido)
+pantalla -> gestor : fijarCompasYSonido(compás, sonido)
+gestor -> config : actualizar(compás, sonido)
+
+musico -> pantalla : iniciar()
+pantalla -> gestor : iniciar()
+loop Cada 60 / BPM segundos, hasta que el músico lo detiene
+    gestor -> gestor : calcularSiguientePulso()
+    note right of gestor : Temporizador de alta precisión,\nsin retardos acumulados
+    gestor -> audio : reproducirClic(acentuado si es el primer tiempo)
+    gestor --> pantalla : pulso(numeroTiempo)
+    pantalla --> musico : resaltarTiempo(numeroTiempo)
+    note right of pantalla : Animación sincronizada con el audio
+end
+
+musico -> pantalla : detener()
+pantalla -> gestor : detener()
+gestor --> pantalla : detenido
+
+@enduml

@@ -13,6 +13,8 @@ export interface ChordDTO {
   minor?: boolean;
   major?: boolean;
   seventh?: boolean;
-  capo?: number;
+  capo?: boolean;
+  /** Traste en el que va el capo (0 = sin capo) */
+  capoFret?: number;
 }
 

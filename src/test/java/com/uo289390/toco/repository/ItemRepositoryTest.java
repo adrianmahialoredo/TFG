@@ -3,7 +3,6 @@ package com.uo289390.toco.repository;
 import static com.uo289390.toco.repository.RepositoryTestFixtures.*;
 import static org.junit.jupiter.api.Assertions.*;
 
-import java.time.LocalDateTime;
 import java.util.List;
 
 import com.uo289390.toco.repository.ItemRepository;
@@ -72,54 +71,6 @@ class ItemRepositoryTest {
         assertEquals(4, itemRepository.findByTitleContainingIgnoreCase("").size());
     }
 
-    @Test
-    void findTop20ByIdNotIn_returnsAtMost20NewestFirst() {
-        LocalDateTime base = LocalDateTime.of(2024, 1, 1, 0, 0);
-        for (long i = 1; i <= 25; i++) {
-            Lesson lesson = lesson(i, "Lesson " + i);
-            lesson.setCreatedAt(base.plusDays(i));
-            em.persist(lesson);
-        }
-        em.flush();
-        em.clear();
-
-        List<Item> result = itemRepository.findTop20ByIdNotInOrderByCreatedAtDesc(List.of(-1L));
-
-        assertEquals(20, result.size());
-        assertEquals(25L, result.getFirst().getId());
-        assertEquals(6L, result.getLast().getId());
-    }
-
-    @Test
-    void findTop20ByIdNotIn_skipsExcludedItemsAndFillsWithOlderOnes() {
-        LocalDateTime base = LocalDateTime.of(2024, 1, 1, 0, 0);
-        for (long i = 1; i <= 25; i++) {
-            Lesson lesson = lesson(i, "Lesson " + i);
-            lesson.setCreatedAt(base.plusDays(i));
-            em.persist(lesson);
-        }
-        em.flush();
-        em.clear();
-
-        List<Item> result = itemRepository.findTop20ByIdNotInOrderByCreatedAtDesc(List.of(25L, 24L));
-
-        assertEquals(20, result.size());
-        assertEquals(23L, result.getFirst().getId());
-        assertEquals(4L, result.getLast().getId());
-        assertTrue(result.stream().noneMatch(item -> item.getId() == 25L || item.getId() == 24L));
-    }
-
-    @Test
-    void findTop20ByIdNotIn_fewerItems_returnsAll() {
-        seedMixedItems();
-
-        assertEquals(4, itemRepository.findTop20ByIdNotInOrderByCreatedAtDesc(List.of(-1L)).size());
-    }
-
-    @Test
-    void findTop20ByIdNotIn_noItems_returnsEmpty() {
-        assertTrue(itemRepository.findTop20ByIdNotInOrderByCreatedAtDesc(List.of(-1L)).isEmpty());
-    }
 
     @Test
     void persistedItems_keepTheirType() {

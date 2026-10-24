@@ -292,6 +292,87 @@ class DtoMapperTest {
     }
 
     @Test
+    void testItemToItemSummaryDto_SongIncludesSearchMetadata() {
+        // Arrange
+        Song song = song(1);
+        song.setDecade("1990s");
+        song.setGenres(new LinkedHashSet<>(List.of(genre(4), genre(5))));
+        song.setInstruments(new LinkedHashSet<>(List.of(instrument(6))));
+
+        // Act
+        ItemSummaryDTO dto = mapper.itemToItemSummaryDto(song);
+
+        // Assert
+        assertEquals("1990s", dto.getDecade());
+        assertEquals(List.of(4L, 5L), dto.getGenreIds());
+        assertEquals(List.of(6L), dto.getInstrumentIds());
+    }
+
+    @Test
+    void testItemToItemSummaryDto_LessonWithOwnGenreAndInstrument() {
+        // Arrange
+        Lesson lesson = lesson(2);
+        lesson.setGenre(genre(4));
+        lesson.setInstrument(instrument(6));
+        lesson.setInstrumentGenre(instrumentGenre(9));
+
+        // Act
+        ItemSummaryDTO dto = mapper.itemToItemSummaryDto(lesson);
+
+        // Assert: its own genre and instrument take precedence over the instrument-genre ones
+        assertEquals(List.of(4L), dto.getGenreIds());
+        assertEquals(List.of(6L), dto.getInstrumentIds());
+    }
+
+    @Test
+    void testItemToItemSummaryDto_LessonInheritsFromInstrumentGenre() {
+        // Arrange
+        Lesson lesson = lesson(2);
+        lesson.setInstrumentGenre(instrumentGenre(9));
+
+        // Act
+        ItemSummaryDTO dto = mapper.itemToItemSummaryDto(lesson);
+
+        // Assert
+        assertEquals(List.of(8L), dto.getGenreIds());
+        assertEquals(List.of(7L), dto.getInstrumentIds());
+    }
+
+    @Test
+    void testItemToItemSummaryDto_LessonWithoutRelationshipsHasEmptyMetadata() {
+        // Act
+        ItemSummaryDTO dto = mapper.itemToItemSummaryDto(lesson(2));
+
+        // Assert
+        assertTrue(dto.getGenreIds().isEmpty());
+        assertTrue(dto.getInstrumentIds().isEmpty());
+        assertNull(dto.getDecade());
+    }
+
+    @Test
+    void testItemToItemSummaryDto_InstrumentGenreIncludesItsGenreAndInstrument() {
+        // Act
+        ItemSummaryDTO dto = mapper.itemToItemSummaryDto(instrumentGenre(9));
+
+        // Assert
+        assertEquals(Item.Type.InstrumentGenre, dto.getType());
+        assertEquals(List.of(8L), dto.getGenreIds());
+        assertEquals(List.of(7L), dto.getInstrumentIds());
+    }
+
+    @Test
+    void testItemToItemSummaryDto_GenreHasNoSearchMetadata() {
+        // Act
+        ItemSummaryDTO dto = mapper.itemToItemSummaryDto(genre(4));
+
+        // Assert
+        assertEquals(Item.Type.Genre, dto.getType());
+        assertTrue(dto.getGenreIds().isEmpty());
+        assertTrue(dto.getInstrumentIds().isEmpty());
+        assertNull(dto.getArtist());
+    }
+
+    @Test
     void testItemsToItemSummaryDTOs() {
         // Act
         List<ItemSummaryDTO> dtos = mapper.itemsToItemSummaryDTOs(List.of(song(1), genre(2), lesson(3)));
@@ -311,7 +392,7 @@ class DtoMapperTest {
     @Test
     void testLessonSectionToLessonSectionDto() {
         // Arrange
-        LessonSection section = new LessonSection(4L, "Intro", "<p>Hi</p>", lesson(9), 2);
+        LessonSection section = new LessonSection(4L, "Intro", "<p>Hi</p>", "https://www.youtube.com/watch?v=abc123", lesson(9), 2);
 
         // Act
         LessonSectionDTO dto = mapper.lessonSectionToLessonSectionDto(section);
@@ -320,6 +401,7 @@ class DtoMapperTest {
         assertEquals(4L, dto.getId());
         assertEquals("Intro", dto.getTitle());
         assertEquals("<p>Hi</p>", dto.getHtmlContent());
+        assertEquals("https://www.youtube.com/watch?v=abc123", dto.getVideoUrl());
         assertEquals(2, dto.getOrderIndex());
         assertEquals(9L, dto.getLessonId());
     }
@@ -338,8 +420,8 @@ class DtoMapperTest {
         lesson.setInstrument(instrument(6));
         InstrumentGenre ig = instrumentGenre(7);
         lesson.joinInstrumentGenre(ig, 3);
-        lesson.addSection(new LessonSection(11L, "A", "a", null, 0));
-        lesson.addSection(new LessonSection(12L, "B", "b", null, 1));
+        lesson.addSection(new LessonSection(11L, "A", "a", null, null, 0));
+        lesson.addSection(new LessonSection(12L, "B", "b", null, null, 1));
 
         // Act
         LessonDTO dto = mapper.lessonToLessonDto(lesson);
@@ -656,5 +738,26 @@ class DtoMapperTest {
 
         // Assert
         assertNull(dto.getDifficulty());
+    }
+
+    // -------- Tune --------
+
+    @Test
+    void testTuneToTuneDto_MapsAllFieldsAndKeepsStringOrder() {
+        // Arrange
+        Instrument guitar = new Instrument();
+        guitar.setId(1L);
+        Tune tune = new Tune(2L, "Drop D", guitar, new ArrayList<>(List.of("D2", "A2", "D3", "G3", "B3", "E4")));
+
+        // Act
+        TuneDTO dto = mapper.tuneToTuneDto(tune);
+
+        // Assert
+        assertEquals(2L, dto.getId());
+        assertEquals("Drop D", dto.getTitle());
+        assertEquals(1L, dto.getInstrumentId());
+        assertEquals(List.of("D2", "A2", "D3", "G3", "B3", "E4"), dto.getNotes());
+        // The DTO gets its own copy: changing it does not touch the entity
+        assertNotSame(tune.getNotes(), dto.getNotes());
     }
 }

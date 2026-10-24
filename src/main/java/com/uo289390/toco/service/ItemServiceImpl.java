@@ -2,8 +2,6 @@ package com.uo289390.toco.service;
 
 import com.uo289390.toco.dto.ItemSummaryDTO;
 import com.uo289390.toco.utils.mapper.DtoMapper;
-import com.uo289390.toco.model.Item;
-import com.uo289390.toco.model.ItemList;
 import com.uo289390.toco.repository.ItemRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -13,9 +11,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
-import static com.uo289390.toco.utils.EntityResolver.resolveItemList;
 import static com.uo289390.toco.utils.EntityResolver.findItem;
-import static com.uo289390.toco.utils.Utils.idsToExclude;
 
 /**
  * Default implementation of {@link ItemService}.
@@ -52,18 +48,6 @@ public class ItemServiceImpl implements ItemService {
     @Override
     public List<ItemSummaryDTO> search(String query) {
         return itemRepository.findByTitleContainingIgnoreCase(query).stream()
-                .map(dtoMapper::itemToItemSummaryDto)
-                .collect(Collectors.toList());
-    }
-
-    @Override
-    public List<ItemSummaryDTO> findRecommendedForItemList(Long id) {
-
-        ItemList list = resolveItemList(id);
-
-        // Newest items that are not already in the list
-        List<Long> alreadyInList = list.getItems().stream().map(Item::getId).toList();
-        return itemRepository.findTop20ByIdNotInOrderByCreatedAtDesc(idsToExclude(alreadyInList)).stream()
                 .map(dtoMapper::itemToItemSummaryDto)
                 .collect(Collectors.toList());
     }

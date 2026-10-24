@@ -1,4 +1,5 @@
-import {ActivityIndicator, ScrollView, View} from "react-native";
+import { ActivityIndicator, View } from "react-native";
+import FadeScrollView from "../components/FadeScrollView";
 import AppLayout from "../components/AppLayout";
 import {useMemo, useState} from "react";
 import SearchBar from "../components/SearchBar";
@@ -27,7 +28,7 @@ export default function GenresScreen() {
           <ProfileHeader title="Géneros" />
 
           {/* Barra de búsqueda */}
-          <View className="bg-background mt-3 mb-4">
+          <View className="bg-background mt-1 mb-4">
             <SearchBar value={query} onChangeText={setQuery} />
           </View>
 
@@ -36,12 +37,12 @@ export default function GenresScreen() {
                 <ActivityIndicator size="large" color="#ffffff" />
               </View>
           ) : (
-              <ScrollView
+              <FadeScrollView
                   showsVerticalScrollIndicator={false}
                   contentContainerStyle={{ paddingBottom: 120 }}
               >
                 <VerticalButtonsCarousel data={formattedData} />
-              </ScrollView>
+              </FadeScrollView>
           )}
         </View>
       </AppLayout>

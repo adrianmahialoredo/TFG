@@ -117,6 +117,19 @@ class GenreRecommendationServiceImplTest {
         }
 
         @Test
+        void testFindForItemList_NullCandidate_IsSkipped() {
+            // Arrange
+            when(itemList.getTopGenresFromSongs(anyInt())).thenReturn(java.util.Arrays.asList(null, genre(2)));
+
+            // Act
+            SequencedSet<Genre> result = service.findForItemList(ITEM_LIST_ID, 1);
+
+            // Assert
+            assertEquals(List.of(genre(2)), List.copyOf(result));
+            verifyNoInteractions(genreRepository);
+        }
+
+        @Test
         void testFindForItemList_MainGenreFromSongsFillsLimit_ReturnsOnlyIt() {
             // Arrange
             Genre fromSongs = genre(1);
@@ -406,6 +419,110 @@ class GenreRecommendationServiceImplTest {
             verify(genreRepository).findByIdNotIn(excludedCaptor.capture(), pageableCaptor.capture());
             assertEquals(List.of(-1L), List.copyOf(excludedCaptor.getValue()));
             assertEquals(1, pageableCaptor.getValue().getPageSize());
+        }
+    }
+
+    @Nested
+    class FindMostUsedInItemListsForUser {
+
+        @Test
+        void testFindMostUsed_UnknownUser_Throws() {
+            // Arrange
+            when(userRepository.findById(99L)).thenReturn(Optional.empty());
+
+            // Act & Assert
+            assertThrows(EntityNotFoundException.class, () -> service.findMostUsedInItemListsForUser(99L, 2));
+        }
+
+        @Test
+        void testFindMostUsed_NonPositiveLimit_ReturnsEmpty() {
+            // Arrange
+            when(user.getTopGenresFromItemLists(anyInt())).thenReturn(List.of(genre(10)));
+
+            // Act
+            SequencedSet<Genre> result = service.findMostUsedInItemListsForUser(USER_ID, 0);
+
+            // Assert
+            assertTrue(result.isEmpty());
+        }
+
+        @Test
+        void testFindMostUsed_KeepsUsageOrderAndExcludesGenresInItemLists() {
+            // Arrange
+            when(user.getIdsFromItemListsOfType(Genre.class)).thenReturn(ids(11L));
+            when(user.getTopGenresFromItemLists(anyInt())).thenReturn(List.of(genre(10), genre(11), genre(12)));
+
+            // Act
+            SequencedSet<Genre> result = service.findMostUsedInItemListsForUser(USER_ID, 5);
+
+            // Assert
+            assertEquals(List.of(10L, 12L), result.stream().map(Genre::getId).toList());
+            verify(user).getTopGenresFromItemLists(Integer.MAX_VALUE);
+        }
+
+        @Test
+        void testFindMostUsed_RespectsLimit() {
+            // Arrange
+            when(user.getTopGenresFromItemLists(anyInt())).thenReturn(List.of(genre(10), genre(11), genre(12)));
+
+            // Act
+            SequencedSet<Genre> result = service.findMostUsedInItemListsForUser(USER_ID, 2);
+
+            // Assert
+            assertEquals(List.of(10L, 11L), result.stream().map(Genre::getId).toList());
+        }
+
+        @Test
+        void testFindMostUsed_NoLists_FallsBackToFavouritesNotInItemLists() {
+            // Arrange
+            when(user.getTopGenresFromItemLists(anyInt())).thenReturn(List.of());
+            when(user.getIdsFromItemListsOfType(Genre.class)).thenReturn(ids(2L));
+            when(user.getPreferences()).thenReturn(preferences(List.of(genre(1), genre(2), genre(3)), List.of()));
+
+            // Act
+            SequencedSet<Genre> result = service.findMostUsedInItemListsForUser(USER_ID, 5);
+
+            // Assert
+            assertEquals(List.of(1L, 3L), result.stream().map(Genre::getId).toList());
+        }
+
+        @Test
+        void testFindMostUsed_ListGenresFirstThenFavouritesWithoutDuplicates() {
+            // Arrange
+            when(user.getTopGenresFromItemLists(anyInt())).thenReturn(List.of(genre(10), genre(1)));
+            when(user.getPreferences()).thenReturn(preferences(List.of(genre(1), genre(2)), List.of()));
+
+            // Act
+            SequencedSet<Genre> result = service.findMostUsedInItemListsForUser(USER_ID, 5);
+
+            // Assert
+            assertEquals(List.of(10L, 1L, 2L), result.stream().map(Genre::getId).toList());
+        }
+
+        @Test
+        void testFindMostUsed_ListGenresFillLimit_FavouritesNotUsed() {
+            // Arrange
+            when(user.getTopGenresFromItemLists(anyInt())).thenReturn(List.of(genre(10), genre(11)));
+            when(user.getPreferences()).thenReturn(preferences(List.of(genre(1)), List.of()));
+
+            // Act
+            SequencedSet<Genre> result = service.findMostUsedInItemListsForUser(USER_ID, 2);
+
+            // Assert
+            assertEquals(List.of(10L, 11L), result.stream().map(Genre::getId).toList());
+        }
+
+        @Test
+        void testFindMostUsed_NoListsNorFavourites_ReturnsEmptyWithoutRandomFill() {
+            // Arrange
+            when(user.getTopGenresFromItemLists(anyInt())).thenReturn(List.of());
+
+            // Act
+            SequencedSet<Genre> result = service.findMostUsedInItemListsForUser(USER_ID, 3);
+
+            // Assert: never random genres
+            assertTrue(result.isEmpty());
+            verifyNoInteractions(genreRepository);
         }
     }
 }

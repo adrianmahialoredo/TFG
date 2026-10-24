@@ -9,6 +9,12 @@ import { ItemSummaryDTO } from '../types';
 /** Máximo de resultados de búsqueda pintados a la vez. */
 const MAX_RESULTS = 50;
 
+/**
+ * Recomendaciones visibles a la vez. El resto espera su turno: cuando una se añade
+ * (y termina su tic), entra la siguiente.
+ */
+export const VISIBLE_RECOMMENDATIONS = 5;
+
 /** Tiempo que se ve el tic antes de que el item desaparezca de la pantalla. */
 const DISMISS_DELAY_MS = 600;
 
@@ -19,7 +25,8 @@ const normalize = (text?: string | null) =>
 /**
  * Nivel 6: Hook orquestador de la pantalla AddItemScreen.
  *
- * - Sin búsqueda: muestra las recomendaciones ("Para ti") del backend para esta lista.
+ * - Sin búsqueda: muestra las recomendaciones ("Para ti") del backend para esta lista,
+ *   de VISIBLE_RECOMMENDATIONS en VISIBLE_RECOMMENDATIONS (al añadir una entra la siguiente).
  * - Con búsqueda: filtra en local el catálogo completo de items (cargado al arrancar
  *   la app), sin llamar al backend.
  * - Añade un item a la lista destino sincronizando la Entity Store (Hidratación Atómica).
@@ -76,6 +83,7 @@ export const useAddItemScreen = (itemListId: string) => {
     };
 
     if (itemListId) fetchRecommended();
+    else setLoading(false);
     return () => {
       cancelled = true;
     };
@@ -141,10 +149,14 @@ export const useAddItemScreen = (itemListId: string) => {
 
   // Items mostrados: resultados si hay búsqueda, si no las recomendaciones. Los que ya están
   // en la lista no se muestran, salvo los recién añadidos mientras enseñan el tic.
+  // De las recomendaciones solo se ven las primeras VISIBLE_RECOMMENDATIONS: el recién añadido
+  // ocupa su hueco mientras enseña el tic y, al quitarse, entra la siguiente en espera.
   const items = useMemo(() => {
     const showingCheck = new Set(addedIds.filter((id) => !dismissedIds.includes(id)));
-    return (query.trim() ? results : recommended)
+    const searchingText = !!query.trim();
+    const visible = (searchingText ? results : recommended)
       .filter((item) => !addedSet.has(item.id) || showingCheck.has(item.id));
+    return searchingText ? visible : visible.slice(0, VISIBLE_RECOMMENDATIONS);
   }, [query, results, recommended, addedSet, addedIds, dismissedIds]);
 
   const isAdded = useCallback((itemId: string) => addedSet.has(itemId), [addedSet]);

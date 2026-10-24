@@ -330,6 +330,23 @@ class ItemListTest {
         }
 
         @Test
+        void getTopGenresFromLessons_belongsToGenreButWithoutGenre_contributesNothing() {
+            Lesson lesson = genreLesson(1L, null);
+            addAll(lesson, genreLesson(2L, rock));
+
+            assertEquals(List.of(rock), itemList.getTopGenresFromLessons(3));
+        }
+
+        @Test
+        void getTopGenresFromSongs_songWithNullGenres_isSkipped() {
+            Song withoutGenres = song(1L, Set.of(), Set.of());
+            withoutGenres.setGenres(null);
+            addAll(withoutGenres, song(2L, Set.of(jazz), Set.of()));
+
+            assertEquals(List.of(jazz), itemList.getTopGenresFromSongs(3));
+        }
+
+        @Test
         void getTopGenresFromLessons_usesInstrumentGenreGenre() {
             addAll(instrumentGenreLesson(1L, instrumentGenre(200L, guitar, jazz)));
 

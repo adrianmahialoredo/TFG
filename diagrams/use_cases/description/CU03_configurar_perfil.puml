@@ -1,0 +1,52 @@
+@startuml DS-CU-03
+title DS-CU-03 - Configurar perfil
+
+' Diagrama de secuencia de análisis (patrón Boundary-Control-Entity)
+autonumber
+hide footbox
+skinparam sequenceMessageAlign center
+skinparam roundcorner 6
+
+actor "Músico" as musico
+boundary "PerfilScreen" as pantalla
+control "GestorPerfil" as gestor
+entity "Usuario" as usuario
+entity "Preferencia" as preferencia
+
+musico -> pantalla : abrirPerfil()
+pantalla -> gestor : obtenerPerfil(userId)
+gestor -> usuario : obtener(userId)
+usuario --> gestor : usuario
+gestor -> preferencia : obtenerFavoritos(userId)
+preferencia --> gestor : géneros, instrumentos
+gestor --> pantalla : perfil
+pantalla --> musico : mostrarPreferencias(nombre, nivel, favoritos)
+
+alt Modificar perfil
+    musico -> pantalla : modificarDatos(nivel, favs)
+    musico -> pantalla : guardar()
+    pantalla -> gestor : guardarPreferencias(userId, nivel, favs)
+    note right of gestor : PUT /api/users/{id}
+    gestor -> gestor : comprobarPropiedad(userId)
+
+    alt 5a. Intento de modificar datos de otro usuario
+        gestor --> pantalla : 403 Forbidden
+        pantalla --> musico : mostrarError()
+    else Es el propietario
+        gestor -> usuario : actualizar(nivel)
+        gestor -> preferencia : actualizar(favs)
+        gestor --> pantalla : usuarioActualizado
+        pantalla -> pantalla : actualizarAlmacenLocal(usuario)
+        note right of pantalla : UserEntitiesStore\n(RAM y disco)
+        pantalla --> musico : notificarActualizacionCorrecta()
+    end
+else 3a. Cerrar sesión
+    musico -> pantalla : cerrarSesion()
+    pantalla -> gestor : cerrarSesion()
+    gestor -> gestor : borrarDatosPersonalesLocales()
+    note right of gestor : Usuario, listas e índices personales.\nEl contenido público sigue en caché.
+    gestor --> pantalla : sesionCerrada
+    pantalla --> musico : redirigirLogin()
+end
+
+@enduml

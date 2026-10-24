@@ -1,6 +1,7 @@
 import * as instrumentGenreService from '../services/instrumentGenre.service';
 import * as instrumentGenreLocal from '../local/instrumentGenre.local';
 import * as lessonRepository from './lesson.repository';
+import * as itemRepository from './item.repository';
 import { useInstrumentGenreEntitiesStore, useItemEntitiesStore } from "../stores/entities";
 import { InstrumentGenreDTO, ItemType } from '../types';
 import { toItemSummary } from '../utils/mappers.utils';
@@ -83,3 +84,13 @@ export const getByGenreId = (genreId: string, onFresh?: OnFresh): Promise<string
 /** Obtiene los InstrumentGenres de un instrumento específico. */
 export const getByInstrumentId = (instrumentId: string, onFresh?: OnFresh): Promise<string[]> =>
     cache.list(`instrument_${instrumentId}`, () => instrumentGenreService.getByInstrumentId(instrumentId), onFresh);
+
+// --- RECOMENDACIONES (el backend devuelve IDs; las tarjetas se pintan con el catálogo de items) ---
+
+/**
+ * Combinaciones de los géneros e instrumentos favoritos del usuario que no están en sus listas
+ * (tarjeta "Prueba esta combinación" del Home). Personalizado: el índice se borra en el logout
+ * con el resto de índices de items.
+ */
+export const getFavouriteCombinations = (userId: string, onFresh?: OnFresh): Promise<string[]> =>
+    itemRepository.getFeed('instrument_genres_favourite_combinations', () => instrumentGenreService.getFavouriteCombinationIdsByUser(userId), onFresh);

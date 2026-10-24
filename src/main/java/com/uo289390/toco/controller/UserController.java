@@ -15,6 +15,8 @@ import org.springframework.validation.annotation.Validated;
 
 import java.util.List;
 
+import static com.uo289390.toco.utils.RecommendationConstants.DEFAULT_TOP_ARTISTS_COUNT;
+
 /**
  * REST controller for users.
  *
@@ -30,6 +32,7 @@ import java.util.List;
  * - GET    /api/users/{id}/favorite-instruments                    Retrieve the IDs of the favourite instruments of a user
  * - POST   /api/users/{id}/favorite-instruments/{instrumentId}     Add an instrument to the favourites of a user
  * - DELETE /api/users/{id}/favorite-instruments/{instrumentId}     Remove an instrument from the favourites of a user
+ * - GET    /api/users/{id}/top-artists?total_artists={n}           Retrieve the favourite artists of a user (from the songs of their lists)
  * - POST   /api/users                                              Create a user
  * - PUT    /api/users/{id}                                         Update a user
  * - DELETE /api/users/{id}                                         Delete a user
@@ -138,6 +141,22 @@ public class UserController {
     @PreAuthorize("hasRole('ADMIN') or @ownership.isSelf(#id, authentication)")
     public ResponseEntity<List<Long>> getFavoriteInstrumentIdsForUser(@PathVariable Long id) {
         return ResponseEntity.of(userService.findFavoriteInstrumentIdsForUser(id));
+    }
+
+    /**
+     * Retrieves the favourite artists of a user: the artists that appear most in the songs of their lists.
+     *
+     * @param id           the ID of the user
+     * @param totalArtists how many artists to return (1 to 10, 5 by default)
+     * @return 200 OK with the artist names from most to least repeated (empty if the lists have no songs),
+     *         400 Bad Request if {@code total_artists} is out of range, or 404 Not Found if the user does not exist
+     */
+    @GetMapping("/{id}/top-artists")
+    @PreAuthorize("hasRole('ADMIN') or @ownership.isSelf(#id, authentication)")
+    public ResponseEntity<List<String>> getTopArtistsForUser(
+            @PathVariable Long id,
+            @RequestParam(name = "total_artists", defaultValue = "" + DEFAULT_TOP_ARTISTS_COUNT) int totalArtists) {
+        return ResponseEntity.of(userService.findTopArtistsForUser(id, totalArtists));
     }
 
     /**

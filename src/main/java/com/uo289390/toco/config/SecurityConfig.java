@@ -25,7 +25,7 @@ import lombok.RequiredArgsConstructor;
  *   redirects the browser there without the JWT; the user is identified by the OAuth state),
  *   {@code /actuator/health} and {@code /error}.
  * - ADMIN only: creating, updating and deleting catalog content (genres, songs, lessons,
- *   chords, instruments...), listing and creating users directly, listing every item list and
+ *   chords, instruments, tunes...), listing and creating users directly, listing every item list and
  *   the rest of the actuator.
  * - Any other request requires a valid JWT. Batch reads ({@code POST /api/<resource>/by-ids})
  *   are reads, so any authenticated user can perform them.
@@ -59,7 +59,8 @@ public class SecurityConfig {
             "/api/lessons/**",
             "/api/lesson-sections/**",
             "/api/instruments/**",
-            "/api/instrument-genres/**"
+            "/api/instrument-genres/**",
+            "/api/tunes/**"
     };
 
     /**

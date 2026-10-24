@@ -39,5 +39,30 @@ public interface SongService {
 
     List<SongDTO> findNewForGenre(Long genreId);
 
+    /**
+     * Retrieves the new songs of some artists (songs flagged {@code artistNew}), mixing the artists:
+     * the first song of each artist, then the second of each one, and so on, in the order the
+     * artists are given (the most important first).
+     *
+     * @param artists the artist names (1 to {@code MAX_ARTISTS_IN_SONGS_BY_ARTISTS}, compared ignoring case)
+     * @param limit   maximum number of songs ({@code DEFAULT_SONGS_BY_ARTISTS_COUNT} if null,
+     *                at most {@code MAX_SONGS_BY_ARTISTS_COUNT})
+     * @return the songs, without duplicates
+     * @throws IllegalArgumentException if there are no artists, too many artists or the limit is out of range
+     */
+    List<SongDTO> findNewForArtists(List<String> artists, Integer limit);
+
+    /**
+     * Retrieves the popular songs of some artists (songs flagged {@code artistPopular}), mixing the
+     * artists like {@link #findNewForArtists(List, Integer)}.
+     *
+     * @param artists the artist names (1 to {@code MAX_ARTISTS_IN_SONGS_BY_ARTISTS}, compared ignoring case)
+     * @param limit   maximum number of songs ({@code DEFAULT_SONGS_BY_ARTISTS_COUNT} if null,
+     *                at most {@code MAX_SONGS_BY_ARTISTS_COUNT})
+     * @return the songs, without duplicates
+     * @throws IllegalArgumentException if there are no artists, too many artists or the limit is out of range
+     */
+    List<SongDTO> findPopularForArtists(List<String> artists, Integer limit);
+
     List<SongDTO> findByIds(List<Long> ids);
 }

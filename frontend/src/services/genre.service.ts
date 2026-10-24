@@ -31,3 +31,12 @@ export const updateGenre = async (id: string, genre: GenreDTO): Promise<GenreDTO
 export const deleteGenre = async (id: string): Promise<void> => {
   await apiClient.delete(API_ENDPOINTS.GENRES.BY_ID(id));
 };
+
+/**
+ * IDs de los géneros más usados en las listas del usuario (por los géneros de sus canciones,
+ * géneros-instrumento y lecciones) y después sus favoritos, sin los que ya están guardados en ellas.
+ */
+export const getMostUsedInItemListsIdsByUser = async (userId: string): Promise<string[]> => {
+  const response = await apiClient.get(API_ENDPOINTS.GENRES.MOST_USED_IN_ITEM_LISTS_IDS_BY_USER(userId));
+  return response.data;
+};

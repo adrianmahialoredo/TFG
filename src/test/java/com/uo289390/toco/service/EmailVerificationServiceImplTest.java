@@ -88,9 +88,21 @@ class EmailVerificationServiceImplTest {
 
     @Test
     void sendCode_emailAlreadyRegistered_throwsWithoutSending() {
-        when(userRepository.findByEmail(EMAIL)).thenReturn(Optional.of(new User()));
+        when(userRepository.existsByEmailIgnoreCase(EMAIL)).thenReturn(true);
 
         IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> service.sendCode(EMAIL));
+
+        assertEquals("Email already registered", ex.getMessage());
+        verifyNoInteractions(emailService);
+    }
+
+    @Test
+    void sendCode_emailRegisteredWithOtherCase_throwsWithoutSending() {
+        // The lookup uses the normalized email, so " John@Example.COM " matches john@example.com
+        when(userRepository.existsByEmailIgnoreCase(EMAIL)).thenReturn(true);
+
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+                () -> service.sendCode(" John@Example.COM "));
 
         assertEquals("Email already registered", ex.getMessage());
         verifyNoInteractions(emailService);
@@ -149,6 +161,31 @@ class EmailVerificationServiceImplTest {
         IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> service.checkCode(EMAIL, " "));
 
         assertEquals("Verification code is required", ex.getMessage());
+    }
+
+    @Test
+    void checkCode_nullCode_throws() {
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> service.checkCode(EMAIL, null));
+
+        assertEquals("Verification code is required", ex.getMessage());
+    }
+
+    @Test
+    void checkCode_nullEmail_isNotRequested() {
+        sendAndCaptureCode();
+
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> service.checkCode(null, "123456"));
+
+        assertEquals("Verification code not requested", ex.getMessage());
+    }
+
+    @Test
+    void consume_nullEmail_doesNotDiscardOtherCodes() {
+        String code = sendAndCaptureCode();
+
+        assertDoesNotThrow(() -> service.consume(null));
+
+        assertDoesNotThrow(() -> service.checkCode(EMAIL, code));
     }
 
     @Test

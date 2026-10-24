@@ -38,3 +38,11 @@ yarn-error.*
 
 # typescript
 *.tsbuildinfo
+
+# Jest
+coverage/
+
+# Carpetas nativas generadas por "npx expo run:android" / "run:ios" (prebuild).
+# Se regeneran desde app.json; no se versionan.
+/android
+/ios

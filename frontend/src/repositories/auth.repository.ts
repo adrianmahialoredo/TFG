@@ -4,14 +4,19 @@ import * as itemListLocal from '../local/itemList.local';
 import * as itemLocal from '../local/item.local';
 import * as songLocal from '../local/song.local';
 import * as lessonLocal from '../local/lesson.local';
-import { SPOTIFY_INDEX_KEY, RECOMMENDED_INDEX_KEY as SONGS_RECOMMENDED_INDEX_KEY } from './song.repository';
+import {
+  SPOTIFY_INDEX_KEY,
+  RECOMMENDED_INDEX_KEY as SONGS_RECOMMENDED_INDEX_KEY,
+  NEW_BY_FAVOURITE_ARTISTS_INDEX_KEY,
+  POPULAR_BY_FAVOURITE_ARTISTS_INDEX_KEY,
+} from './song.repository';
 import { RECOMMENDED_INDEX_KEY as LESSONS_RECOMMENDED_INDEX_KEY } from './lesson.repository';
 import { useAuthStore, useUserEntitiesStore, useItemListEntitiesStore } from '../stores/entities';
 import { UserDTO } from '../types';
 
-export const login = async (email: string, password: string): Promise<{ token: string; user: UserDTO }> => {
+export const login = async (identifier: string, password: string): Promise<{ token: string; user: UserDTO }> => {
   try {
-    const { token, user } = await authService.login(email, password);
+    const { token, user } = await authService.login(identifier, password);
     const userId = user.id.toString();
 
     // 1. Hidratación de RAM: El objeto completo va AQUÍ
@@ -75,7 +80,12 @@ export const logout = async (): Promise<void> => {
       // El catálogo de items es público: se conserva.
       itemLocal.clearQueryIndexes(['items_catalog']),
       // Las canciones de Spotify y las recomendadas van con DTO completo y su índice vive en el de canciones.
-      songLocal.removeQueryIndexes([SPOTIFY_INDEX_KEY, SONGS_RECOMMENDED_INDEX_KEY]),
+      songLocal.removeQueryIndexes([
+        SPOTIFY_INDEX_KEY,
+        SONGS_RECOMMENDED_INDEX_KEY,
+        NEW_BY_FAVOURITE_ARTISTS_INDEX_KEY,
+        POPULAR_BY_FAVOURITE_ARTISTS_INDEX_KEY,
+      ]),
       lessonLocal.removeQueryIndexes([LESSONS_RECOMMENDED_INDEX_KEY]),
     ]);
 

@@ -1,7 +1,9 @@
 import React from 'react';
-import { ScrollView, TouchableOpacity, View, Text, Image, ActivityIndicator, Modal, Pressable } from "react-native";
+import { TouchableOpacity, View, Text, Image, ActivityIndicator, Modal, Pressable } from "react-native";
+import FadeScrollView from "../components/FadeScrollView";
 import {useRoute, RouteProp, useNavigation, NavigationProp, useFocusEffect} from '@react-navigation/native';
 import * as ImagePicker from 'expo-image-picker';
+import { Trash2 } from 'lucide-react-native';
 import AppLayout from "../components/AppLayout";
 import ProfileHeader from "../components/ProfileHeader";
 import ListItem from "../components/ListItem";
@@ -23,7 +25,7 @@ export default function ListScreen() {
   const route = useRoute<ListScreenRouteProp>();
   const { itemListId } = route.params;
 
-  const { list, items, loading, error, refresh, updateList, updateImage } = useItemListDetail(itemListId);
+  const { list, items, loading, error, refresh, updateList, updateImage, removeItem, deleteList } = useItemListDetail(itemListId);
   const { showAlert } = useAppAlert();
 
   const [editingPhoto, setEditingPhoto] = React.useState(false);
@@ -34,6 +36,54 @@ export default function ListScreen() {
   const [newName, setNewName] = React.useState('');
   const [renameError, setRenameError] = React.useState<string | null>(null);
   const [renaming, setRenaming] = React.useState(false);
+
+  const [deleting, setDeleting] = React.useState(false);
+
+  /** Pide confirmación y, si se elimina, vuelve a la pantalla anterior. */
+  const handleDelete = () => {
+    showAlert({
+      title: 'Eliminar lista',
+      message: `¿Seguro que quieres eliminar "${list?.name ?? 'esta lista'}"? No se puede deshacer.`,
+      actions: [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Eliminar',
+          style: 'destructive',
+          onPress: async () => {
+            setDeleting(true);
+            if (await deleteList()) {
+              navigation.goBack();
+            } else {
+              setDeleting(false);
+              showAlert({ title: 'Error', message: 'No se pudo eliminar la lista' });
+            }
+          },
+        },
+      ],
+    });
+  };
+
+  /** Pide confirmación y quita el item de la lista. */
+  const handleRemoveItem = (item: ItemSummaryDTO) => {
+    showAlert({
+      title: 'Quitar de la lista',
+      message: `¿Quitar "${item.title}" de "${list?.name ?? 'la lista'}"?`,
+      actions: [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Quitar',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await removeItem(item.id);
+            } catch {
+              showAlert({ title: 'Error', message: 'No se pudo quitar el item de la lista' });
+            }
+          },
+        },
+      ],
+    });
+  };
 
   // Refresca la lista al volver a esta pantalla (p. ej. tras añadir un item),
   // omitiendo el primer foco porque el hook ya carga en el montaje.
@@ -118,6 +168,17 @@ export default function ListScreen() {
     );
   }
 
+  // Eliminando (o ya eliminada, mientras se vuelve atrás): sin el aviso de "lista no encontrada"
+  if (deleting) {
+    return (
+        <AppLayout>
+          <View className="bg-background flex-1 justify-center items-center">
+            <ActivityIndicator size="large" color={COLORS.primary} />
+          </View>
+        </AppLayout>
+    );
+  }
+
   // Estado de Error o Lista No Encontrada
   if (error || !list) {
     return (
@@ -137,12 +198,12 @@ export default function ListScreen() {
           {/* Header con botón de volver atrás */}
           <ProfileHeader title="Listas" />
 
-          <ScrollView
+          <FadeScrollView
               showsVerticalScrollIndicator={false}
               contentContainerStyle={{ paddingBottom: 120 }}
           >
             {/* Cabecera con Info de la Lista */}
-            <View className="items-center mt-6 mb-8 px-4">
+            <View className="items-center mt-2 mb-8 px-4">
               {list.imageUrl ? (
                   <TouchableOpacity onPress={() => setEditingPhoto(true)} activeOpacity={0.85}>
                     <Image
@@ -184,6 +245,7 @@ export default function ListScreen() {
                           item={itemToListItem(item)}
                           inverted={index % 2 !== 0}
                           onPress={() => handlePress(item)}
+                          onRemove={() => handleRemoveItem(item)}
                       />
                   ))
               ) : (
@@ -205,8 +267,30 @@ export default function ListScreen() {
                 </Text>
                 <AddButton size={26} color={COLORS.primary} />
               </TouchableOpacity>
+
+              {/* Eliminar la lista (con confirmación). Estilos en línea: con className NativeWind
+                  pisa la opacidad animada del TouchableOpacity */}
+              <TouchableOpacity
+                  onPress={handleDelete}
+                  activeOpacity={0.8}
+                  accessibilityRole="button"
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    alignSelf: 'center',
+                    gap: 8,
+                    marginTop: 24,
+                    paddingHorizontal: 28,
+                    paddingVertical: 14,
+                    borderRadius: 9999,
+                    backgroundColor: '#dc2626', // red-600, como "Cerrar sesión"
+                  }}
+              >
+                <Trash2 size={20} color="white" />
+                <Text className="text-white text-base font-semibold">Eliminar lista</Text>
+              </TouchableOpacity>
             </View>
-          </ScrollView>
+          </FadeScrollView>
         </View>
 
         <PhotoOptionsModal

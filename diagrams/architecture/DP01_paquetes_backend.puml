@@ -1,0 +1,101 @@
+@startuml DP-01
+title DP-01 - Diagrama de paquetes del backend
+
+' Dependencias reales entre paquetes de com.uo289390.toco, sacadas de los
+' imports del código. Una flecha A ..> B significa "A importa algo de B".
+' Se omiten:
+'   - los imports que solo sirven para un {@link} del Javadoc
+'     (controller y utils -> exception);
+'   - dos atajos puntuales de controller hacia model / utils.mapper
+'     (RecommendationController, UserController).
+' Capas y reglas: architecture.md (§1). Frontend en DP02_paquetes_frontend.puml.
+skinparam roundcorner 6
+skinparam packageStyle folder
+set separator none
+skinparam nodesep 40
+skinparam ranksep 55
+skinparam defaultTextAlignment center
+skinparam package {
+    BackgroundColor<<backend>> #FFF9F0
+    BorderColor<<backend>> #B07A1F
+}
+skinparam ArrowColor #555555
+
+package "com.uo289390.toco" <<backend>> {
+
+    package "controller" as b_controller {
+    }
+    package "exception" as b_exception {
+    }
+
+    package "service" as b_service {
+        package "recommendation" as b_recommendation {
+        }
+    }
+
+    package "dto" as b_dto {
+        package "validation" as b_validation {
+        }
+    }
+
+    package "repository" as b_repository {
+    }
+    package "model" as b_model {
+    }
+
+    package "utils" as b_utils {
+        package "mapper" as b_mapper {
+        }
+    }
+
+    package "security" as b_security {
+    }
+    package "config" as b_config {
+    }
+}
+
+b_exception ..> b_controller : <<intercepta>>
+
+b_controller ..> b_service
+b_controller ..> b_recommendation
+b_controller ..> b_dto
+b_controller ..> b_validation
+b_controller ..> b_security
+
+b_service ..> b_repository
+b_service ..> b_model
+b_service ..> b_dto
+b_service ..> b_utils
+b_service ..> b_mapper
+b_service ..> b_security
+b_service ..> b_config
+
+b_recommendation ..> b_repository
+b_recommendation ..> b_mapper
+
+b_repository ..> b_model
+b_dto ..> b_model
+b_mapper ..> b_model
+b_mapper ..> b_dto
+b_utils ..> b_repository
+b_utils ..> b_model
+b_model ..> b_utils : <<Identifiable>>
+
+b_security ..> b_model
+b_security ..> b_utils
+b_config ..> b_security
+b_config ..> b_repository
+b_config ..> b_model
+
+
+legend bottom left
+  |= Paquete |= Contenido |
+  | controller | Controladores REST: solo HTTP (rutas, parámetros, códigos de respuesta) |
+  | exception | GlobalExceptionHandler (@RestControllerAdvice): excepción -> respuesta HTTP |
+  | utils | EntityResolver, Utils, RecommendationConstants, Identifiable |
+  | utils.mapper | DtoMapper (entidad -> DTO) y EntityMapper (DTO -> entidad) |
+  | security | JwtAuthenticationFilter, JwtUtil, OwnershipChecker |
+  | config | SecurityConfig, AdminBootstrap, SpotifyProperties, AppConfig |
+endlegend
+
+@enduml

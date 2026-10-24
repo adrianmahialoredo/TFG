@@ -39,6 +39,21 @@ class EmailServiceImplTest {
     }
 
     @Test
+    void fill_missingTemplate_throwsUncheckedIOException() {
+        java.io.UncheckedIOException ex = assertThrows(java.io.UncheckedIOException.class,
+                () -> EmailServiceImpl.fill("templates/email/does-not-exist.txt", Map.of()));
+
+        assertTrue(ex.getMessage().contains("does-not-exist.txt"));
+    }
+
+    @Test
+    void fill_withoutValues_leavesPlaceholdersUntouched() {
+        String content = EmailServiceImpl.fill("templates/email/verification-code.txt", Map.of());
+
+        assertTrue(content.contains("{{code}}"));
+    }
+
+    @Test
     void sendVerificationCode_withoutSmtpServer_doesNotFail() {
         EmailServiceImpl service = new EmailServiceImpl(provider(null), "TOCO <no-reply@toco.app>");
 

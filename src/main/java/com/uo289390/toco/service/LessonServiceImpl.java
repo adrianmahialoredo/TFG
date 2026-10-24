@@ -86,6 +86,7 @@ public class LessonServiceImpl implements LessonService {
                 LessonSection section = new LessonSection();
                 section.setTitle(sDto.getTitle());
                 section.setHtmlContent(sDto.getHtmlContent());
+                section.setVideoUrl(sDto.getVideoUrl());
                 section.setOrderIndex(sDto.getOrderIndex());
                 lesson.addSection(section);
             });
@@ -187,6 +188,7 @@ public class LessonServiceImpl implements LessonService {
                 LessonSection s = new LessonSection();
                 s.setTitle(sDto.getTitle());
                 s.setHtmlContent(sDto.getHtmlContent());
+                s.setVideoUrl(sDto.getVideoUrl());
                 s.setOrderIndex(sDto.getOrderIndex());
                 lesson.addSection(s);
             });

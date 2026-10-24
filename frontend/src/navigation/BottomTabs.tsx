@@ -11,7 +11,7 @@ import LessonScreen from '../screens/LessonScreen';
 import GenreMainScreen from '../screens/GenreMainScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import MetronomeScreen from '../screens/MetronomeScreen';
-import InstrumentGenreScreen from '../screens/InstrumentGenreScreen';
+import TunerScreen from '../screens/TunerScreen';
 import InstrumentGenreLessonScreen from '../screens/InstrumentGenreLessonScreen';
 import ListScreen from '../screens/ListScreen';
 import AddItemScreen from '../screens/AddItemScreen';
@@ -76,8 +76,7 @@ export default function BottomTabs() {
         getId={({ params }) => (params as { genreId?: string } | undefined)?.genreId?.toString()} />
       <Tab.Screen name="ProfileScreen" component={ProfileScreen} options={HIDDEN_TAB_OPTIONS} />
       <Tab.Screen name="MetronomeScreen" component={MetronomeScreen} options={HIDDEN_TAB_OPTIONS} />
-      <Tab.Screen name="InstrumentGenreScreen" component={InstrumentGenreScreen} options={HIDDEN_TAB_OPTIONS}
-        getId={({ params }) => (params as { instrumentGenreId?: string } | undefined)?.instrumentGenreId?.toString()} />
+      <Tab.Screen name="TunerScreen" component={TunerScreen} options={HIDDEN_TAB_OPTIONS} />
       <Tab.Screen name="InstrumentGenreLesson" component={InstrumentGenreLessonScreen} options={HIDDEN_TAB_OPTIONS}
         getId={({ params }) => (params as { instrumentGenreId?: string } | undefined)?.instrumentGenreId?.toString()} />
       <Tab.Screen name="ListScreen" component={ListScreen} options={HIDDEN_TAB_OPTIONS}

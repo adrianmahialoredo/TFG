@@ -46,13 +46,14 @@ class EntityResolverTest {
     @Mock private SongLessonRepository songLessonRepository;
     @Mock private SpotifyUserRepository spotifyUserRepository;
     @Mock private TabSectionRepository tabSectionRepository;
+    @Mock private TuneRepository tuneRepository;
     @Mock private UserRepository userRepository;
 
     @BeforeEach
     void setUp() {
         new EntityResolver(chordRepository, genreRepository, instrumentRepository, instrumentGenreRepository,
                 itemRepository, itemListRepository, lessonRepository, lessonSectionRepository, songRepository,
-                songLessonRepository, spotifyUserRepository, tabSectionRepository, userRepository);
+                songLessonRepository, spotifyUserRepository, tabSectionRepository, tuneRepository, userRepository);
     }
 
     /**
@@ -94,6 +95,7 @@ class EntityResolverTest {
                 new Case("SongLesson", repo(t -> t.songLessonRepository), new SongLesson(), EntityResolver::findSongLesson, EntityResolver::resolveSongLesson),
                 new Case("SpotifyUser", repo(t -> t.spotifyUserRepository), new SpotifyUser(), EntityResolver::findSpotifyUser, EntityResolver::resolveSpotifyUser),
                 new Case("TabSection", repo(t -> t.tabSectionRepository), new TabSection(), EntityResolver::findTabSection, EntityResolver::resolveTabSection),
+                new Case("Tune", repo(t -> t.tuneRepository), new Tune(), EntityResolver::findTune, EntityResolver::resolveTune),
                 new Case("User", repo(t -> t.userRepository), new User(), EntityResolver::findUser, EntityResolver::resolveUser)
         ).map(Arguments::of);
     }

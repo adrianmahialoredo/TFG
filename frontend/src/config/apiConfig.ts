@@ -32,6 +32,8 @@ export const API_ENDPOINTS = {
     FAVORITE_GENRE: (id: string | number, genreId: string | number) => `${API_URL}/users/${id}/favorite-genres/${genreId}`,
     FAVORITE_INSTRUMENTS: (id: string | number) => `${API_URL}/users/${id}/favorite-instruments`,
     FAVORITE_INSTRUMENT: (id: string | number, instrumentId: string | number) => `${API_URL}/users/${id}/favorite-instruments/${instrumentId}`,
+    // Artistas más repetidos en las canciones de las listas del usuario (?total_artists=n, de 1 a 10)
+    TOP_ARTISTS: (id: string | number) => `${API_URL}/users/${id}/top-artists`,
   },
 
   // Genres
@@ -39,6 +41,9 @@ export const API_ENDPOINTS = {
     BASE: `${API_URL}/genres`,
     BY_ID: (id: string) => `${API_URL}/genres/${id}`,
     BY_IDS: `${API_URL}/genres/by-ids`,
+    // Géneros más usados en las listas del usuario (que no estén ya en ellas): devuelve solo IDs
+    MOST_USED_IN_ITEM_LISTS_IDS_BY_USER: (userId: string) =>
+      `${API_URL}/recommendations/genres/most-used-in-item-lists/by-user/${userId}/ids`,
   },
 
   // Songs
@@ -55,6 +60,9 @@ export const API_ENDPOINTS = {
     NEW: `${API_URL}/songs/new`,
     SPOTIFY: (userId: string) => `${API_URL}/spotify/recommendations/songs/${userId}`,
     RECOMMENDED_BY_USER: (userId: string) => `${API_URL}/recommendations/songs/by-user/${userId}`,
+    // Canciones de varios artistas (?limit=n&artist1=a&artist2=b..., hasta 10 artistas y 50 canciones)
+    NEW_BY_ARTISTS: `${API_URL}/songs/by-artists/new`,
+    POPULAR_BY_ARTISTS: `${API_URL}/songs/by-artists/popular`,
   },
 
   // Song Lessons
@@ -110,6 +118,9 @@ export const API_ENDPOINTS = {
     BY_IDS: `${API_URL}/instrument-genres/by-ids`,
     BY_GENRE: (genreId: string) => `${API_URL}/instrument-genres/by-genre/${genreId}`,
     BY_INSTRUMENT: (instrumentId: string) => `${API_URL}/instrument-genres/by-instrument/${instrumentId}`,
+    // Combinaciones de los géneros e instrumentos favoritos del usuario: devuelve solo IDs
+    FAVOURITE_COMBINATION_IDS_BY_USER: (userId: string) =>
+      `${API_URL}/recommendations/instrument-genres/favourite-combinations/by-user/${userId}/ids`,
   },
 
   // Item Lists
@@ -128,6 +139,14 @@ export const API_ENDPOINTS = {
     BY_ID: (id: string) => `${API_URL}/tab-sections/${id}`,
     BY_IDS: `${API_URL}/tab-sections/by-ids`,
     BY_SONG_LESSON: (songLessonId: string) => `${API_URL}/tab-sections/by-song-lesson/${songLessonId}`,
+  },
+
+  // Tunes (afinaciones del afinador)
+  TUNES: {
+    BASE: `${API_URL}/tunes`,
+    BY_ID: (id: string) => `${API_URL}/tunes/${id}`,
+    BY_IDS: `${API_URL}/tunes/by-ids`,
+    BY_INSTRUMENT: (instrumentId: string) => `${API_URL}/tunes/by-instrument/${instrumentId}`,
   },
 
   // Spotify Integration

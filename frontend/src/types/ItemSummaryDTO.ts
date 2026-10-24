@@ -19,4 +19,10 @@ export interface ItemSummaryDTO {
   level?: number;
   /** Artista de la canción (subtítulo de la tarjeta). Solo en canciones. */
   artist?: string | null;
+  /** IDs de los géneros del item (canciones, lecciones y géneros-instrumento). Para el buscador. */
+  genreIds?: string[];
+  /** IDs de los instrumentos del item (canciones, lecciones y géneros-instrumento). Para el buscador. */
+  instrumentIds?: string[];
+  /** Década de la canción (p.ej. "1990s"). Para el buscador. Solo en canciones. */
+  decade?: string | null;
 }

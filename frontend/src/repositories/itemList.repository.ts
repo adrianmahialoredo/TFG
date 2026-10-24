@@ -83,8 +83,17 @@ export const getByUserId = async (userId: string): Promise<string[]> => {
         if (localLists && localLists.length > 0) {
             useItemListEntitiesStore.getState().setItemLists(localLists);
 
-            // 2. Sync de fondo para mantener RAM/Disco frescos
+            // 2. Sync de fondo para mantener RAM/Disco frescos. Las listas que ya no existen
+            //    en el backend (p.ej. borradas desde otro dispositivo) se quitan de RAM y Disco;
+            //    la UI se entera sola porque deriva las listas de la Store.
             itemListService.getUserIds(userId).then(async (remoteIds) => {
+                const remoteSet = new Set(remoteIds.map(String));
+                const staleIds = localLists.map(l => l.id.toString()).filter(id => !remoteSet.has(id));
+                if (staleIds.length > 0) {
+                    useItemListEntitiesStore.getState().removeItemLists(staleIds);
+                    await Promise.all(staleIds.map(id => itemListLocal.removeById(id, userId)));
+                }
+
                 if (remoteIds.length > 0) {
                     const remoteLists = await itemListService.getAllById(remoteIds);
                     await hydrateItemLists(remoteLists);
@@ -176,6 +185,26 @@ export const updateItemList = async (
     } catch (error) {
         console.error('[ItemListRepo] Error en updateItemList:', error);
         return null;
+    }
+};
+
+/**
+ * Elimina una lista: primero en el backend y, si lo confirma, de RAM y Disco.
+ * @returns true si se eliminó
+ */
+export const deleteItemList = async (listId: string): Promise<boolean> => {
+    try {
+        const userId = useItemListEntitiesStore.getState().itemLists[listId]?.userId
+            ?? (await itemListLocal.getById(listId))?.userId;
+
+        await itemListService.deleteItemList(listId);
+
+        useItemListEntitiesStore.getState().removeItemLists([listId]);
+        if (userId) await itemListLocal.removeById(listId, userId.toString());
+        return true;
+    } catch (error) {
+        console.error('[ItemListRepo] Error en deleteItemList:', error);
+        return false;
     }
 };
 

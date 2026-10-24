@@ -28,6 +28,15 @@ public interface UserRepository extends JpaRepository<User, Long> {
     Optional<User> findByEmail(String email);
 
     /**
+     * Checks whether a user with the given email exists, ignoring case.
+     * Used before registering, so that "Ana@x.com" and "ana@x.com" count as the same account.
+     *
+     * @param email the email to look for
+     * @return true if a user with that email (in any case) exists
+     */
+    boolean existsByEmailIgnoreCase(String email);
+
+    /**
      * Finds a User entity by its username.
      * 
      * @param username the username of the user to search for

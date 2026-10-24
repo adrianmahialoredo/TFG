@@ -15,11 +15,12 @@ import com.uo289390.toco.model.Song;
 import com.uo289390.toco.model.SongLesson;
 import com.uo289390.toco.model.SpotifyUser;
 import com.uo289390.toco.model.TabSection;
+import com.uo289390.toco.model.Tune;
 import com.uo289390.toco.model.User;
 
 /**
  * Factory methods that build valid, not yet persisted entities for the repository tests.
- * Items, instruments, chords and song lessons have manually assigned IDs, so callers pass them in.
+ * Items, instruments, chords, tunes and song lessons have manually assigned IDs, so callers pass them in.
  */
 final class RepositoryTestFixtures {
 
@@ -80,6 +81,15 @@ final class RepositoryTestFixtures {
         chord.setNotes(List.of("C", "E", "G"));
         chord.setImageUrl("https://example.com/" + name + ".png");
         return chord;
+    }
+
+    static Tune tune(long id, String title, Instrument instrument, String... notes) {
+        Tune tune = new Tune();
+        tune.setId(id);
+        tune.setTitle(title);
+        tune.setInstrument(instrument);
+        tune.setNotes(new java.util.ArrayList<>(List.of(notes)));
+        return tune;
     }
 
     static SongLesson songLesson(long id, Song song, Instrument instrument) {

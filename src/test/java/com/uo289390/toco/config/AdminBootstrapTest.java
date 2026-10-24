@@ -54,7 +54,7 @@ class AdminBootstrapTest {
     }
 
     @ParameterizedTest
-    @CsvSource(value = {"'', S3cret!pass", "admin@toco.dev, ''", "'   ', S3cret!pass", "NULL, NULL"}, nullValues = "NULL")
+    @CsvSource(value = {"'', S3cret!pass", "admin@toco.dev, ''", "'   ', S3cret!pass", "NULL, NULL", "admin@toco.dev, NULL", "admin@toco.dev, '   '", "NULL, S3cret!pass"}, nullValues = "NULL")
     void run_withoutEmailOrPassword_doesNothing(String email, String password) {
         adminBootstrap.setEmail(email);
         adminBootstrap.setPassword(password);

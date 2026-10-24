@@ -1,0 +1,169 @@
+@startuml DSD-CU-05
+title DSD-CU-05 - Consultar detalle de canción y lección
+
+' Diagrama de secuencia de diseño: realización de CU-05 (análisis en
+' diagrams/use_cases/description/CU05_consultar_cancion.puml).
+' Fuentes: frontend/src/screens/SongScreen.tsx, components/ChordModal.tsx, hooks/useSong.ts,
+' stores/ui/songScreen.store.ts, repositories/song.repository.ts, songLesson.repository.ts,
+' chord.repository.ts, tabSection.repository.ts, item.repository.ts, utils/entityCache.utils.ts,
+' stores/entities/recentItems.entities.store.ts, services/song.service.ts, songLesson.service.ts,
+' chord.service.ts, tabSection.service.ts; backend SongController.java, SongServiceImpl.java,
+' SongLessonController.java, ChordController.java, TabSectionController.java, *ServiceImpl.java,
+' utils/EntityResolver.java, utils/mapper/DtoMapper.java.
+' Diferencias con el guion:
+' - La pantalla es SongScreen (no SongDetailScreen) y el hook useSong(songId).
+' - songRepository.getById no usa la caché genérica para la canción: mira RAM (useSongEntitiesStore),
+'   luego disco (songLocal.getById) y solo después songService.getById. Si la sirve de caché,
+'   cache.revalidate([id]) la vuelve a pedir en segundo plano.
+' - SongServiceImpl.findById(id) usa EntityResolver.findSong(id) (que llama a SongRepository.findById)
+'   y DtoMapper.songToSongDto(song) (genreIds, instrumentIds, lessonIds). Respuesta: 200 OK o 404.
+' - Las lecciones NO se piden con GET /api/song-lessons/by-song/{songId} (existe, SongLessonController.
+'   getForSong, pero la app no lo usa): songRepository.getById pide song.lessonIds con
+'   songLessonRepository.getAllById -> POST /api/song-lessons/by-ids.
+' - Acordes y tablaturas de TODAS las lecciones se piden a la vez (chordRepository.getAllById y
+'   tabSectionRepository.getAllById -> POST /api/chords/by-ids y POST /api/tab-sections/by-ids),
+'   así que cambiar de dificultad no hace peticiones: solo cambia useSongScreenStore.
+' - La pantalla no llama a ningún repositorio (Nivel 7): todo lo hace useSong.
+' - markAsAccessed lo llama useSong (no la pantalla) y escribe en useRecentItemsStore (zustand persist
+'   sobre AsyncStorage), sin backend.
+' - Además del análisis: selector de instrumento (si hay lecciones de más de uno) y elección de la
+'   lección por defecto según los instrumentos favoritos y el nivel del usuario.
+autonumber
+hide footbox
+skinparam sequenceMessageAlign center
+skinparam roundcorner 6
+skinparam maxMessageSize 260
+skinparam BoxPadding 10
+
+actor "Músico" as actor
+
+box "App (React Native)" #F3F8FF
+    participant "SongScreen\n<<Nivel 7>>" as screen
+    participant "useSong\n<<Nivel 6>>" as hook
+    participant "useSongScreenStore\n<<Nivel 5>>" as uiStore
+    participant "songRepository\n<<Nivel 3>>" as songRepo
+    participant "songLessonRepository\nchordRepository\ntabSectionRepository\n<<Nivel 3>>" as childRepos
+    participant "itemRepository\n<<Nivel 3>>" as itemRepo
+    participant "Entity Stores\n<<Nivel 4>>" as stores
+    participant "songService\nsongLessonService\nchordService\ntabSectionService\n<<Nivel 1>>" as services
+end box
+
+box "Backend (Spring Boot)" #FFF9F0
+    participant "SongController\n<<controller>>" as songController
+    participant "SongServiceImpl\n<<service>>" as songService
+    participant "DtoMapper\n<<mapper>>" as mapper
+    participant "SongLessonController\nChordController\nTabSectionController\n<<controller>>" as childControllers
+end box
+
+actor -> screen : abre una canción\nnavigate('SongScreen', { songId })
+screen -> hook : useSong(songId)
+hook -> uiStore : reset()
+hook -> uiStore : setLoading(true)
+hook -> songRepo : getById(songId)
+
+songRepo -> stores : useSongEntitiesStore.songs[id]
+alt canción en RAM o en disco (songLocal.getById)
+    stores --> songRepo : SongDTO
+    songRepo ->> services : cache.revalidate([id])\n(POST /api/songs/by-ids en segundo plano,\nuna vez por sesión)
+else cache-miss
+    songRepo -> services : songService.getById(id)
+    services -> songController : GET /api/songs/{id}
+    songController -> songService : findById(id)
+    songService -> songService : EntityResolver.findSong(id)\n-> SongRepository.findById(id) : Optional<Song>
+    alt la canción existe
+        songService -> mapper : songToSongDto(song)
+        mapper --> songService : SongDTO (genreIds, instrumentIds, lessonIds)
+        songService --> songController : Optional<SongDTO>
+        songController --> services : 200 OK\nSongDTO
+        services --> songRepo : SongDTO
+        songRepo -> songRepo : cache.markFresh([id]); songLocal.saveSingle(song)
+    else no existe
+        songController --> services : 404 Not Found
+        services --> songRepo : AxiosError 404
+        songRepo --> hook : null
+        hook -> uiStore : setLoading(false)
+        screen --> actor : "Canción no encontrada"
+    end
+end
+songRepo -> stores : useSongEntitiesStore.setSongs([song])
+
+songRepo -> childRepos : songLessonRepository.getAllById(song.lessonIds)
+note right of childRepos : createEntityCache.getAllById:\nRAM -> disco -> API (solo los que falten)
+opt faltan lecciones en caché
+    childRepos -> services : songLessonService.getAllById(missing)
+    services -> childControllers : POST /api/song-lessons/by-ids\n[ids]
+    childControllers -> mapper : SongLessonServiceImpl.findByIds(ids)\n-> SongLessonRepository.findAllById(ids)\n-> songLessonToSongLessonDto(lesson)
+    mapper --> childControllers : SongLessonDTO (difficulty, chordedLyrics,\nvideoUrl, instrumentId, chordIds, tabSectionsIds)
+    childControllers --> services : 200 OK\nList<SongLessonDTO>
+    services --> childRepos : SongLessonDTO[]
+    childRepos -> stores : useSongLessonEntitiesStore.setSongLessons(lessons)
+end
+childRepos --> songRepo : SongLessonDTO[]
+
+par acordes y tablaturas de todas las lecciones (Promise.allSettled)
+    songRepo -> childRepos : chordRepository.getAllById(chordIds)
+    opt faltan acordes en caché
+        childRepos -> services : chordService.getAllById(missing)
+        services -> childControllers : POST /api/chords/by-ids\n[ids]
+        childControllers -> mapper : ChordServiceImpl.findByIds(ids)\n-> chordToChordDto(chord)
+        mapper --> childControllers : ChordDto
+        childControllers --> services : 200 OK\nList<ChordDto>
+        services --> childRepos : ChordDTO[]
+        childRepos -> stores : useChordEntitiesStore.setChords(chords)
+    end
+else
+    songRepo -> childRepos : tabSectionRepository.getAllById(tabIds)
+    opt faltan tablaturas en caché
+        childRepos -> services : tabSectionService.getAllById(missing)
+        services -> childControllers : POST /api/tab-sections/by-ids\n[ids]
+        childControllers -> mapper : TabSectionServiceImpl.findByIds(ids)\n-> tabSectionToTabSectionDto(section)
+        mapper --> childControllers : TabSectionDTO
+        childControllers --> services : 200 OK\nList<TabSectionDTO>
+        services --> childRepos : TabSectionDTO[]
+        childRepos -> stores : useTabSectionEntitiesStore.setTabSections(tabs)
+    end
+end
+songRepo --> hook : SongDTO
+hook -> uiStore : setLoading(false)
+
+hook ->> itemRepo : markAsAccessed(songId)
+itemRepo ->> stores : useRecentItemsStore.markAsAccessed(userId, id)
+note right of stores : "Recientes" del Home: solo frontend,\nhasta MAX_RECENT_ITEMS (12), persistido\nen AsyncStorage
+
+hook -> stores : lee songs[songId], songLessons, chords, tabSections\n(selectores) y usuario actual
+hook -> hook : useMemo: instrumento (favorito o el de la 1.ª lección),\ndificultad (ORIGINAL si nivel >= ORIGINAL_LESSON_MIN_LEVEL,\nsi no la de la 1.ª lección), selectedLesson, chords,\ntabSections, parseLyrics(chordedLyrics)
+hook --> screen : { song, selectedLesson, chords, tabSections,\navailableDifficulties, parsedLyrics, ... }
+
+alt sin lecciones para la canción
+    screen --> actor : "No hay lecciones disponibles para esta canción"
+else
+    screen --> actor : carátula, título, artista, DifficultyStars,\nYoutubeVideo(videoUrl), selector de dificultad,\nacordes, letra con acordes y tabs
+end
+
+opt 3a. La canción tiene varias dificultades (EASY, MEDIUM, ORIGINAL)
+    actor -> screen : elige dificultad en OptionSelector
+    screen -> hook : changeDifficulty(difficulty)
+    hook -> uiStore : setDifficulty(difficulty)
+    uiStore --> hook : selectedDifficulty
+    hook -> hook : useMemo: nueva selectedLesson, chords,\ntabSections y parsedLyrics (desde las Entity Stores)
+    note right of hook : Sin peticiones: los acordes y tabs de todas\nlas lecciones ya se cargaron en getById
+    hook --> screen : lección seleccionada
+    screen --> actor : actualiza vídeo, acordes, letra y tablaturas
+end
+
+opt El músico cambia de instrumento (si hay lecciones de más de uno)
+    actor -> screen : elige instrumento en OptionSelector
+    screen -> hook : changeInstrument(instrumentId)
+    hook -> uiStore : setInstrument(instrumentId)
+    hook --> screen : lecciones y dificultades de ese instrumento
+end
+
+opt 5a. El músico pulsa un acorde
+    actor -> screen : pulsa un acorde (TouchableOpacity)
+    screen -> screen : setSelectedChord(chord)
+    screen --> actor : <ChordModal chord />: nombre, diagrama (imageUrl),\ntags (Mayor, Menor, Séptima, Power chord, Abierto,\nCejilla) y "Capo: n" / "Sin capo"
+    actor -> screen : cierra el modal
+    screen -> screen : setSelectedChord(null)
+end
+
+@enduml

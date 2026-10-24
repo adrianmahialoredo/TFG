@@ -15,22 +15,19 @@ export default function LoginScreen() {
   const { showAlert } = useAppAlert();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList, 'LoginScreen'>>();
 
-  const [email, setEmail] = useState('');
+  // Email o nombre de usuario
+  const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
   const validateForm = (): boolean => {
-    if (!email.trim()) {
-      showAlert({ title: 'Error', message: 'Por favor ingresa tu email' });
+    if (!identifier.trim()) {
+      showAlert({ title: 'Error', message: 'Por favor ingresa tu email o tu usuario' });
       return false;
     }
     if (!password.trim()) {
       showAlert({ title: 'Error', message: 'Por favor ingresa tu contrasena' });
-      return false;
-    }
-    if (!email.includes('@')) {
-      showAlert({ title: 'Error', message: 'Por favor ingresa un email valido' });
       return false;
     }
     return true;
@@ -41,7 +38,7 @@ export default function LoginScreen() {
 
     setLoading(true);
     try {
-      await login(email, password);
+      await login(identifier, password);
       // La navegación se hace automáticamente desde RootNavigator al cambiar isAuthenticated
       navigation.reset({
         index: 0,
@@ -51,7 +48,7 @@ export default function LoginScreen() {
       const errorMessage =
         error instanceof Error
           ? error.message
-          : 'Email o contrasena incorrectos';
+          : 'Usuario, email o contraseña incorrectos';
       showAlert({ title: 'Error de Inicio de Sesion', message: errorMessage });
     } finally {
       setLoading(false);
@@ -71,12 +68,15 @@ export default function LoginScreen() {
 
       <View className="relative mb-4">
         <TextInput
-          value={email}
-          onChangeText={setEmail}
+          value={identifier}
+          onChangeText={setIdentifier}
           className="text-secondary border border-secondary rounded-lg p-4 mb-2 pr-12"
           placeholder="Email o Usuario"
           placeholderTextColor={COLORS.placeholder}
-          keyboardType="email-address"
+          // Teclado normal: también se puede escribir el nombre de usuario
+          autoCapitalize="none"
+          autoCorrect={false}
+          autoComplete="username"
           editable={!loading}
           underlineColorAndroid="transparent"
           selectionColor={COLORS.secondary}

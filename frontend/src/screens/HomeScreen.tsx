@@ -1,6 +1,7 @@
 // src/screens/HomeScreen.tsx
 
-import { View, Text, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
+import { View, Text, TouchableOpacity, ActivityIndicator } from 'react-native';
+import FadeScrollView from '../components/FadeScrollView';
 import { useNavigation, NavigationProp } from '@react-navigation/native';
 import { useCallback } from 'react';
 import { Activity, CircleCheckBig, Headphones } from 'lucide-react-native';
@@ -8,10 +9,11 @@ import HorizontalItemsCarousel from '../components/carousels/HorizontalItemsCaro
 import AppLayout from '../components/AppLayout';
 import { ToolButton } from '../components/buttons/ToolButton';
 import { RootStackParamList } from '../types';
-import { useAuth } from '../hooks/useAuth';
+import { useAuth } from '../context/AuthContext';
 import { useHomeItems } from '../hooks/useHomeItems';
 import { navigateToItem } from '../utils/navigation.utils';
 import UserAvatar from "../components/UserAvatar";
+import SuggestionCard from "../components/SuggestionCard";
 
 export default function HomeScreen() {
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
@@ -20,7 +22,19 @@ export default function HomeScreen() {
   const { user } = useAuth();
 
   // Nivel 6: hook que orquesta los repositorios y se suscribe a la Entity Store de items
-  const { recentItems, recommendations, getItemById, loading, error } = useHomeItems();
+  const {
+    recentItems,
+    recommendations,
+    favouriteCombination,
+    mostUsedGenre,
+    newFavouriteArtistSong,
+    newFavouriteArtistSongs,
+    popularFavouriteArtistSong,
+    popularFavouriteArtistSongs,
+    getItemById,
+    loading,
+    error,
+  } = useHomeItems();
 
   // Resuelve el item completo (con su type) y navega a la pantalla de detalle adecuada
   const handleItemPress = useCallback(
@@ -33,13 +47,13 @@ export default function HomeScreen() {
 
   return (
     <AppLayout>
-      <ScrollView
+      <FadeScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 120 }}
       >
         <View className="flex-1 bg-background">
           {/* Icono de perfil */}
-          <View className="flex-row justify-center my-7">
+          <View className="flex-row justify-center mt-2 mb-7">
             <TouchableOpacity onPress={() => navigation.navigate('ProfileScreen')}>
               <UserAvatar user={user} size={80} className="border" />
             </TouchableOpacity>
@@ -75,9 +89,25 @@ export default function HomeScreen() {
               label="Metrónomo"
               onPress={() => navigation.navigate('MetronomeScreen')}
             />
-            <ToolButton icon={<CircleCheckBig size={75} color="white" strokeWidth={1} />} label="Afinador" />
+            <ToolButton
+              icon={<CircleCheckBig size={75} color="white" strokeWidth={1} />}
+              label="Afinador"
+              onPress={() => navigation.navigate('TunerScreen')}
+            />
             <ToolButton icon={<Headphones size={75} color="white" strokeWidth={1} />} label="Identificador" />
           </View>
+
+          {/* Card: un género-instrumento que combina favoritos del usuario (solo si existe alguno).
+              Sin imagen: las de los géneros-instrumento no existen, se muestra el icono del instrumento */}
+          {favouriteCombination && (
+            <View className="mb-6">
+              <SuggestionCard
+                label="Prueba esta combinación"
+                title={favouriteCombination.title}
+                onPress={() => navigateToItem(navigation, favouriteCombination)}
+              />
+            </View>
+          )}
 
           {/* Carrusel: Recomendaciones (sin items muestra una card invitando a explorar) */}
           <HorizontalItemsCarousel
@@ -86,8 +116,60 @@ export default function HomeScreen() {
             onItemPress={handleItemPress}
             emptyMessage={loading ? undefined : 'Explora la app y empieza a aprender para que se muestren tus recomendaciones'}
           />
+
+          {/* Card: uno de los géneros más usados en las listas que aún no está en ellas (solo si hay alguno) */}
+          {mostUsedGenre && (
+              <View className="mb-10">
+                <SuggestionCard
+                    label="Explora este género"
+                    title={mostUsedGenre.title}
+                    imageUrl={mostUsedGenre.imageUrl}
+                    onPress={() => navigateToItem(navigation, mostUsedGenre)}
+                />
+              </View>
+          )}
+
+          {/* Card: una canción nueva de uno de los artistas favoritos (los más repetidos en sus listas) */}
+          {newFavouriteArtistSong && (
+            <View className="mb-6">
+              <SuggestionCard
+                label={`Lo nuevo de ${newFavouriteArtistSong.artist ?? 'tus artistas favoritos'}`}
+                title={newFavouriteArtistSong.title}
+                imageUrl={newFavouriteArtistSong.imageUrl}
+                onPress={() => navigateToItem(navigation, newFavouriteArtistSong)}
+              />
+            </View>
+          )}
+
+          {/* Carrusel: el resto de canciones nuevas de los artistas favoritos */}
+          <HorizontalItemsCarousel
+            title="Novedades de tus artistas"
+            data={newFavouriteArtistSongs}
+            onItemPress={handleItemPress}
+            emptyMessage={loading ? undefined : 'Añade canciones a tus listas para descubrir las novedades de tus artistas favoritos'}
+          />
+
+          {/* Card: una canción popular de uno de los artistas favoritos */}
+          {popularFavouriteArtistSong && (
+            <View className="mb-6">
+              <SuggestionCard
+                label={`Lo más popular de ${popularFavouriteArtistSong.artist ?? 'tus artistas favoritos'}`}
+                title={popularFavouriteArtistSong.title}
+                imageUrl={popularFavouriteArtistSong.imageUrl}
+                onPress={() => navigateToItem(navigation, popularFavouriteArtistSong)}
+              />
+            </View>
+          )}
+
+          {/* Carrusel: el resto de canciones populares de los artistas favoritos */}
+          <HorizontalItemsCarousel
+            title="Populares de tus artistas"
+            data={popularFavouriteArtistSongs}
+            onItemPress={handleItemPress}
+            emptyMessage={loading ? undefined : 'Añade canciones a tus listas para ver los éxitos de tus artistas favoritos'}
+          />
         </View>
-      </ScrollView>
+      </FadeScrollView>
     </AppLayout>
   );
 }

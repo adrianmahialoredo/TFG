@@ -3,7 +3,10 @@ package com.uo289390.toco.service;
 import static com.uo289390.toco.service.EntityResolverTestSupport.initResolver;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyCollection;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 import java.util.ArrayList;
@@ -587,6 +590,34 @@ class SongServiceTest {
     }
 
     @Test
+    void testUpdate_WithDecade_ReplacesDecade() {
+        // Arrange
+        when(songRepository.findById(1L)).thenReturn(Optional.of(testSong));
+        when(songRepository.save(any(Song.class))).thenAnswer(SongServiceTest::savedArgument);
+        SongDTO dto = basicDto();
+        dto.setDecade("1980s");
+
+        // Act
+        songService.update(1L, dto);
+
+        // Assert
+        assertEquals("1980s", testSong.getDecade());
+    }
+
+    @Test
+    void testUpdate_NullDecade_KeepsCurrentDecade() {
+        // Arrange
+        when(songRepository.findById(1L)).thenReturn(Optional.of(testSong));
+        when(songRepository.save(any(Song.class))).thenAnswer(SongServiceTest::savedArgument);
+
+        // Act: basicDto() leaves the decade as null (omitted)
+        songService.update(1L, basicDto());
+
+        // Assert
+        assertEquals("1970s", testSong.getDecade());
+    }
+
+    @Test
     void testUpdate_LessonIds_ModifiesManagedCollectionInPlace() {
         // Arrange (regression: replacing an orphanRemoval collection breaks Hibernate)
         SongLesson kept = songLesson(300L);
@@ -850,5 +881,88 @@ class SongServiceTest {
         assertTrue(songService.findPopularForGenre(99L).isEmpty());
         assertTrue(songService.findClassicForGenre(99L).isEmpty());
         assertTrue(songService.findNewForGenre(99L).isEmpty());
+    }
+
+    // ---------- findNewForArtists / findPopularForArtists ----------
+
+    private static Song songBy(Long id, String artist) {
+        Song song = song(id, "Song " + id);
+        song.setArtist(artist);
+        return song;
+    }
+
+    private static List<Long> ids(List<SongDTO> songs) {
+        return songs.stream().map(SongDTO::getId).toList();
+    }
+
+    @Test
+    void testFindNewForArtists_MixesTheArtistsInTurns() {
+        // Arrange
+        when(songRepository.findByArtistIgnoreCaseAndArtistNewTrueAndIdNotIn(eq("Queen"), anyCollection(), any(Pageable.class)))
+                .thenReturn(List.of(songBy(1L, "Queen"), songBy(2L, "Queen"), songBy(3L, "Queen")));
+        when(songRepository.findByArtistIgnoreCaseAndArtistNewTrueAndIdNotIn(eq("Bowie"), anyCollection(), any(Pageable.class)))
+                .thenReturn(List.of(songBy(10L, "Bowie")));
+
+        // Act
+        List<SongDTO> result = songService.findNewForArtists(List.of("Queen", "Bowie"), 10);
+
+        // Assert: one of each artist in turns; when Bowie runs out, Queen fills the rest
+        assertEquals(List.of(1L, 10L, 2L, 3L), ids(result));
+    }
+
+    @Test
+    void testFindNewForArtists_StopsAtTheLimitAndAsksEachArtistForUpToTheLimit() {
+        // Arrange
+        when(songRepository.findByArtistIgnoreCaseAndArtistNewTrueAndIdNotIn(eq("Queen"), anyCollection(), any(Pageable.class)))
+                .thenReturn(List.of(songBy(1L, "Queen"), songBy(2L, "Queen")));
+        when(songRepository.findByArtistIgnoreCaseAndArtistNewTrueAndIdNotIn(eq("Bowie"), anyCollection(), any(Pageable.class)))
+                .thenReturn(List.of(songBy(10L, "Bowie"), songBy(11L, "Bowie")));
+
+        // Act
+        List<SongDTO> result = songService.findNewForArtists(List.of("Queen", "Bowie"), 3);
+
+        // Assert
+        assertEquals(List.of(1L, 10L, 2L), ids(result));
+        ArgumentCaptor<Pageable> pageable = ArgumentCaptor.forClass(Pageable.class);
+        verify(songRepository, times(2)).findByArtistIgnoreCaseAndArtistNewTrueAndIdNotIn(anyString(), anyCollection(), pageable.capture());
+        assertTrue(pageable.getAllValues().stream().allMatch(p -> p.getPageSize() == 3));
+    }
+
+    @Test
+    void testFindNewForArtists_DefaultLimitIsTenAndDuplicatedArtistsAreAskedOnce() {
+        // Arrange
+        when(songRepository.findByArtistIgnoreCaseAndArtistNewTrueAndIdNotIn(eq("Queen"), anyCollection(), any(Pageable.class)))
+                .thenReturn(List.of());
+
+        // Act
+        List<SongDTO> result = songService.findNewForArtists(java.util.Arrays.asList(" Queen ", "Queen", "", null), null);
+
+        // Assert
+        assertTrue(result.isEmpty());
+        verify(songRepository).findByArtistIgnoreCaseAndArtistNewTrueAndIdNotIn(eq("Queen"), anyCollection(), eq(PageRequest.of(0, 10)));
+    }
+
+    @Test
+    void testFindPopularForArtists_UsesThePopularQuery() {
+        // Arrange
+        when(songRepository.findByArtistIgnoreCaseAndArtistPopularTrueAndIdNotIn(eq("Queen"), anyCollection(), any(Pageable.class)))
+                .thenReturn(List.of(songBy(5L, "Queen")));
+
+        // Act & Assert
+        assertEquals(List.of(5L), ids(songService.findPopularForArtists(List.of("Queen"), 12)));
+        verify(songRepository, never()).findByArtistIgnoreCaseAndArtistNewTrueAndIdNotIn(anyString(), anyCollection(), any());
+    }
+
+    @Test
+    void testFindForArtists_InvalidArgumentsAreRejectedWithoutQuerying() {
+        List<String> eleven = java.util.stream.IntStream.rangeClosed(1, 11).mapToObj(i -> "Artist " + i).toList();
+
+        assertThrows(IllegalArgumentException.class, () -> songService.findNewForArtists(List.of(), 10));
+        assertThrows(IllegalArgumentException.class, () -> songService.findNewForArtists(null, 10));
+        assertThrows(IllegalArgumentException.class, () -> songService.findNewForArtists(List.of(" "), 10));
+        assertThrows(IllegalArgumentException.class, () -> songService.findNewForArtists(eleven, 10));
+        assertThrows(IllegalArgumentException.class, () -> songService.findPopularForArtists(List.of("Queen"), 51));
+        assertThrows(IllegalArgumentException.class, () -> songService.findPopularForArtists(List.of("Queen"), 0));
+        verifyNoInteractions(songRepository);
     }
 }

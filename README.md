@@ -39,6 +39,8 @@ cp .env.example .env
 
 El servidor estará disponible en: `http://192.168.0.22:8080`
 
+> **App móvil:** el afinador usa el micrófono con `react-native-audio-api`, un módulo nativo que **no está en Expo Go**. La app se ejecuta con una *development build*: `cd frontend && npx expo run:android` (o `run:ios`), que compila e instala la app; después basta `npx expo start` para servirle el código. En Expo Go (`npx expo start --go`) la app funciona y el afinador entra en modo demostración, con una cuerda simulada en lugar del micrófono. Detalle en [`architecture.md`](architecture.md) §12 (*Afinador*).
+
 ---
 
 ## 📡 Endpoints de API
@@ -49,7 +51,7 @@ El servidor estará disponible en: `http://192.168.0.22:8080`
 |--------|----------|-------------|
 | `POST` | `/api/auth/verification-code` | Enviar un código de verificación al email de un registro (`204`; `429` si se pide otro antes de 60 s) |
 | `POST` | `/api/auth/register` | Registrar nuevo usuario con ese código (`verificationCode` en el body) y devolver el JWT |
-| `POST` | `/api/auth/login` | Iniciar sesión (retorna JWT token) |
+| `POST` | `/api/auth/login` | Iniciar sesión con email o nombre de usuario (retorna JWT token) |
 
 **Registro con verificación de email:**
 ```json
@@ -66,11 +68,11 @@ POST /api/auth/register
 ```
 El código tiene 6 dígitos, caduca a los 10 minutos y se descarta tras 5 intentos fallidos. Detalle en [`architecture.md`](architecture.md) §9.
 
-**Ejemplo Login:**
+**Ejemplo Login** (`identifier` es el email o el nombre de usuario; se sigue aceptando el campo antiguo `email`):
 ```json
 POST /api/auth/login
 {
-  "email": "user@example.com",
+  "identifier": "user@example.com",
   "password": "password123"
 }
 
@@ -107,8 +109,9 @@ Todos los controladores siguen la misma estructura:
 | `GET` | `/api/users/{id}/favorite-instruments` | IDs de los instrumentos favoritos del usuario |
 | `POST` | `/api/users/{id}/favorite-instruments/{instrumentId}` | Añadir un instrumento a los favoritos del usuario |
 | `DELETE` | `/api/users/{id}/favorite-instruments/{instrumentId}` | Quitar un instrumento de los favoritos del usuario |
+| `GET` | `/api/users/{id}/top-artists?total_artists={n}` | Artistas favoritos del usuario: los más repetidos en las canciones de sus listas (`n` de 1 a 10, 5 por defecto) |
 | `POST` | `/api/users` | Crear usuario |
-| `PUT` | `/api/users/{id}` | Actualizar usuario (el email no se cambia: se ignora el del body) |
+| `PUT` | `/api/users/{id}` | Actualizar usuario (el email no se cambia: se ignora el del body). `difficultyLevel` (0 a 5) es opcional: si no se envía, se conserva; fuera de rango, `400` |
 | `DELETE` | `/api/users/{id}` | Eliminar usuario |
 
 ---
@@ -154,6 +157,8 @@ Todos los controladores siguen la misma estructura:
 | `GET` | `/api/songs/by-genre/{genreId}/new` | Canciones nuevas de un género (DTO completo) |
 | `GET` | `/api/songs/popular?limit={n}` | Canciones populares (DTO completo) |
 | `GET` | `/api/songs/new?limit={n}` | Canciones nuevas (DTO completo) |
+| `GET` | `/api/songs/by-artists/new?limit={n}&artist1={a}&artist2={b}…` | Canciones nuevas de esos artistas, mezclados por turnos (DTO completo; hasta 10 artistas y 50 canciones, 10 por defecto) |
+| `GET` | `/api/songs/by-artists/popular?limit={n}&artist1={a}&artist2={b}…` | Canciones populares de esos artistas, mezclados por turnos (DTO completo; mismos límites) |
 | `GET` | `/api/songs/recommended/ids?limit={n}` | IDs de las canciones recomendadas para el usuario (**pendiente**: aún sin implementar) |
 | `GET` | `/api/songs/spotify?limit={n}` | Canciones recomendadas por Spotify (DTO completo) |
 | `POST` | `/api/songs` | Crear canción |
@@ -215,6 +220,21 @@ Todos los controladores siguen la misma estructura:
 | `PUT` | `/api/chords/{id}` | Actualizar acorde |
 | `DELETE` | `/api/chords/{id}` | Eliminar acorde |
 
+**Modelo ChordDto:**
+```json
+{
+  "id": 1,
+  "name": "Gmaj7",
+  "notes": ["G", "B", "D", "F#"],
+  "imageUrl": "https://...",
+  "open": true, "barre": false, "powerChord": false,
+  "minor": false, "major": true, "seventh": true,
+  "capo": false,
+  "capoFret": 0
+}
+```
+`capoFret` es el traste del capo (0 a 12; 0 = sin capo). La app muestra estos datos en un modal al pulsar un acorde de una canción.
+
 ---
 
 ### 📚 Lecciones (`/api/lessons`)
@@ -246,6 +266,19 @@ Todos los controladores siguen la misma estructura:
 | `PUT` | `/api/lesson-sections/{id}` | Actualizar sección de lección |
 | `DELETE` | `/api/lesson-sections/{id}` | Eliminar sección de lección |
 
+**Modelo LessonSectionDTO:**
+```json
+{
+  "id": 7,
+  "lessonId": 101,
+  "title": "El acorde de quinta",
+  "htmlContent": "<h3>El acorde de quinta</h3><p>...</p>",
+  "videoUrl": "https://www.youtube.com/watch?v=...",
+  "orderIndex": 0
+}
+```
+`videoUrl` es opcional: un vídeo de apoyo de YouTube que la app muestra encima del contenido de la sección.
+
 ---
 
 ### 🎹 Instrumentos (`/api/instruments`)
@@ -273,6 +306,22 @@ Todos los controladores siguen la misma estructura:
 | `POST` | `/api/instrument-genres` | Crear instrument-genre |
 | `PUT` | `/api/instrument-genres/{id}` | Actualizar instrument-genre |
 | `DELETE` | `/api/instrument-genres/{id}` | Eliminar instrument-genre |
+
+---
+
+### 🎚️ Afinaciones (`/api/tunes`)
+
+Afinaciones de cada instrumento que usa el afinador de la app. Las notas van de la cuerda más grave a la más aguda, en notación científica (`E2`, `F#3`); la app calcula su frecuencia (La4 = 440 Hz).
+
+| Método | Endpoint | Descripción |
+|--------|----------|-------------|
+| `GET` | `/api/tunes` | Obtener todas las afinaciones |
+| `POST` | `/api/tunes/by-ids` | Obtener varias afinaciones por ID (array de IDs en el body) |
+| `GET` | `/api/tunes/{id}` | Obtener afinación por ID |
+| `GET` | `/api/tunes/by-instrument/{instrumentId}` | Afinaciones de un instrumento (la estándar primero) |
+| `POST` | `/api/tunes` | Crear afinación |
+| `PUT` | `/api/tunes/{id}` | Actualizar afinación |
+| `DELETE` | `/api/tunes/{id}` | Eliminar afinación |
 
 ---
 
@@ -304,9 +353,6 @@ Devuelven `ItemSummaryDTO` (`id`, `title`, `imageUrl`, `type`, `level`, `artist`
 | `POST` | `/api/items/by-ids` | Obtener varios elementos por ID (array de IDs en el body) |
 | `GET` | `/api/items/{id}` | Obtener elemento por ID |
 | `GET` | `/api/items/search?q={texto}` | Buscar elementos por título |
-| `GET` | `/api/items/recommended/ids` | IDs de los elementos recomendados para el usuario (**pendiente**: aún sin implementar) |
-| `GET` | `/api/items/recommended/by-item-list/{itemListId}` | Elementos recomendados para una lista (marcador: los 20 más nuevos) |
-| `PUT` | `/api/items/{id}/access` | Marcar un elemento como accedido |
 
 ---
 
@@ -349,7 +395,7 @@ Authorization: Bearer <jwt-token>
 ### Control de acceso
 
 - **Públicas:** `/api/auth/**`, `/api/spotify/callback`, `/actuator/health` y las listas `GET /api/genres` y `GET /api/instruments` (el formulario de registro las necesita antes de tener token; el detalle por id sigue protegido). Todo lo demás exige JWT (sin token: `401`).
-- **Solo `ADMIN`:** crear, editar y borrar contenido del catálogo (géneros, canciones, lecciones, acordes, instrumentos…) `GET`/`POST /api/users` y `GET /api/item-lists` (todas las listas).
+- **Solo `ADMIN`:** crear, editar y borrar contenido del catálogo (géneros, canciones, lecciones, acordes, instrumentos, afinaciones…) `GET`/`POST /api/users` y `GET /api/item-lists` (todas las listas).
 - **Solo el propio usuario (o un `ADMIN`):** leer y modificar su perfil y sus favoritos, sus listas y sus items, y pedir sus recomendaciones (las personales y las de Spotify). Si no es suyo: `403`.
 - **Administrador inicial:** se crea al arrancar con `ADMIN_EMAIL` y `ADMIN_PASSWORD` del `.env`. Los scripts de carga de datos (`scripts/insert_*.py`) inician sesión con él.
 
@@ -477,7 +523,8 @@ Spring lo importa al arrancar y los scripts de `scripts/` (`clean_db.py`, `migra
 - **Genre** → **Song** (N a N)
 - **Song** → **SongLesson** (1 a N)
 - **SongLesson** → **TabSection** (1 a N)
-- **Instrument** → **Genre** (N a N via InstrumentGenreScreen)
+- **Instrument** → **Genre** (N a N vía InstrumentGenre)
+- **Instrument** → **Tune** (1 a N): afinaciones del afinador
 
 ---
 

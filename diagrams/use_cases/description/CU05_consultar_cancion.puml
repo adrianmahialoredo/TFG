@@ -1,0 +1,57 @@
+@startuml DS-CU-05
+title DS-CU-05 - Consultar detalle de canción y lección
+
+' Diagrama de secuencia de análisis (patrón Boundary-Control-Entity)
+autonumber
+hide footbox
+skinparam sequenceMessageAlign center
+skinparam roundcorner 6
+
+actor "Músico" as musico
+boundary "SongDetailScreen" as pantalla
+control "GestorCanciones" as gestor
+entity "Song" as song
+entity "SongLesson" as leccion
+entity "Chord" as chord
+entity "TabSection" as tab
+
+musico -> pantalla : seleccionarCancion(id)
+pantalla -> gestor : solicitarCancion(id)
+gestor -> song : obtener(id)
+note right of song : RAM -> disco -> API
+song --> gestor : SongDTO
+
+gestor -> leccion : obtenerSongLesson(songId, dificultad)
+note right of leccion : GET /api/song-lessons/by-song/{songId}\n(por defecto, la primera disponible)
+leccion --> gestor : SongLessonDTO
+
+gestor -> chord : obtenerAcordes(ids)
+chord --> gestor : ChordDto[]
+gestor -> tab : obtenerTabSections(id)
+tab --> gestor : TabSectionDTO[]
+
+gestor --> pantalla : canción + lección
+pantalla --> musico : mostrarDetalle(carátula, título, artista,\nchordedLyrics, vídeo de YouTube, acordes, tablaturas)
+gestor ->> gestor : marcarRecienteLocal(id)
+
+opt 3a. La canción tiene varias dificultades (EASY, MEDIUM, ORIGINAL)
+    musico -> pantalla : cambiarDificultad(dificultad)
+    pantalla -> gestor : obtenerSongLesson(songId, dificultad)
+    gestor -> leccion : obtener(songId, dificultad)
+    leccion --> gestor : SongLessonDTO
+    gestor -> chord : obtenerAcordes(ids)
+    chord --> gestor : ChordDto[]
+    gestor -> tab : obtenerTabSections(id)
+    tab --> gestor : TabSectionDTO[]
+    gestor --> pantalla : lección
+    pantalla --> musico : actualizarLetraAcordesYTablatura()
+end
+
+opt 5a. El músico pulsa un acorde
+    musico -> pantalla : seleccionarAcorde(chordId)
+    pantalla --> musico : mostrarModalAcorde(nombre, diagrama, propiedades, capo)
+    note right of pantalla : Propiedades como tags (Mayor, Menor,\nSéptima, Power chord, Abierto, Cejilla)\ny el traste del capo ("Sin capo" si es 0)
+    musico -> pantalla : cerrarModal()
+end
+
+@enduml

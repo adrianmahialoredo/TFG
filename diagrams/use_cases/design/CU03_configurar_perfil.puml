@@ -1,0 +1,178 @@
+@startuml DSD-CU-03
+title DSD-CU-03 - Configurar perfil
+
+' Diagrama de secuencia de diseño: realización de CU-03 (análisis en
+' diagrams/use_cases/description/CU03_configurar_perfil.puml).
+' Fuentes: frontend/src/screens/ProfileScreen.tsx, hooks/useProfile.ts, hooks/useGenres.ts,
+' hooks/useInstruments.ts, context/AuthContext.tsx, repositories/user.repository.ts,
+' repositories/auth.repository.ts, services/user.service.ts, services/apiClient.ts,
+' stores/entities/user.entities.store.ts, stores/entities/auth.entities.store.ts,
+' local/user.local.ts, local/item.local.ts, local/song.local.ts, local/lesson.local.ts;
+' UserController.java, OwnershipChecker.java, UserServiceImpl.java, UserRepository.java,
+' EntityResolver.java, JwtAuthenticationFilter.java, GlobalExceptionHandler.java.
+' Diferencias con el análisis:
+' - Los favoritos no se piden aparte: llegan como IDs en el UserDto (favouriteGenresIds,
+'   favouriteInstrumentsIds) y GenreViewer / InstrumentViewer los resuelven con
+'   useGenresByIds / useInstrumentsByIds.
+' - "Guardar" (PUT /api/users/{id}) envía nombre, usuario y nivel; los favoritos se cambian
+'   aparte, desde FavoritesPickerModal, con POST/DELETE /api/users/{id}/favorite-genres/{genreId}
+'   (e instrumentos), uno por cambio.
+' - El email no se puede cambiar (el backend ignora el del body).
+' - El cierre de sesión es solo local: no hay petición al backend.
+autonumber
+hide footbox
+skinparam sequenceMessageAlign center
+skinparam roundcorner 6
+skinparam maxMessageSize 260
+skinparam BoxPadding 10
+
+actor "Músico" as actor
+
+box "App (React Native)" #F3F8FF
+    participant "ProfileScreen\n<<Nivel 7>>" as screen
+    participant "useProfile\n<<Nivel 6>>" as hook
+    participant "AuthProvider\n(useAuth)\n<<Nivel 6>>" as context
+    participant "userRepository\n<<Nivel 3>>" as repo
+    participant "authRepository\n<<Nivel 3>>" as authRepo
+    participant "userService\n<<Nivel 1>>" as service
+    participant "useUserEntitiesStore\nuseAuthStore\nuseItemListEntitiesStore\n<<Nivel 4>>" as store
+    participant "userLocal, itemListLocal,\nitemLocal, songLocal,\nlessonLocal\n<<Nivel 2>>" as local
+end box
+
+box "Backend (Spring Boot)" #FFF9F0
+    participant "UserController\n<<controller>>" as controller
+    participant "OwnershipChecker\n<<security>>" as ownership
+    participant "UserServiceImpl\n<<service>>" as userService
+    participant "UserRepository\n<<repository>>" as userRepo
+end box
+
+note over controller, userRepo : Todas las peticiones llevan Authorization: Bearer <token> (apiClient).\nJwtAuthenticationFilter valida el token y deja en el SecurityContext\nauthentication.getName() = id del usuario y ROLE_<rol>.\nSin token válido: 401 (y apiClient cierra la sesión).
+
+== Carga del perfil ==
+
+actor -> screen : abre la pestaña Perfil
+screen -> hook : useProfile()
+hook -> store : useUserEntitiesStore(users[currentUserId])\n(currentUserId de useAuthStore)
+store --> hook : user | undefined
+
+opt El usuario no está en RAM (p. ej. tras reiniciar la app)
+    hook -> repo : getById(currentUserId)
+    repo -> local : userLocal.getById(id)
+    local --> repo : UserDTO | null
+    alt Estaba en disco
+        repo -> store : setUsers([user])
+        repo ->> repo : cache.revalidate([id])\n(refresco en segundo plano)
+    else No estaba en disco
+        repo -> service : getById(id)
+        service -> controller : GET /api/users/{id}
+        controller -> ownership : @PreAuthorize("hasRole('ADMIN') or\n@ownership.isSelf(#id, authentication)")
+        ownership --> controller : true
+        controller -> userService : findById(id)
+        userService -> userRepo : EntityResolver.findUser(id) -> findById(id)
+        userRepo --> userService : Optional<User>
+        userService --> controller : Optional<UserDto> (dtoMapper.userToUserDto)
+        controller --> service : 200 OK UserDto
+        service --> repo : UserDTO
+        repo -> store : setUsers([user])
+        repo -> local : userLocal.saveBatch([user])
+    end
+    store --> hook : user (el selector se actualiza)
+end
+hook --> screen : { user, isLoading, ... }
+screen --> actor : nombre, usuario, email (solo lectura),\nnivel (DifficultyLevelSlider 0-5) y favoritos
+note right of screen : GenreViewer / InstrumentViewer resuelven\nuser.favouriteGenresIds / favouriteInstrumentsIds\ncon useGenresByIds / useInstrumentsByIds
+
+alt Guardar cambios del perfil
+
+    actor -> screen : modifica nombre, usuario o nivel
+    actor -> screen : pulsa "Guardar"
+    screen -> screen : handleSaveProfile()
+    opt Menos favoritos que MIN_FAVOURITE_GENRES / MIN_FAVOURITE_INSTRUMENTS
+        screen --> actor : showAlert('Faltan favoritos', ...)\n(no se envía nada; fin)
+    end
+    screen -> hook : updateProfileData({ name, username, email, difficultyLevel })
+    hook -> repo : updateProfile(currentUserId, updates)
+    repo -> repo : backupUser = users[userId]\ncache.markFresh([userId])
+    repo -> store : updateUser(userId, updates)
+    note right of store : Actualización optimista en RAM
+    repo -> service : updateUserProfile({ ...backupUser, ...updates })
+    service -> controller : PUT /api/users/{id}\nUserDto
+    controller -> ownership : @PreAuthorize("hasRole('ADMIN') or\n@ownership.isSelf(#id, authentication)")
+    ownership -> ownership : isSelf(id, authentication):\nString.valueOf(id) == authentication.getName()
+
+    alt 5a. El id no es el del usuario autenticado (y no es ADMIN)
+        ownership --> controller : false
+        controller --> service : 403 Forbidden\n(AccessDeniedException -> GlobalExceptionHandler)
+        service --> repo : throw AxiosError
+        repo -> store : setUsers([backupUser])
+        note right of repo : Rollback de la RAM
+        repo --> hook : throw
+        hook -> hook : setError('Error al actualizar el perfil')
+        hook --> screen : throw
+        screen --> actor : showAlert('Error', 'No se pudieron guardar los cambios')
+    else Es el propietario
+        ownership --> controller : true
+        controller -> userService : update(id, dto)
+        userService -> userRepo : EntityResolver.findUser(id)
+        userRepo --> userService : Optional<User>
+        userService -> userRepo : findByUsername(username)\n(ensureUsernameAvailable)
+        userRepo --> userService : Optional<User>
+        userService -> userService : entityMapper.userDtoToUser(dto, resolveGenres(ids),\nresolveInstruments(ids)) + ensureMinimumFavourites(...)
+        userService -> userService : copia name, username, favoritos, profileImageUrl\ny validDifficultyLevel(difficultyLevel)\n(el email no se cambia)
+        alt Usuario ocupado, nivel fuera de 0-5 o pocos favoritos
+            userService --> controller : IllegalArgumentException
+            controller --> service : 400 Bad Request { message }
+            service --> repo : throw
+            repo -> store : setUsers([backupUser])
+            repo --> screen : throw (vía useProfile)
+            screen --> actor : showAlert('Error', 'No se pudieron guardar los cambios')
+        else Datos válidos
+            userService -> userRepo : save(existingUser)
+            userRepo --> userService : User
+            userService --> controller : Optional<UserDto> (dtoMapper.userToUserDto)
+            controller --> service : 200 OK UserDto
+            service --> repo : UserDTO
+            repo -> store : hydrateUsers([apiResponse]): setUsers(...)
+            repo -> local : userLocal.saveBatch([apiResponse])
+            repo --> hook : UserDTO
+            hook --> screen : void
+            screen --> actor : showAlert('Exito', 'Perfil actualizado correctamente')
+        end
+    end
+
+else Cambiar géneros o instrumentos favoritos
+
+    actor -> screen : elige favoritos en FavoritesPickerModal
+    screen -> hook : handleSaveFavorites(ids) ->\nupdateFavoriteGenres(ids) | updateFavoriteInstruments(ids)
+    hook -> repo : updateFavorites(currentUserId, kind, ids)
+    repo -> repo : diff con los actuales (toAdd, toRemove)
+    repo -> store : updateUser(userId, { favouriteGenresIds: ids })
+    loop Por cada id añadido / quitado (en serie)
+        repo -> service : addFavoriteGenre(userId, genreId) | removeFavoriteGenre(...)
+        service -> controller : POST | DELETE /api/users/{id}/favorite-genres/{genreId}\n(o /favorite-instruments/{instrumentId})
+        note right of controller : Mismo @PreAuthorize con OwnershipChecker.isSelf (403).\nUserServiceImpl.addFavoriteGenre / removeFavoriteGenre;\nquitar por debajo del mínimo -> 400
+        controller --> service : 200 OK UserDto
+        service --> repo : UserDTO
+    end
+    repo -> store : setUsers([último UserDTO])
+    repo -> local : userLocal.saveBatch(...)
+    note right of repo : Si falla a mitad: rollback a backupUser\ny recarga en segundo plano con\nuserService.getById(userId)
+
+else 3a. Cerrar sesión
+
+    actor -> screen : pulsa "Cerrar sesión"
+    screen --> actor : showAlert('Cerrar sesion', 'Estas seguro?')
+    actor -> screen : confirma
+    screen -> context : logout()
+    context -> authRepo : logout()
+    authRepo -> store : useAuthStore.clearAuth()\nuseUserEntitiesStore.clearUsers()\nuseItemListEntitiesStore.clearItemLists()
+    authRepo -> local : Promise.all([\nuserLocal.clearAll(),\nitemListLocal.clearAll(),\nitemLocal.clearQueryIndexes(['items_catalog']),\nsongLocal.removeQueryIndexes([Spotify, recomendadas,\nnuevas/populares de artistas favoritos]),\nlessonLocal.removeQueryIndexes([recomendadas]) ])
+    note right of local : Se borran el usuario, sus listas y los índices\npersonales. Se conservan el catálogo de items y\nel contenido público (canciones, lecciones,\ngéneros...) como caché, y los recientes por usuario.
+    local --> authRepo : ok
+    authRepo --> context : void
+    context --> screen : void
+    store ->> screen : isAuthenticated = false
+    screen --> actor : AppNavigator muestra LoginScreen
+end
+
+@enduml

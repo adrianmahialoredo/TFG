@@ -30,15 +30,23 @@ export const useLesson = (lessonId: string, { markAccessed = true }: { markAcces
 
   // 3. Carga inicial (lección + secciones; el género solo si la lección pertenece a uno)
   useEffect(() => {
-    if (!lessonId) return;
+    if (!lessonId) {
+      setLoading(false);
+      return;
+    }
     // Si la lección cambia antes de terminar, la carga anterior no debe tocar el estado
     let cancelled = false;
 
     const loadData = async () => {
       setLoading(true);
-      const loaded = await lessonRepository.getById(lessonId);
-      if (loaded?.genreId) await genreRepository.getById(loaded.genreId);
-      if (!cancelled) setLoading(false);
+      try {
+        const loaded = await lessonRepository.getById(lessonId);
+        if (loaded?.genreId) await genreRepository.getById(loaded.genreId);
+      } catch (error) {
+        console.error('[useLesson] Error cargando la lección:', error);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
     };
     loadData();
     // Marca el item como accedido para la sección "Recientes" del Home (fire-and-forget)

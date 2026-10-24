@@ -115,6 +115,35 @@ class EntityEqualityTest {
     // --- SongLesson ---
 
     @Test
+    @SuppressWarnings("EqualsWithItself")
+    void entitiesWithoutId_areEqualToThemselves() {
+        // Reflexivity must hold even before an ID is assigned (the id-based comparison alone would fail)
+        Song song = song(null);
+        Instrument instrument = new Instrument();
+        SongLesson songLesson = new SongLesson();
+        Chord chord = new Chord();
+
+        assertTrue(song.equals(song));
+        assertTrue(instrument.equals(instrument));
+        assertTrue(songLesson.equals(songLesson));
+        assertTrue(chord.equals(chord));
+    }
+
+    @Test
+    void instrumentAndSongLesson_areNotEqualToOtherTypes() {
+        Instrument instrument = new Instrument();
+        instrument.setId(1L);
+        SongLesson songLesson = new SongLesson();
+        songLesson.setId(1L);
+
+        assertNotEquals(instrument, songLesson);
+        assertNotEquals(songLesson, instrument);
+        assertNotEquals(null, instrument);
+        assertFalse(song(1L).equals(instrument));
+        assertFalse(song(1L).equals(null));
+    }
+
+    @Test
     void songLessons_equalityIsById() {
         SongLesson a = new SongLesson();
         a.setId(1L);

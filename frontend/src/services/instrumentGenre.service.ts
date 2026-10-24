@@ -27,6 +27,15 @@ export const getByInstrumentId = async (instrumentId: string): Promise<Instrumen
   return response.data;
 };
 
+/**
+ * IDs de los géneros-instrumento que combinan un género y un instrumento favoritos del usuario
+ * y no están en sus listas (los de su nivel primero).
+ */
+export const getFavouriteCombinationIdsByUser = async (userId: string): Promise<string[]> => {
+  const response = await apiClient.get(API_ENDPOINTS.INSTRUMENT_GENRES.FAVOURITE_COMBINATION_IDS_BY_USER(userId));
+  return response.data;
+};
+
 export const createInstrumentGenre = async (instrumentGenre: InstrumentGenreDTO): Promise<InstrumentGenreDTO> => {
   const response = await apiClient.post(API_ENDPOINTS.INSTRUMENT_GENRES.BASE, instrumentGenre);
   return response.data;

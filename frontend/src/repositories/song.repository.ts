@@ -1,4 +1,5 @@
 import * as songService from '../services/song.service';
+import * as userService from '../services/user.service';
 import * as songLocal from '../local/song.local';
 import * as songLessonRepository from './songLesson.repository';
 import * as tabSectionRepository from './tabSection.repository';
@@ -50,7 +51,7 @@ export const getById = async (id: string): Promise<SongDTO | null> => {
         if (song.lessonIds?.length > 0) {
             try {
                 await songLessonRepository.getAllById(song.lessonIds).then(async (lessons) => {
-                    const tabIds = lessons.flatMap(l => l.tabSectionIds || []);
+                    const tabIds = lessons.flatMap(l => l.tabSectionsIds || []);
                     const chordIds = lessons.flatMap(l => l.chordIds || []);
                     await Promise.allSettled([
                         tabIds.length > 0 ? tabSectionRepository.getAllById(tabIds) : Promise.resolve(),
@@ -97,6 +98,8 @@ export const getNew = (onFresh?: OnFresh): Promise<string[]> =>
 /** Personalizados por usuario: sus índices se borran en el logout. */
 export const SPOTIFY_INDEX_KEY = 'spotify';
 export const RECOMMENDED_INDEX_KEY = 'recommended';
+export const NEW_BY_FAVOURITE_ARTISTS_INDEX_KEY = 'new_favourite_artists';
+export const POPULAR_BY_FAVOURITE_ARTISTS_INDEX_KEY = 'popular_favourite_artists';
 
 /** Canciones del carrusel de Spotify (el backend exige `limit`). */
 const SPOTIFY_SONGS_LIMIT = 10;
@@ -109,3 +112,35 @@ const RECOMMENDED_SONGS_LIMIT = 10;
 
 export const getRecommended = (userId: string, onFresh?: OnFresh): Promise<string[]> =>
     cache.list(RECOMMENDED_INDEX_KEY, () => songService.getRecommendedByUser(userId, RECOMMENDED_SONGS_LIMIT), onFresh);
+
+/** Artistas favoritos que se usan en los carruseles del Home (el backend admite hasta 10). */
+export const FAVOURITE_ARTISTS_COUNT = 5;
+/** Canciones de cada carrusel de artistas favoritos (el backend admite hasta 50). */
+export const SONGS_BY_FAVOURITE_ARTISTS_LIMIT = 12;
+
+/**
+ * Canciones nuevas y populares de los artistas favoritos del usuario (los más repetidos en sus listas),
+ * para el Home. Devuelven DTO completo (excepción de negocio: son de sus artistas favoritos).
+ *
+ * Cada carrusel es una lista Cache-First con su índice (personalizado: se borra en el logout).
+ * Los artistas se piden una sola vez para los dos; sin artistas (listas sin canciones) no se pide
+ * nada más y los carruseles quedan vacíos.
+ */
+export const getByFavouriteArtists = async (
+    userId: string,
+    onFresh: { newSongs?: OnFresh; popularSongs?: OnFresh } = {},
+): Promise<{ newSongs: string[]; popularSongs: string[] }> => {
+    let artistsRequest: Promise<string[]> | null = null;
+    const favouriteArtists = () => (artistsRequest ??= userService.getTopArtists(userId, FAVOURITE_ARTISTS_COUNT));
+
+    const songsOf = (fetch: (artists: string[], limit: number) => Promise<SongDTO[]>) => async () => {
+        const artists = await favouriteArtists();
+        return artists.length === 0 ? [] : fetch(artists, SONGS_BY_FAVOURITE_ARTISTS_LIMIT);
+    };
+
+    const [newSongs, popularSongs] = await Promise.all([
+        cache.list(NEW_BY_FAVOURITE_ARTISTS_INDEX_KEY, songsOf(songService.getNewByArtists), onFresh.newSongs),
+        cache.list(POPULAR_BY_FAVOURITE_ARTISTS_INDEX_KEY, songsOf(songService.getPopularByArtists), onFresh.popularSongs),
+    ]);
+    return { newSongs, popularSongs };
+};

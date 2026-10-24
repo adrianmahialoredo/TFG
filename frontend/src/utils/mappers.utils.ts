@@ -3,7 +3,45 @@
  * Centraliza la lógica de transformación de datos entre capas
  */
 
-import { AnyItemDTO, CarouselItemDTO, GenreDTO, InstrumentDTO, ItemSummaryDTO, ItemType, SongDTO } from '../types';
+import { AnyItemDTO, CarouselItemDTO, GenreDTO, InstrumentDTO, InstrumentGenreDTO, ItemSummaryDTO, ItemType, LessonDTO, SongDTO } from '../types';
+
+/** IDs presentes como strings (el backend los manda como números). */
+const presentIds = (...ids: (string | number | null | undefined)[]): string[] =>
+  ids.filter((id) => id != null).map(String);
+
+/**
+ * Metadatos de búsqueda (géneros, instrumentos, década) que se pueden sacar del DTO completo.
+ * Solo incluye los campos que conoce: una lección de un género-instrumento no trae su género
+ * ni su instrumento, así que no se pisan los que ya mandó el backend en el resumen.
+ */
+const toSearchMetadata = (dto: AnyItemDTO, type: ItemType): Partial<ItemSummaryDTO> => {
+  switch (type) {
+    case ItemType.SONG: {
+      const song = dto as SongDTO;
+      return {
+        genreIds: presentIds(...(song.genreIds ?? [])),
+        instrumentIds: presentIds(...(song.instrumentIds ?? [])),
+        ...(song.decade !== undefined && { decade: song.decade }),
+      };
+    }
+    case ItemType.LESSON: {
+      const lesson = dto as LessonDTO;
+      return {
+        ...(lesson.genreId != null && { genreIds: presentIds(lesson.genreId) }),
+        ...(lesson.instrumentId != null && { instrumentIds: presentIds(lesson.instrumentId) }),
+      };
+    }
+    case ItemType.INSTRUMENT_GENRE: {
+      const instrumentGenre = dto as InstrumentGenreDTO;
+      return {
+        genreIds: presentIds(instrumentGenre.genreId),
+        instrumentIds: presentIds(instrumentGenre.instrumentId),
+      };
+    }
+    default:
+      return {};
+  }
+};
 
 /**
  * Deriva el resumen (catálogo) de un DTO completo.
@@ -18,6 +56,7 @@ export const toItemSummary = (dto: AnyItemDTO, type: ItemType = dto.type): ItemS
   type,
   level: dto.level,
   artist: type === ItemType.SONG ? (dto as SongDTO).artist : null,
+  ...toSearchMetadata(dto, type),
 });
 
 /**

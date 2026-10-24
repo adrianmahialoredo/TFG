@@ -50,6 +50,7 @@ public class EntityResolver {
     private static SongLessonRepository songLessonRepository;
     private static SpotifyUserRepository spotifyUserRepository;
     private static TabSectionRepository tabSectionRepository;
+    private static TuneRepository tuneRepository;
     private static UserRepository userRepository;
 
     public EntityResolver(ChordRepository chordRepository,
@@ -64,6 +65,7 @@ public class EntityResolver {
                           SongLessonRepository songLessonRepository,
                           SpotifyUserRepository spotifyUserRepository,
                           TabSectionRepository tabSectionRepository,
+                          TuneRepository tuneRepository,
                           UserRepository userRepository) {
         EntityResolver.chordRepository = chordRepository;
         EntityResolver.genreRepository = genreRepository;
@@ -77,6 +79,7 @@ public class EntityResolver {
         EntityResolver.songLessonRepository = songLessonRepository;
         EntityResolver.spotifyUserRepository = spotifyUserRepository;
         EntityResolver.tabSectionRepository = tabSectionRepository;
+        EntityResolver.tuneRepository = tuneRepository;
         EntityResolver.userRepository = userRepository;
     }
 
@@ -128,6 +131,10 @@ public class EntityResolver {
 
     public static Optional<TabSection> findTabSection(Long id) {
         return find(tabSectionRepository, id);
+    }
+
+    public static Optional<Tune> findTune(Long id) {
+        return find(tuneRepository, id);
     }
 
     public static Optional<User> findUser(Long id) {
@@ -182,6 +189,10 @@ public class EntityResolver {
 
     public static TabSection resolveTabSection(Long id) {
         return resolve(tabSectionRepository, id, "TabSection");
+    }
+
+    public static Tune resolveTune(Long id) {
+        return resolve(tuneRepository, id, "Tune");
     }
 
     public static User resolveUser(Long id) {

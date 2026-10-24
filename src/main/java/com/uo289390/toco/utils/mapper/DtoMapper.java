@@ -88,8 +88,30 @@ public class DtoMapper {
         dto.setType(item.getType());
         dto.setLevel(item.getLevel());
 
-        if (item instanceof Song song) {
-            dto.setArtist(song.getArtist());
+        // Search metadata: lets the frontend filter by genre, instrument or decade without the full DTO.
+        // A lazy Item proxy is not an instance of the concrete subclass, so unproxy it first.
+        switch ((Item) Hibernate.unproxy(item)) {
+            case Song song -> {
+                dto.setArtist(song.getArtist());
+                dto.setDecade(song.getDecade());
+                dto.setGenreIds(song.getGenres().stream().map(Genre::getId).toList());
+                dto.setInstrumentIds(song.getInstruments().stream().map(Instrument::getId).toList());
+            }
+            case Lesson lesson -> {
+                // A lesson of an instrument-genre inherits its genre and instrument
+                Optional<InstrumentGenre> instrumentGenre = Optional.ofNullable(lesson.getInstrumentGenre());
+                Optional.ofNullable(lesson.getGenre())
+                        .or(() -> instrumentGenre.map(InstrumentGenre::getGenre))
+                        .ifPresent(genre -> dto.setGenreIds(List.of(genre.getId())));
+                Optional.ofNullable(lesson.getInstrument())
+                        .or(() -> instrumentGenre.map(InstrumentGenre::getInstrument))
+                        .ifPresent(instrument -> dto.setInstrumentIds(List.of(instrument.getId())));
+            }
+            case InstrumentGenre instrumentGenre -> {
+                dto.setGenreIds(List.of(instrumentGenre.getGenre().getId()));
+                dto.setInstrumentIds(List.of(instrumentGenre.getInstrument().getId()));
+            }
+            default -> { }
         }
 
         return dto;
@@ -100,6 +122,7 @@ public class DtoMapper {
         dto.setId(section.getId());
         dto.setTitle(section.getTitle());
         dto.setHtmlContent(section.getHtmlContent());
+        dto.setVideoUrl(section.getVideoUrl());
         dto.setOrderIndex(section.getOrderIndex());
         dto.setLessonId(section.getLesson().getId());
         return dto;
@@ -138,6 +161,7 @@ public class DtoMapper {
         dto.setImageUrl(song.getImageUrl());
         dto.setLevel(song.getLevel());
         dto.setArtist(song.getArtist());
+        dto.setDecade(song.getDecade());
         dto.setGenreIds(song.getGenres().stream().map(Genre::getId).collect(Collectors.toList()));
         dto.setInstrumentIds(song.getInstruments().stream().map(Instrument::getId).collect(Collectors.toList()));
         dto.setLessonIds(song.getLessons().stream().map(SongLesson::getId).collect(Collectors.toList()));
@@ -168,6 +192,15 @@ public class DtoMapper {
         return dto;
     }
 
+    public TuneDTO tuneToTuneDto(Tune tune) {
+        TuneDTO dto = new TuneDTO();
+        dto.setId(tune.getId());
+        dto.setTitle(tune.getTitle());
+        dto.setInstrumentId(tune.getInstrument().getId());
+        dto.setNotes(new ArrayList<>(tune.getNotes()));
+        return dto;
+    }
+
     public UserDto userToUserDto(User user) {
         UserDto dto = new UserDto();
         dto.setId(user.getId());
@@ -182,6 +215,7 @@ public class DtoMapper {
                 .map(Instrument::getId)
                 .collect(Collectors.toList()));
         dto.setSpotifyConnected(user.getSpotifyUser() != null);
+        dto.setDifficultyLevel(user.getDifficultyLevel());
         return dto;
     }
 
@@ -199,6 +233,7 @@ public class DtoMapper {
                 .map(Instrument::getId)
                 .collect(Collectors.toList()));
         dto.setSpotifyConnected(user.getSpotifyUser() != null);
+        dto.setDifficultyLevel(user.getDifficultyLevel());
         return dto;
     }
 

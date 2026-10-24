@@ -1,0 +1,172 @@
+@startuml DSD-CU-10
+title DSD-CU-10 - Vincular cuenta de Spotify
+
+' Diagrama de secuencia de diseño: realización de CU-10 (análisis en
+' diagrams/use_cases/description/CU10_vincular_spotify.puml).
+' Fuentes: frontend/src/screens/ProfileScreen.tsx, components/buttons/SpotifyButton.tsx,
+' hooks/useSpotifyConnect.ts, repositories/spotify.repository.ts, repositories/user.repository.ts,
+' services/spotify.service.ts, config/apiConfig.ts, hooks/useFeedSongs.ts;
+' SpotifyAuthController.java, SpotifyAuthServiceImpl.java, SpotifyRecommendationController.java,
+' SpotifyRecommendationServiceImpl.java, SpotifyUserRepository.java, UserRepository.java,
+' SpotifyProperties.java, SecurityConfig.java, GlobalExceptionHandler.java, DtoMapper.java.
+' Diferencias con el guion:
+'  - getLoginUrl() no recibe la Authentication como parámetro: lee el userId del SecurityContextHolder.
+'  - El state lo genera SpotifyAuthServiceImpl.buildAuthorizationUrl(userId) (UUID en un
+'    ConcurrentHashMap en memoria), no el controlador.
+'  - El callback no envía client_id/client_secret en el body: van en la cabecera Basic
+'    (headers.setBasicAuth); el body lleva grant_type, code y redirect_uri.
+'  - Tras obtener los tokens se llama además a GET https://api.spotify.com/v1/me para conocer el
+'    spotifyUserId, y se desvincula la cuenta de otro usuario si la tenía (con flush).
+'  - El botón no está en ProfileScreen directamente: ProfileScreen pinta <SpotifyButton />, que usa
+'    el hook useSpotifyConnect (Nivel 6). El navegador se abre con WebBrowser.openBrowserAsync.
+'  - A la vuelta la app no recibe nada del callback: recarga el usuario (GET /api/users/{id}) y
+'    mira UserDto.spotifyConnected.
+'  - getValidAccessToken(userId) no lo invoca el flujo de vinculación: lo llama
+'    SpotifyRecommendationServiceImpl (authorizedRequest) cada vez que consulta la API de Spotify.
+autonumber
+hide footbox
+skinparam sequenceMessageAlign center
+skinparam roundcorner 6
+skinparam maxMessageSize 260
+skinparam BoxPadding 10
+
+actor "Músico" as actor
+
+box "App (React Native)" #F3F8FF
+    participant "SpotifyButton\n(ProfileScreen)\n<<Nivel 7>>" as screen
+    participant "useSpotifyConnect\n<<Nivel 6>>" as hook
+    participant "spotifyRepository\n<<Nivel 3>>" as repo
+    participant "spotifyService\n<<Nivel 1>>" as service
+    participant "WebBrowser\n<<expo-web-browser>>" as browser
+end box
+
+box "Backend (Spring Boot)" #FFF9F0
+    participant "SpotifyAuthController\n<<controller>>" as controller
+    participant "SpotifyRecommendationServiceImpl\n<<service>>" as recService
+    participant "SpotifyAuthServiceImpl\n<<service>>" as authService
+    participant "SpotifyUserRepository\n<<repository>>" as spotifyRepo
+    participant "UserRepository\n<<repository>>" as userRepo
+end box
+
+box "Servicios externos" #F3F3F3
+    participant "Spotify Accounts\n<<sistema externo>>" as accounts
+    participant "Spotify Web API\n<<sistema externo>>" as webApi
+end box
+
+== Solicitud de la URL de autorización ==
+
+actor -> screen : pulsa "Conectar con Spotify"
+screen -> hook : connect()
+hook -> hook : waitForAppActive()\n(escucha AppState 'change')
+hook -> repo : getAuthUrl()
+repo -> service : spotifyLogin()
+service -> controller : GET /api/spotify/login\nAuthorization: Bearer <JWT>
+note over controller : JwtAuthenticationFilter (sin JWT válido: 401)
+controller -> controller : currentUserId() : Optional<Long>
+controller -> authService : buildAuthorizationUrl(userId)
+authService -> authService : removeIf(isExpired);\nstate = UUID.randomUUID();\npendingAuthorizations.put(state,\nPendingAuthorization(userId, now + 10 min))
+note right of authService : client_id, redirect_uri: SpotifyProperties\nscope = user-read-email user-top-read
+authService --> controller : "https://accounts.spotify.com/authorize?\nclient_id&response_type=code&redirect_uri&scope&state"
+controller --> service : 200 OK\n{ authUrl }
+service --> repo : { authUrl }
+repo --> hook : authUrl
+
+== Autorización en el navegador ==
+
+hook -> browser : openBrowserAsync(authUrl)
+browser -> accounts : GET /authorize?client_id&scope&redirect_uri&state
+accounts --> actor : pide login y permisos
+actor -> accounts : decide sobre los permisos
+
+alt 5a. El músico rechaza los permisos
+    accounts --> browser : 302 redirect_uri?error=access_denied&state
+    browser -> controller : GET /api/spotify/callback?error=access_denied&state
+    controller --> browser : 400 Bad Request (text/html)\n"No se ha conectado Spotify (access_denied)..."
+    browser --> actor : muestra la página
+else Permisos concedidos
+    accounts --> browser : 302 redirect_uri?code&state
+    browser -> controller : GET /api/spotify/callback?code&state
+    note over controller : Ruta pública (permitAll): el usuario se identifica\npor el state. handleCallback es @Transactional; un fallo\nde Spotify/red -> RuntimeException -> 500
+    controller -> authService : handleCallback(code, state)
+    activate authService
+    authService -> authService : pendingAuthorizations.remove(state)\n.filter(!isExpired) -> userId
+    alt code vacío, o state desconocido / caducado
+        authService --> controller : IllegalArgumentException
+        controller --> browser : 400 Bad Request (GlobalExceptionHandler)
+    else state válido (se consume: un solo uso)
+        authService -> userRepo : findById(userId) : Optional<User>
+        userRepo --> authService : appUser
+        authService -> accounts : POST /api/token\nBasic(client_id, client_secret)\n{ grant_type=authorization_code, code, redirect_uri }
+        accounts --> authService : { access_token, refresh_token, expires_in }
+        authService -> webApi : GET /v1/me\nAuthorization: Bearer access_token
+        webApi --> authService : { id } -> spotifyUserId
+        authService -> authService : unlinkFromOtherUser(spotifyUserId, appUser)
+        authService -> spotifyRepo : findBySpotifyUserId(spotifyUserId) : Optional<SpotifyUser>
+        opt 7a. La cuenta de Spotify ya estaba vinculada a otro usuario (o a ninguno)
+            alt Tenía otro usuario
+                authService -> userRepo : previousUser.setSpotifyUser(null)\nsave(previousUser)\n(orphanRemoval borra el SpotifyUser)
+            else Huérfana
+                authService -> spotifyRepo : delete(existing)
+            end
+            authService -> spotifyRepo : flush()
+            note right of spotifyRepo : Hibernate ejecuta los inserts antes que\nlos deletes: el flush libera el spotifyUserId único
+        end
+        authService -> authService : spotifyUser = appUser.getSpotifyUser()\n?? new SpotifyUser() (se reutiliza)
+        authService -> authService : setSpotifyUserId, setAccessToken,\nsetRefreshToken, setTokenExpiration(now + expires_in)\nspotifyUser.setUser(appUser), appUser.setSpotifyUser(spotifyUser)
+        authService -> spotifyRepo : save(spotifyUser)
+        authService -> userRepo : save(appUser)
+        authService --> controller : void
+        deactivate authService
+        controller --> browser : 200 OK (text/html)\n"¡Spotify conectado! Ya puedes volver a la app."
+        browser --> actor : muestra la página
+    end
+end
+
+== Vuelta a la app ==
+
+actor -> browser : cierra el navegador / vuelve a la app
+browser --> hook : result\n(iOS: 'cancel' | 'dismiss' al cerrarse;\nAndroid: 'opened' al abrirse -> await appActive.promise)
+hook -> repo : refreshLinkedUser(currentUserId)
+note right of repo : userRepository.refresh(userId):\nGET /api/users/{id} (@ownership.isSelf) -> 200 OK UserDto\n{ spotifyConnected = user.getSpotifyUser() != null }\nhydrateUsers: RAM (UserEntitiesStore) + disco
+repo --> hook : UserDTO
+hook -> hook : appActive.cancel()\nsetConnecting(false)
+hook --> screen : resuelve
+alt connect() lanza (p. ej. error de red o 401)
+    screen --> actor : showAlert("No se pudo iniciar sesion con Spotify.")
+else spotifyConnected = true
+    screen --> actor : el Home muestra el carrusel de Spotify\n(useFeedSongs -> songRepository.getFromSpotify)
+end
+
+== 9a. Más tarde: renovación del token de acceso (caduca en 1 h) ==
+
+note over recService : GET /api/spotify/recommendations/songs/{userId}?limit\nSpotifyRecommendationController.getSongsForUser ->\nSpotifyRecommendationServiceImpl.findSongsForUser (@Transactional(readOnly = true))\n-> authorizedRequest(userId)
+recService -> authService : getValidAccessToken(userId)
+activate authService
+note right of authService : @Transactional(propagation = REQUIRES_NEW):\nel llamante es de solo lectura y no guardaría el token
+authService -> spotifyRepo : findByUserId(userId) : Optional<SpotifyUser>
+alt Sin cuenta vinculada
+    spotifyRepo --> authService : Optional.empty()
+    authService --> recService : EntityNotFoundException (404)
+else Token válido (caduca en más de 1 min)
+    spotifyRepo --> authService : spotifyUser
+    authService --> recService : accessToken
+else Token caducado o a punto de caducar
+    spotifyRepo --> authService : spotifyUser
+    authService -> authService : refreshAccessToken(spotifyUser)
+    authService -> accounts : POST /api/token\nBasic(client_id, client_secret)\n{ grant_type=refresh_token, refresh_token }
+    alt Spotify rechaza la renovación (acceso revocado, 4xx)
+        accounts --> authService : 400 invalid_grant
+        authService --> recService : IllegalStateException\n("Vuelve a vincular tu cuenta")
+        note right of authService : Un 5xx o error de red también da\nIllegalStateException ("Inténtalo más tarde"),\npero se conserva la vinculación
+    else Renovado
+        accounts --> authService : { access_token, expires_in, [refresh_token] }
+        authService -> authService : setAccessToken, setTokenExpiration;\nsetRefreshToken solo si llega uno nuevo
+        authService -> spotifyRepo : save(spotifyUser)
+        authService --> recService : nuevo accessToken
+    end
+end
+deactivate authService
+recService -> webApi : GET /v1/me/top/tracks?limit&time_range\nAuthorization: Bearer accessToken
+webApi --> recService : canciones top del usuario
+
+@enduml

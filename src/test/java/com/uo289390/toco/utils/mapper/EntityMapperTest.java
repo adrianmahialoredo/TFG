@@ -248,6 +248,7 @@ class EntityMapperTest {
         dto.setId(6L);
         dto.setTitle("Intro");
         dto.setHtmlContent("<p>x</p>");
+        dto.setVideoUrl("https://www.youtube.com/watch?v=abc123");
         dto.setOrderIndex(3);
         dto.setLessonId(99L);
         Lesson lesson = lesson(1);
@@ -259,6 +260,7 @@ class EntityMapperTest {
         assertEquals(6L, section.getId());
         assertEquals("Intro", section.getTitle());
         assertEquals("<p>x</p>", section.getHtmlContent());
+        assertEquals("https://www.youtube.com/watch?v=abc123", section.getVideoUrl());
         assertEquals(3, section.getOrderIndex());
         assertSame(lesson, section.getLesson());
     }
@@ -404,5 +406,29 @@ class EntityMapperTest {
         assertSame(instruments, user.getPreferences().getFavoriteInstruments());
         assertSame(user, user.getPreferences().getUser());
         assertEquals(Role.USER, user.getRole());
+    }
+
+    // -------- Tune --------
+
+    @Test
+    void testTuneDtoToTune_MapsAllFieldsWithResolvedInstrument() {
+        // Arrange
+        TuneDTO dto = new TuneDTO();
+        dto.setId(1L);
+        dto.setTitle("Estándar");
+        dto.setInstrumentId(3L);
+        dto.setNotes(List.of("E1", "A1", "D2", "G2"));
+        Instrument bass = instrument(3L);
+
+        // Act
+        Tune tune = mapper.tuneDtoToTune(dto, bass);
+
+        // Assert
+        assertEquals(1L, tune.getId());
+        assertEquals("Estándar", tune.getTitle());
+        assertSame(bass, tune.getInstrument());
+        assertEquals(List.of("E1", "A1", "D2", "G2"), tune.getNotes());
+        // Mutable copy, so Hibernate can manage the element collection
+        assertDoesNotThrow(() -> tune.getNotes().add("B2"));
     }
 }

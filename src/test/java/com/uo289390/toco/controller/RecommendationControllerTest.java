@@ -25,10 +25,14 @@ import com.uo289390.toco.config.SecurityConfig;
 import com.uo289390.toco.dto.ItemDTO;
 import com.uo289390.toco.dto.LessonDTO;
 import com.uo289390.toco.dto.SongDTO;
+import com.uo289390.toco.model.Genre;
+import com.uo289390.toco.model.InstrumentGenre;
 import com.uo289390.toco.model.Lesson;
 import com.uo289390.toco.model.Song;
 import com.uo289390.toco.security.JwtAuthenticationFilter;
 import com.uo289390.toco.security.JwtUtil;
+import com.uo289390.toco.service.recommendation.GenreRecommendationService;
+import com.uo289390.toco.service.recommendation.InstrumentGenreRecommendationService;
 import com.uo289390.toco.service.recommendation.ItemRecommendationService;
 import com.uo289390.toco.service.recommendation.LessonRecommendationService;
 import com.uo289390.toco.service.recommendation.SongRecommendationService;
@@ -57,6 +61,12 @@ class RecommendationControllerTest {
 
     @MockitoBean
     private SongRecommendationService songRecommendationService;
+
+    @MockitoBean
+    private InstrumentGenreRecommendationService instrumentGenreRecommendationService;
+
+    @MockitoBean
+    private GenreRecommendationService genreRecommendationService;
 
     @MockitoBean
     private DtoMapper dtoMapper;
@@ -194,5 +204,55 @@ class RecommendationControllerTest {
                 .andExpect(jsonPath("$.status").value(400));
 
         verify(songRecommendationService, never()).findForUser(anyLong(), anyInt());
+    }
+
+    @Test
+    void getFavouriteInstrumentGenreCombinationIds_usesConfiguredCountAndReturnsIdsInOrder() throws Exception {
+        InstrumentGenre first = new InstrumentGenre();
+        first.setId(30L);
+        InstrumentGenre second = new InstrumentGenre();
+        second.setId(31L);
+        when(instrumentGenreRecommendationService.findFavouriteCombinationsForUser(7L, RecommendationConstants.FAVOURITE_INSTRUMENT_GENRE_COMBINATIONS_COUNT))
+                .thenReturn(new LinkedHashSet<>(List.of(first, second)));
+
+        mockMvc.perform(get("/api/recommendations/instrument-genres/favourite-combinations/by-user/7/ids"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(2))
+                .andExpect(jsonPath("$[0]").value(30))
+                .andExpect(jsonPath("$[1]").value(31));
+    }
+
+    @Test
+    void getFavouriteInstrumentGenreCombinationIds_unknownUser_returnsNotFound() throws Exception {
+        when(instrumentGenreRecommendationService.findFavouriteCombinationsForUser(anyLong(), anyInt()))
+                .thenThrow(new jakarta.persistence.EntityNotFoundException("User not found"));
+
+        mockMvc.perform(get("/api/recommendations/instrument-genres/favourite-combinations/by-user/7/ids"))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void getMostUsedGenreInItemListsIds_usesConfiguredCountAndReturnsIdsInOrder() throws Exception {
+        Genre first = new Genre();
+        first.setId(40L);
+        Genre second = new Genre();
+        second.setId(41L);
+        when(genreRecommendationService.findMostUsedInItemListsForUser(7L, RecommendationConstants.MOST_USED_GENRES_IN_ITEM_LISTS_COUNT))
+                .thenReturn(new LinkedHashSet<>(List.of(first, second)));
+
+        mockMvc.perform(get("/api/recommendations/genres/most-used-in-item-lists/by-user/7/ids"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(2))
+                .andExpect(jsonPath("$[0]").value(40))
+                .andExpect(jsonPath("$[1]").value(41));
+    }
+
+    @Test
+    void getMostUsedGenreInItemListsIds_unknownUser_returnsNotFound() throws Exception {
+        when(genreRecommendationService.findMostUsedInItemListsForUser(anyLong(), anyInt()))
+                .thenThrow(new jakarta.persistence.EntityNotFoundException("User not found"));
+
+        mockMvc.perform(get("/api/recommendations/genres/most-used-in-item-lists/by-user/7/ids"))
+                .andExpect(status().isNotFound());
     }
 }

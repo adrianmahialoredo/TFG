@@ -1,5 +1,6 @@
 import React from 'react';
-import { Image, View, ScrollView, Text } from 'react-native';
+import { Image, View, Text } from 'react-native';
+import FadeScrollView from '../components/FadeScrollView';
 import YoutubePlayer from 'react-native-youtube-iframe';
 import { useGenreDescription } from '../hooks/useGenreDescription';
 
@@ -28,8 +29,8 @@ export default function GenreDescriptionScreen({ genreId }: GenreDescriptionProp
     }
 
     return (
-        <ScrollView
-            className="bg-background px-4 pt-4"
+        <FadeScrollView
+            className="bg-background px-4 pt-2"
             contentContainerStyle={{ paddingBottom: 120 }}
             showsVerticalScrollIndicator={false}
         >
@@ -75,6 +76,6 @@ export default function GenreDescriptionScreen({ genreId }: GenreDescriptionProp
                     </View>
                 </View>
             </View>
-        </ScrollView>
+        </FadeScrollView>
     );
 }

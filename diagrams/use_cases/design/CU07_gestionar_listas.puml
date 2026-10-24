@@ -1,0 +1,209 @@
+@startuml DSD-CU-07
+title DSD-CU-07 - Gestionar listas de estudio
+
+' Diagrama de secuencia de diseño: realización de CU-07 (análisis en
+' diagrams/use_cases/description/CU07_gestionar_listas.puml).
+' Fuentes: frontend/src/screens/ProfileScreen.tsx, screens/ListScreen.tsx, hooks/useItemLists.ts,
+' hooks/useItemListDetail.ts, repositories/itemList.repository.ts, services/itemList.service.ts,
+' services/cloudinary.service.ts, stores/entities/itemList.entities.store.ts, local/itemList.local.ts,
+' config/apiConfig.ts; ItemListController.java, ItemListServiceImpl.java, OwnershipChecker.java,
+' EntityResolver.java, DtoMapper.java, EntityMapper.java, GlobalExceptionHandler.java.
+' Diferencias con el análisis:
+' - "Mis listas" no es una pantalla propia: es el carrusel de ProfileScreen; editar y borrar se hacen en ListScreen.
+' - Crear una lista solo pide el nombre (CreateListMiniModal); la imagen se añade después desde ListScreen
+'   (subida a Cloudinary + PUT). Tras crearla, la app navega a ListScreen.
+' - La propiedad la comprueba @PreAuthorize con OwnershipChecker (bean "ownership"), no el servicio.
+autonumber
+hide footbox
+skinparam sequenceMessageAlign center
+skinparam roundcorner 6
+skinparam maxMessageSize 260
+skinparam BoxPadding 10
+
+actor "Músico" as actor
+
+box "App (React Native)" #F3F8FF
+    participant "ProfileScreen\n<<Nivel 7>>" as profile
+    participant "ListScreen\n<<Nivel 7>>" as listScreen
+    participant "useItemLists\n<<Nivel 6>>" as useLists
+    participant "useItemListDetail\n<<Nivel 6>>" as useDetail
+    participant "itemListRepository\n<<Nivel 3>>" as repo
+    participant "useItemListEntitiesStore\n<<Nivel 4>>" as store
+    participant "itemListService\n<<Nivel 1>>" as service
+end box
+
+box "Backend (Spring Boot)" #FFF9F0
+    participant "ItemListController\n<<controller>>" as controller
+    participant "ItemListServiceImpl\n<<service>>" as listService
+    participant "ItemListRepository\n<<repository>>" as listRepo
+end box
+
+box "Servicios externos" #F3F3F3
+    participant "Cloudinary\n<<sistema externo>>" as cloudinary
+end box
+
+note over controller
+  Todas las peticiones llevan Authorization: Bearer <token> (apiClient).
+  JwtAuthenticationFilter rellena el SecurityContext; sin token válido: 401.
+  @PreAuthorize("hasRole('ADMIN') or @ownership...") con OwnershipChecker;
+  si no es suyo: AccessDeniedException -> 403 (GlobalExceptionHandler).
+end note
+
+== Consultar "Mis listas" ==
+
+actor -> profile : abre Perfil (carrusel "Mis listas")
+profile -> useLists : useItemLists(user.id)
+useLists -> repo : getByUserId(userId)
+repo -> repo : itemListLocal.getByUserId(userId)
+note right of repo : Disco (AsyncStorage, índice por usuario)
+
+alt Hay listas guardadas en disco
+    repo -> store : setItemLists(localLists)
+    repo --> useLists : ids locales (al instante)
+    note right of repo : La sincronización de abajo se lanza\nen segundo plano (stale-while-revalidate)
+else Sin datos locales
+    note right of repo : Se espera a la sincronización de abajo
+end
+
+repo ->> service : getUserIds(userId)
+service -> controller : GET /api/item-lists/by-user/{userId}/ids
+note right of controller : @ownership.isSelf(#userId, authentication)
+controller -> listService : findIdsForUser(userId)
+listService -> listService : EntityResolver.findUser(userId)\n.map(user.getItemLists() -> ids)
+listService --> controller : List<Long>
+controller --> service : 200 OK\nList<Long>
+service --> repo : remoteIds
+
+opt Hay listas locales que ya no existen en el backend
+    repo -> store : removeItemLists(staleIds)
+    repo -> repo : itemListLocal.removeById(id, userId)
+end
+
+repo -> service : getAllById(remoteIds)
+service -> controller : POST /api/item-lists/by-ids\n[ids]
+note right of controller : @ownership.ownsAllItemLists(#ids, authentication)
+controller -> listService : findByIds(ids)
+listService -> listRepo : findAllById(ids)
+listRepo --> listService : List<ItemList>
+listService -> listService : DtoMapper.itemListToItemListDto(list)
+listService --> controller : List<ItemListDTO>
+controller --> service : 200 OK\nList<ItemListDTO>
+service --> repo : ItemListDTO[] (toAppItemListDTO)
+repo -> store : hydrateItemLists(lists)
+note right of store : setItemLists + cache.markFresh +\nitemListLocal.saveBatchWithUserIndex (disco)
+store --> useLists : itemLists (suscripción Zustand)
+useLists -> useLists : useMemo: filtra por userId
+useLists --> profile : lists
+profile --> actor : muestra el carrusel "Mis listas"
+
+== Crear lista ==
+
+actor -> profile : pulsa "Crear lista" e introduce el nombre
+profile -> profile : handleCreateList()
+alt Nombre de menos de 2 caracteres
+    profile --> actor : "El nombre debe tener al menos 2 caracteres"
+else Nombre válido
+    profile -> useLists : createList({ name })
+    useLists -> repo : createItemList({ name, userId })
+    repo -> service : createItemList(payload)
+    service -> controller : POST /api/item-lists\n{ userId, name, imageUrl, itemIds: [] }
+    note right of controller : @ownership.isSelf(#dto.userId, authentication)
+    controller -> listService : create(dto)
+    listService -> listService : EntityResolver.resolveUser(userId)\nEntityResolver.resolveItems(itemIds)
+    listService -> listService : EntityMapper.itemListDtoToItemList(dto, user, items)
+    listService -> listRepo : save(list)
+    listRepo --> listService : ItemList
+    listService -> listService : DtoMapper.itemListToItemListDto(list)
+    listService --> controller : ItemListDTO
+    controller --> service : 201 Created\nItemListDTO
+    service --> repo : ItemListDTO
+    repo -> store : hydrateItemLists([created])
+    note right of store : RAM + disco, sin recargar las listas de la red
+    repo --> useLists : created
+    useLists --> profile : created
+    alt created es null (error de red, 403...)
+        profile --> actor : "No se pudo crear la lista"
+    else Lista creada
+        profile -> listScreen : navigate('ListScreen', { itemListId: created.id })
+        listScreen --> actor : muestra la lista nueva (vacía)
+    end
+end
+
+== 3a. Renombrar o cambiar la foto de una lista ==
+
+actor -> listScreen : edita el nombre (o elige una foto)
+alt Cambiar la foto
+    listScreen -> listScreen : ImagePicker.launchImageLibraryAsync()
+    listScreen -> useDetail : updateImage(localUri)
+    useDetail -> repo : updateItemListImage(listId, localUri)
+    repo -> cloudinary : uploadProfileImageToCloudinary(localUri)\nPOST https://api.cloudinary.com/v1_1/{cloudName}/image/upload
+    note right of cloudinary : axios sin apiClient:\nno se envía el JWT
+    cloudinary --> repo : secure_url
+    repo -> repo : updateItemList(listId, { imageUrl: secure_url })
+else Renombrar
+    listScreen -> listScreen : handleRename() (mínimo 2 caracteres)
+    listScreen -> useDetail : updateList({ name })
+    useDetail -> repo : updateItemList(listId, { name })
+end
+repo -> repo : getById(listId)
+note right of repo : RAM -> disco -> API; se fusiona con\nlos cambios (id, userId e itemIds actuales)
+repo -> service : updateItemList(listId, payload)
+service -> controller : PUT /api/item-lists/{id}\nItemListDTO
+note right of controller : @ownership.ownsItemList(#id, authentication)\nand @ownership.isSelf(#dto.userId, authentication)
+controller -> listService : update(id, dto)
+listService -> listService : EntityResolver.findItemList(id)
+alt La lista no existe
+    listService --> controller : Optional.empty()
+    controller --> service : 404 Not Found
+else Existe
+    listService -> listService : updateItemListFromDto(existing, dto)\n(setName, setImageUrl, resolveUser, resolveItems)
+    listService -> listRepo : save(existing)
+    listRepo --> listService : ItemList
+    listService --> controller : Optional<ItemListDTO>
+    controller --> service : 200 OK\nItemListDTO
+    service --> repo : ItemListDTO
+    repo -> store : hydrateItemLists([updated])
+    store --> useDetail : list (suscripción Zustand)
+    useDetail --> listScreen : list
+    listScreen --> actor : muestra la lista actualizada
+end
+opt Error (repositorio devuelve null o falla Cloudinary)
+    listScreen --> actor : "No se pudo actualizar el nombre" /\n"No se pudo actualizar la foto de la lista"
+end
+
+== 3b. Eliminar una lista ==
+
+actor -> listScreen : pulsa "Eliminar lista"
+listScreen --> actor : showAlert("Eliminar lista", confirmación)
+alt Cancela
+    actor -> listScreen : Cancelar
+else Confirma
+    actor -> listScreen : Eliminar
+    listScreen -> useDetail : deleteList()
+    useDetail -> repo : deleteItemList(listId)
+    repo -> service : deleteItemList(listId)
+    service -> controller : DELETE /api/item-lists/{id}
+    note right of controller : @ownership.ownsItemList(#id, authentication)
+    controller -> listService : delete(id)
+    listService -> listRepo : existsById(id)
+    alt No existe
+        controller --> service : 404 Not Found
+    else Existe
+        listService -> listRepo : deleteById(id)
+        listService --> controller : true
+        controller --> service : 204 No Content
+        service --> repo : void
+        repo -> store : removeItemLists([listId])
+        repo -> repo : itemListLocal.removeById(listId, userId)
+        note right of repo : Purga de RAM y disco solo si\nel backend lo confirma
+        repo --> useDetail : true
+        useDetail --> listScreen : true
+        listScreen -> listScreen : navigation.goBack()
+        listScreen --> actor : vuelve a Perfil; la lista ya no aparece
+    end
+    opt Error (404, 403, sin red): deleteItemList devuelve false
+        listScreen --> actor : "No se pudo eliminar la lista"
+    end
+end
+
+@enduml
