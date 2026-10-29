@@ -11,6 +11,13 @@ jest.mock('@react-navigation/native', () => ({
   useNavigation: () => ({ navigate: mockNavigate }),
 }));
 
+// El modal real necesita las Stores y el repositorio de listas: aquí basta con saber qué item recibe
+jest.mock('@/components/AddToListModal', () => {
+  const { Text } = require('react-native');
+  return ({ item, onClose }: any) =>
+    item ? <Text onPress={onClose}>{`Modal: ${item.title}`}</Text> : null;
+});
+
 const sections: SearchSection[] = [
   {
     field: 'title',
@@ -49,5 +56,16 @@ describe('SearchResults', () => {
     expect(mockNavigate).toHaveBeenCalledWith('SongScreen', { songId: 's1' });
     await fireEvent.press(screen.getByText('Rock\nGénero'));
     expect(mockNavigate).toHaveBeenCalledWith('GenreMainScreen', { genreId: 'g1' });
+  });
+
+  it('el botón + abre el modal de listas con ese item, sin navegar', async () => {
+    await render(<SearchResults sections={sections} emptyText="" />);
+    expect(screen.queryByText(/^Modal:/)).toBeNull();
+    await fireEvent.press(screen.getByLabelText('Añadir Wonderwall a una lista'));
+    expect(screen.getByText('Modal: Wonderwall')).toBeTruthy();
+    expect(mockNavigate).not.toHaveBeenCalled();
+
+    await fireEvent.press(screen.getByText('Modal: Wonderwall'));
+    expect(screen.queryByText(/^Modal:/)).toBeNull();
   });
 });

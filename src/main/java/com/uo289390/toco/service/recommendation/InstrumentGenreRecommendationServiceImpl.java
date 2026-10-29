@@ -50,7 +50,7 @@ public class InstrumentGenreRecommendationServiceImpl implements InstrumentGenre
         }
 
         // Nivel 2 - Sacar los InstrumentGenres de combinar los generos y los instrumentos mas top de la playlist. No se añaden más si no se encuentran
-        int topN = RecommendationConstants.NUMBER_OF_MAX_TOP_INSTRUMENTS_AND_GENRES_USED_IN_INSTRUMENT_GENRE_RECOMMENDATION;
+        int topN = RecommendationConstants.N_MAX_TOP_INSTRUMENTS_AND_GENRES_USED_IN_INSTRUMENT_GENRE_RECOMMENDATION;
         List<Genre> topGenres = itemList.getTopGenresFromItems(topN);
         List<Instrument> topInstruments = itemList.getTopInstrumentsFromItems(topN);
 
@@ -76,14 +76,14 @@ public class InstrumentGenreRecommendationServiceImpl implements InstrumentGenre
 
         // Candidatos: los generos/instrumentos mas usados en las listas del usuario, completados con sus favoritos
         Set<Long> genreIds = candidateIds(
-                user.getTopGenresFromItemLists(RecommendationConstants.NUMBER_OF_ITEM_LISTS_GENRES_USED_IN_BY_USER_INSTRUMENT_GENRE_RECOMMENDATION),
+                user.getTopGenresFromItemLists(RecommendationConstants.N_ITEM_LISTS_GENRES_USED_IN_BY_USER_INSTRUMENT_GENRE_RECOMMENDATION),
                 user.getPreferences().getFavoriteGenres(),
-                RecommendationConstants.NUMBER_OF_FAVOURITE_GENRES_USED_IN_BY_USER_INSTRUMENT_GENRE_RECOMMENDATION
+                RecommendationConstants.N_FAVOURITE_GENRES_USED_IN_BY_USER_INSTRUMENT_GENRE_RECOMMENDATION
         );
         Set<Long> instrumentIds = candidateIds(
-                user.getTopInstrumentsFromItemLists(RecommendationConstants.NUMBER_OF_ITEM_LISTS_INSTRUMENTS_USED_IN_BY_USER_INSTRUMENT_GENRE_RECOMMENDATION),
+                user.getTopInstrumentsFromItemLists(RecommendationConstants.N_ITEM_LISTS_INSTRUMENTS_USED_IN_BY_USER_INSTRUMENT_GENRE_RECOMMENDATION),
                 user.getPreferences().getFavoriteInstruments(),
-                RecommendationConstants.NUMBER_OF_FAVOURITE_INSTRUMENTS_USED_IN_BY_USER_INSTRUMENT_GENRE_RECOMMENDATION
+                RecommendationConstants.N_FAVOURITE_INSTRUMENTS_USED_IN_BY_USER_INSTRUMENT_GENRE_RECOMMENDATION
         );
 
         return findCombinations(user, genreIds, instrumentIds, limit);

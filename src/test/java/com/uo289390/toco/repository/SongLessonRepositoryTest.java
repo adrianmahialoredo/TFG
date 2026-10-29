@@ -51,8 +51,8 @@ class SongLessonRepositoryTest {
         guitar = em.persist(instrument(1L, "Guitar"));
         song = em.persist(song(10L, "Song", "Artist"));
         otherSong = em.persist(song(11L, "Other", "Artist"));
-        c = em.persist(chord(1L, "C"));
-        g = em.persist(chord(2L, "G"));
+        c = em.persist(chord(1L, "C", guitar));
+        g = em.persist(chord(2L, "G", guitar));
 
         SongLesson easy = songLesson(100L, song, guitar);
         easy.setChords(new LinkedHashSet<>(List.of(g, c)));

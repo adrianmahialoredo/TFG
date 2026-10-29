@@ -7,7 +7,7 @@
     "imageUrl": "https://res.cloudinary.com/dvm8qkmuo/image/upload/v1750595587/poppunk_kc5pyt.jpg",
     "welcomeIntroVideoId": "NstT7n8KzZQ",
     "welcomeSongVideoId": "hTWKbfoikeg",
-    "description": "El pop punk es un género musical que combina la velocidad y la energía del punk con melodías pegajosas y estructuras accesibles del pop..."
+    "description": "El pop punk combina la velocidad y la energía visceral del punk rock con melodías pegadizas y estribillos directos. Destacan ritmos acelerados de batería, líneas de bajo melódicas y muros de guitarras distorsionadas tocadas con power chords."
   },
   {
     "id": 2,
@@ -17,7 +17,7 @@
     "imageUrl": "https://res.cloudinary.com/dvm8qkmuo/image/upload/v1750595587/rock2_oualas.jpg",
     "welcomeIntroVideoId": "zDdiF1fl5Vg",
     "welcomeSongVideoId": "gj0Rz-uP4Mk",
-    "description": "El Rock and Roll es uno de los géneros más influyentes y revolucionarios en la historia de la música moderna..."
+    "description": "El Rock and Roll es el pilar de la música moderna de raíz blues y country. Se apoya en patrones rítmicos de backbeat, progresiones de 12 compases, riffs cortantes y solos basados en la escala pentatónica con fuerte uso de bendings y vibrato."
   },
   {
     "id": 3,
@@ -27,7 +27,7 @@
     "imageUrl": "https://res.cloudinary.com/dvm8qkmuo/image/upload/v1750595587/poprock_jnkyot.jpg",
     "welcomeIntroVideoId": "kEl3WnM4F9I",
     "welcomeSongVideoId": "fJ9rUzIMcZQ",
-    "description": "El pop rock es un género híbrido que combina la accesibilidad melódica del pop con la energía e instrumentos del rock..."
+    "description": "El pop rock combina la riqueza melódica y vocal del pop tradicional con la instrumentación orgánica y dinámica del rock. Es el género perfecto para dominar rasgueos con púa, cejillas básicas, arpegios abiertos y arreglos de piano o ukelele."
   },
   {
     "id": 4,
@@ -37,7 +37,7 @@
     "imageUrl": "https://res.cloudinary.com/dvm8qkmuo/image/upload/v1750595587/funk_pljjno.jpg",
     "welcomeIntroVideoId": "w2WBJbFg04s",
     "welcomeSongVideoId": "3XsuI3FZx9E",
-    "description": "El funk es un estilo musical vibrante, rítmico y lleno de groove..."
+    "description": "El funk es ritmo puro y groove bailable. Prioriza la acentuación en el primer tiempo ('The One'), la subdivisión precisa de semicorcheas con rasgueos muteados (ghost notes) en guitarra, líneas de bajo sincopadas y tensiones armónicas de séptima y novena."
   },
   {
     "id": 5,
@@ -47,7 +47,7 @@
     "imageUrl": "https://res.cloudinary.com/dvm8qkmuo/image/upload/v1750595587/country_rqgxp3.jpg",
     "welcomeIntroVideoId": "XIR16j4GxxU",
     "welcomeSongVideoId": "4zLfCnGVeL4",
-    "description": "El country es un género musical originario del sur de Estados Unidos..."
+    "description": "El country cuenta historias cotidianas con un timbre inconfundible. En lo instrumental destaca el picking alternado en bajos (boom-chick), rasgueos brillantes en afinaciones abiertas y técnicas híbridas combinando púa con los dedos medio y anular."
   },
   {
     "id": 6,
@@ -57,6 +57,26 @@
     "imageUrl": "https://res.cloudinary.com/dvm8qkmuo/image/upload/v1750595587/nuevaola_uktho3.jpg",
     "welcomeIntroVideoId": "xWIwOufhT-4",
     "welcomeSongVideoId": "iipcx-L6yJQ",
-    "description": "La nueva ola del pop español representa una revolución fresca y emocional..."
+    "description": "La nueva ola del pop en español fusiona el pulso de la música urbana con guitarras pop-rock nostálgicas y letras generacionales sinceras. Se caracteriza por progresiones circulares sencillas, coros accesibles y producción contemporánea."
+  },
+  {
+    "id": 7,
+    "title": "Indie & Alternativo",
+    "level": 3,
+    "bannerUrl": "https://res.cloudinary.com/dvm8qkmuo/image/upload/v1750596625/poprock_gscnkm.png",
+    "imageUrl": "https://res.cloudinary.com/dvm8qkmuo/image/upload/v1750595587/rock2_oualas.jpg",
+    "welcomeIntroVideoId": "0qanF-91aJo",
+    "welcomeSongVideoId": "YlUKcNNmywk",
+    "description": "El rock alternativo e indie explora texturas melancólicas, disonancias sutiles, efectos de modulación (chorus, delay, reverb espacial) y estructuras no convencionales que dan total libertad de composición instrumental."
+  },
+  {
+    "id": 8,
+    "title": "Soul & R&B",
+    "level": 4,
+    "bannerUrl": "https://res.cloudinary.com/dvm8qkmuo/image/upload/v1750596624/funk_ratm8i.jpg",
+    "imageUrl": "https://res.cloudinary.com/dvm8qkmuo/image/upload/v1750595587/funk_pljjno.jpg",
+    "welcomeIntroVideoId": "w2WBJbFg04s",
+    "welcomeSongVideoId": "3XsuI3FZx9E",
+    "description": "La elegancia del soul reside en su profundidad armónica y expresividad rítmica. Utiliza progresiones con séptimas mayores, novenas y suspensiones, junto con líneas vocales y de bajo suaves pero sumamente melódicas."
   }
 ]

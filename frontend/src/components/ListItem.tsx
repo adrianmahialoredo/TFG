@@ -1,5 +1,6 @@
 import { TouchableOpacity, View, Text, Image } from "react-native";
 import { X } from "lucide-react-native";
+import AddButton from "./iconbuttons/AddButton";
 import { COLORS } from "../constants/Theme";
 
 type ItemProps = {
@@ -13,28 +14,53 @@ type ItemProps = {
   onPress: () => void;
   /** Si se pasa, muestra un botón para quitar el item (p.ej. de una lista de estudio). */
   onRemove?: () => void;
+  /** Si se pasa, muestra un botón + para añadir el item a una lista (p.ej. en los resultados de búsqueda). */
+  onAdd?: () => void;
   inverted?: boolean;
 };
 
-export default function ListItem({ item, onPress, onRemove, inverted = false }: ItemProps ) {
-  const containerClassName = inverted
-    ? 'flex-row bg-primary border border-secondary rounded-2xl shadow-md'
-    : 'flex-row bg-secondary rounded-2xl shadow-md';
-  const textClassName = inverted
-    ? 'text-lg font-semibold text-secondary justify-center text-center'
-    : 'text-lg font-semibold text-primary justify-center text-center';
+/**
+ * Fila de un item de una lista (ListScreen). Estilos en línea y sin className, como AddListItem:
+ * `inverted` cambia cuando se quita un item de encima y NativeWind a veces no aplicaba el cambio
+ * de clases (fila sin fondo o con colores mezclados).
+ */
+export default function ListItem({ item, onPress, onRemove, onAdd, inverted = false }: ItemProps ) {
+  const textColor = inverted ? COLORS.secondary : COLORS.primary;
 
   return (
-    <View className={containerClassName}>
-      <TouchableOpacity onPress={onPress} className="flex-row flex-1">
+    <View
+      style={{
+        flexDirection: 'row',
+        borderRadius: 16,
+        overflow: 'hidden',
+        backgroundColor: inverted ? COLORS.primary : COLORS.secondary,
+        borderWidth: 1,
+        borderColor: COLORS.secondary,
+      }}
+    >
+      <TouchableOpacity onPress={onPress} style={{ flexDirection: 'row', flex: 1 }}>
         <Image
-          source={{ uri: item.imageUrl }} // Placeholder image
-          className="h-24 w-24 rounded-l-xl"
+          source={{ uri: item.imageUrl }}
+          style={{ width: 96, height: 96 }}
         />
-        <View className="self-center items-center flex-1">
-          <Text className={textClassName}>{item.info}</Text>
+        <View style={{ flex: 1, alignSelf: 'center', alignItems: 'center' }}>
+          <Text style={{ fontSize: 18, lineHeight: 28, fontWeight: '600', color: textColor, textAlign: 'center' }}>
+            {item.info}
+          </Text>
         </View>
       </TouchableOpacity>
+      {onAdd && (
+        <TouchableOpacity
+          onPress={onAdd}
+          activeOpacity={0.6}
+          accessibilityRole="button"
+          accessibilityLabel={`Añadir ${item.title} a una lista`}
+          hitSlop={8}
+          style={{ justifyContent: 'center', paddingHorizontal: 14 }}
+        >
+          <AddButton size={30} color={textColor} />
+        </TouchableOpacity>
+      )}
       {onRemove && (
         // Estilos en línea: con className NativeWind pisa la opacidad animada del TouchableOpacity
         <TouchableOpacity
@@ -45,7 +71,7 @@ export default function ListItem({ item, onPress, onRemove, inverted = false }: 
           hitSlop={8}
           style={{ justifyContent: 'center', paddingHorizontal: 14 }}
         >
-          <X size={22} color={inverted ? COLORS.secondary : COLORS.primary} />
+          <X size={22} color={textColor} />
         </TouchableOpacity>
       )}
     </View>

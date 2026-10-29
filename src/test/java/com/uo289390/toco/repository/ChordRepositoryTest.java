@@ -14,10 +14,11 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Sort;
 
 import com.uo289390.toco.model.Chord;
+import com.uo289390.toco.model.Instrument;
 
 /**
  * Integration tests for ChordRepository: CRUD, the notes element collection, the chord flags
- * and the unique name constraint.
+ * and the unique (name, instrument) constraint.
  */
 @DataJpaTest
 class ChordRepositoryTest {
@@ -28,11 +29,16 @@ class ChordRepositoryTest {
     @Autowired
     private ChordRepository chordRepository;
 
+    private Instrument guitar;
+    private Instrument piano;
+
     @BeforeEach
     void setUp() {
-        em.persist(chord(1L, "C"));
-        em.persist(chord(2L, "G"));
-        em.persist(chord(3L, "Am"));
+        guitar = em.persist(instrument(1L, "Guitar"));
+        piano = em.persist(instrument(2L, "Piano"));
+        em.persist(chord(1L, "C", guitar));
+        em.persist(chord(2L, "G", guitar));
+        em.persist(chord(3L, "Am", guitar));
         em.flush();
         em.clear();
     }
@@ -44,6 +50,7 @@ class ChordRepositoryTest {
         assertEquals("C", loaded.getName());
         assertEquals(List.of("C", "E", "G"), loaded.getNotes());
         assertEquals("https://example.com/C.png", loaded.getImageUrl());
+        assertEquals(1L, loaded.getInstrument().getId());
     }
 
     @Test
@@ -67,7 +74,7 @@ class ChordRepositoryTest {
 
     @Test
     void save_persistsFlagsAndCapoFret() {
-        Chord chord = chord(4L, "F");
+        Chord chord = chord(4L, "F", guitar);
         chord.setBarre(true);
         chord.setMajor(true);
         chord.setSeventh(true);
@@ -89,7 +96,7 @@ class ChordRepositoryTest {
 
     @Test
     void save_keepsNotesOrder() {
-        Chord chord = chord(5L, "Dmaj7");
+        Chord chord = chord(5L, "Dmaj7", guitar);
         chord.setNotes(List.of("D", "F#", "A", "C#"));
         chordRepository.saveAndFlush(chord);
         em.clear();
@@ -108,8 +115,23 @@ class ChordRepositoryTest {
     }
 
     @Test
-    void duplicateName_violatesUniqueConstraint() {
-        assertThrows(DataIntegrityViolationException.class, () -> chordRepository.saveAndFlush(chord(6L, "C")));
+    void duplicateNameForSameInstrument_violatesUniqueConstraint() {
+        assertThrows(DataIntegrityViolationException.class,
+                () -> chordRepository.saveAndFlush(chord(6L, "C", guitar)));
+    }
+
+    @Test
+    void sameNameForAnotherInstrument_isAllowed() {
+        chordRepository.saveAndFlush(chord(6L, "C", piano));
+        em.clear();
+
+        assertEquals(2L, chordRepository.findById(6L).orElseThrow().getInstrument().getId());
+        assertEquals(4, chordRepository.count());
+    }
+
+    @Test
+    void chordWithoutInstrument_isRejected() {
+        assertThrows(Exception.class, () -> chordRepository.saveAndFlush(chord(7L, "D", null)));
     }
 
     @Test

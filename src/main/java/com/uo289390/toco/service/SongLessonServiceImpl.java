@@ -40,11 +40,13 @@ public class SongLessonServiceImpl implements SongLessonService {
     @Override
     @Transactional
     public SongLessonDTO create(SongLessonDTO dto) {
+        Song song = resolveSong(dto.getSongId());
+        Instrument instrument = resolveInstrument(dto.getInstrumentId());
         SongLesson lesson = entityMapper.songLessonDtoToSongLesson(
                 dto,
-                resolveSong(dto.getSongId()),
-                resolveInstrument(dto.getInstrumentId()),
-                resolveChords(dto.getChordIds())
+                song,
+                instrument,
+                resolveChords(dto.getChordIds(), instrument)
         );
         return dtoMapper.songLessonToSongLessonDto(songLessonRepository.save(lesson));
     }
@@ -115,7 +117,7 @@ public class SongLessonServiceImpl implements SongLessonService {
             existing.setInstrument(resolveInstrument(dto.getInstrumentId()));
         }
 
-        existing.setChords(resolveChords(dto.getChordIds()));
+        existing.setChords(resolveChords(dto.getChordIds(), existing.getInstrument()));
     }
 
 }

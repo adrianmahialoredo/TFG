@@ -77,8 +77,19 @@ export const useTuner = (notes: string[]) => {
     setLockedString(null);
   }, [notesKey]);
 
+  // Hasta cuándo se descartan bloques (ver handleBlock)
+  const skipUntilRef = useRef(0);
+
   const handleBlock = useCallback(({ samples, sampleRate }: AudioBlock) => {
+    // El análisis corre en el hilo de JS, el mismo que atiende los toques y el scroll. Si un
+    // bloque tarda X ms en analizarse, se descartan los que lleguen en los X ms siguientes: el
+    // análisis nunca ocupa más de la mitad del hilo y, en un móvil lento, la app sigue respondiendo
+    // (la aguja se actualiza menos veces por segundo en vez de bloquearlo todo).
+    const startedAt = Date.now();
+    if (startedAt < skipUntilRef.current) return;
     const pitch = detectPitch(samples, sampleRate);
+    const finishedAt = Date.now();
+    skipUntilRef.current = finishedAt + (finishedAt - startedAt);
     if (pitch === null) {
       // Silencio: se mantiene la última lectura, pero la siguiente nota empieza de cero
       recentPitchesRef.current = [];

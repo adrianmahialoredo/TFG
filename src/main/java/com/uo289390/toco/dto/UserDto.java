@@ -81,20 +81,20 @@ public class UserDto {
     
     /**
      * List of IDs of the user's favourite genres.
-     * At least {@link Preferences#MIN_NUMBER_OF_FAVOURITE_GENRES} are always required.
+     * At least {@link Preferences#MIN_N_FAVOURITE_GENRES} are always required.
      */
     @NotNull(message = "Favourite genres are required")
-    @Size(min = Preferences.MIN_NUMBER_OF_FAVOURITE_GENRES,
-          message = "At least " + Preferences.MIN_NUMBER_OF_FAVOURITE_GENRES + " favourite genres are required")
+    @Size(min = Preferences.MIN_N_FAVOURITE_GENRES,
+          message = "At least " + Preferences.MIN_N_FAVOURITE_GENRES + " favourite genres are required")
     private List<Long> favouriteGenresIds;
 
     /**
      * List of IDs of the user's favourite instruments.
-     * At least {@link Preferences#MIN_NUMBER_OF_FAVOURITE_INSTRUMENTS} are always required.
+     * At least {@link Preferences#MIN_N_FAVOURITE_INSTRUMENTS} are always required.
      */
     @NotNull(message = "Favourite instruments are required")
-    @Size(min = Preferences.MIN_NUMBER_OF_FAVOURITE_INSTRUMENTS,
-          message = "At least " + Preferences.MIN_NUMBER_OF_FAVOURITE_INSTRUMENTS + " favourite instruments are required")
+    @Size(min = Preferences.MIN_N_FAVOURITE_INSTRUMENTS,
+          message = "At least " + Preferences.MIN_N_FAVOURITE_INSTRUMENTS + " favourite instruments are required")
     private List<Long> favouriteInstrumentsIds;
 
     /**

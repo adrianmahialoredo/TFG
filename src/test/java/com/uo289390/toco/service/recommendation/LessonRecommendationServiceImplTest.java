@@ -228,12 +228,12 @@ class LessonRecommendationServiceImplTest {
             when(dtoMapper.lessonToLessonDto(found.get(1))).thenReturn(dto2);
 
             // Act
-            List<LessonDTO> result = service.findForGenre(5L, RecommendationConstants.BY_GENRE_RECOMMENDED_LESSONS_COUNT);
+            List<LessonDTO> result = service.findForGenre(5L, RecommendationConstants.N_BY_GENRE_RECOMMENDED_LESSONS);
 
             // Assert
             assertEquals(List.of(dto1, dto2), result);
             verify(lessonRepository).findByGenreIdAndGenrePopularTrueAndBelongsToInstrumentGenreFalse(eq(5L), pageableCaptor.capture());
-            assertEquals(RecommendationConstants.BY_GENRE_RECOMMENDED_LESSONS_COUNT, pageableCaptor.getValue().getPageSize());
+            assertEquals(RecommendationConstants.N_BY_GENRE_RECOMMENDED_LESSONS, pageableCaptor.getValue().getPageSize());
         }
 
         @Test
@@ -284,9 +284,9 @@ class LessonRecommendationServiceImplTest {
             // Arrange
             when(user.getIdsFromItemListsOfType(Lesson.class)).thenReturn(ids(90L));
             when(user.getPreferences()).thenReturn(preferences(List.of(genre(1), genre(2)), List.of(instrument(11), instrument(12))));
-            when(user.getTopGenresFromItemLists(RecommendationConstants.NUMBER_OF_ITEM_LISTS_GENRES_USED_IN_BY_USER_LESSON_RECOMMENDATION))
+            when(user.getTopGenresFromItemLists(RecommendationConstants.N_ITEM_LISTS_GENRES_USED_IN_BY_USER_LESSON_RECOMMENDATION))
                     .thenReturn(List.of(genre(5), genre(1)));
-            when(user.getTopInstrumentsFromItemLists(RecommendationConstants.NUMBER_OF_ITEM_LISTS_INSTRUMENTS_USED_IN_BY_USER_LESSON_RECOMMENDATION))
+            when(user.getTopInstrumentsFromItemLists(RecommendationConstants.N_ITEM_LISTS_INSTRUMENTS_USED_IN_BY_USER_LESSON_RECOMMENDATION))
                     .thenReturn(List.of(instrument(15)));
             when(lessonRepository.findByGenreIdInAndBelongsToGenreTrueAndLevelLessThanEqualAndIdNotIn(any(), anyInt(), any(), any())).thenReturn(lessons(1, 2));
             when(lessonRepository.findByInstrumentIdInAndBelongsToInstrumentTrueAndLevelLessThanEqualAndIdNotIn(any(), anyInt(), any(), any())).thenReturn(lessons(3));

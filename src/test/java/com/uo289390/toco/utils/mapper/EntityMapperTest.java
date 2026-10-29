@@ -68,9 +68,11 @@ class EntityMapperTest {
         dto.setSeventh(true);
         dto.setCapo(true);
         dto.setCapoFret(5);
+        dto.setInstrumentId(2L);
+        Instrument ukulele = instrument(2);
 
         // Act
-        Chord chord = mapper.chordDtoToChord(dto);
+        Chord chord = mapper.chordDtoToChord(dto, ukulele);
 
         // Assert
         assertEquals(1L, chord.getId());
@@ -85,6 +87,7 @@ class EntityMapperTest {
         assertTrue(chord.isSeventh());
         assertTrue(chord.isCapo());
         assertEquals(5, chord.getCapoFret());
+        assertSame(ukulele, chord.getInstrument());
     }
 
     @Test
@@ -94,7 +97,7 @@ class EntityMapperTest {
         dto.setName("D");
 
         // Act
-        Chord chord = mapper.chordDtoToChord(dto);
+        Chord chord = mapper.chordDtoToChord(dto, null);
 
         // Assert
         assertNull(chord.getId());
@@ -274,6 +277,10 @@ class EntityMapperTest {
         dto.setId(7L);
         dto.setTitle("Imagine");
         dto.setArtist("John Lennon");
+        dto.setDecade("1970s");
+        dto.setPopular(true);
+        dto.setGenreClassic(true);
+        dto.setArtistPopular(true);
         Set<Genre> genres = Set.of(genre(1));
         Set<Instrument> instruments = Set.of(instrument(2));
         SongLesson songLesson = new SongLesson();
@@ -290,6 +297,12 @@ class EntityMapperTest {
         assertSame(genres, song.getGenres());
         assertSame(instruments, song.getInstruments());
         assertSame(lessons, song.getLessons());
+        assertEquals("1970s", song.getDecade());
+        assertTrue(song.isPopular());
+        assertTrue(song.isGenreClassic());
+        assertTrue(song.isArtistPopular());
+        assertFalse(song.isGenreNew());
+        assertFalse(song.isArtistNew());
     }
 
     // -------- SongLesson --------

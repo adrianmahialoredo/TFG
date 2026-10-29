@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { CLOUDINARY_CONFIG } from '../config/cloudinaryConfig';
+import { parseBmp, Rgb, toColorSampleUrl } from '../utils/imageColor.utils';
 
 type CloudinaryUploadResponse = {
   secure_url?: string;
@@ -72,3 +73,17 @@ export const uploadProfileImageToCloudinary = async (imageUri: string): Promise<
   return data.secure_url;
 };
 
+
+/**
+ * Píxeles de la miniatura 8x8 de una imagen de Cloudinary (ver `utils/imageColor.utils`).
+ * Devuelve [] si la imagen no es de Cloudinary. Con `fetch` y no con axios: hace falta el
+ * ArrayBuffer de la respuesta y, como en la subida, no debe llevar el token del backend.
+ */
+export const getColorSample = async (imageUrl: string): Promise<Rgb[]> => {
+  const sampleUrl = toColorSampleUrl(imageUrl);
+  if (!sampleUrl) return [];
+
+  const response = await fetch(sampleUrl);
+  if (!response.ok) throw new Error(`Cloudinary respondió ${response.status} al pedir la miniatura.`);
+  return parseBmp(await response.arrayBuffer());
+};

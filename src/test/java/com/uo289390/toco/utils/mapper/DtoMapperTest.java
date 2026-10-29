@@ -97,7 +97,7 @@ class DtoMapperTest {
     void testChordToChordDto_MapsAllFields() {
         // Arrange
         Chord chord = new Chord(1L, "Am", List.of("A", "C", "E"), "https://example.com/am.png",
-                true, false, false, true, false, false, true, 2);
+                true, false, false, true, false, false, true, 2, instrument(5));
 
         // Act
         ChordDto dto = mapper.chordToChordDto(chord);
@@ -115,13 +115,14 @@ class DtoMapperTest {
         assertFalse(dto.isSeventh());
         assertTrue(dto.isCapo());
         assertEquals(2, dto.getCapoFret());
+        assertEquals(5L, dto.getInstrumentId());
     }
 
     @Test
     void testChordToChordDto_AllFlagsInverted() {
         // Arrange
         Chord chord = new Chord(2L, "G7", List.of(), "https://example.com/g7.png",
-                false, true, true, false, true, true, false, 0);
+                false, true, true, false, true, true, false, 0, null);
 
         // Act
         ChordDto dto = mapper.chordToChordDto(chord);
@@ -135,6 +136,7 @@ class DtoMapperTest {
         assertTrue(dto.isSeventh());
         assertFalse(dto.isCapo());
         assertEquals(0, dto.getCapoFret());
+        assertNull(dto.getInstrumentId());
     }
 
     // -------- Genre --------
@@ -504,6 +506,9 @@ class DtoMapperTest {
         SongLesson songLesson = new SongLesson();
         songLesson.setId(5L);
         song.setLessons(new LinkedHashSet<>(List.of(songLesson)));
+        song.setPopular(true);
+        song.setGenreClassic(true);
+        song.setArtistNew(true);
 
         // Act
         SongDTO dto = mapper.songToSongDto(song);
@@ -518,6 +523,14 @@ class DtoMapperTest {
         assertEquals(List.of(3L, 4L), dto.getInstrumentIds());
         assertEquals(List.of(5L), dto.getLessonIds());
         assertEquals(Item.Type.Song, dto.getType());
+        assertTrue(dto.isPopular());
+        assertTrue(dto.isGenreClassic());
+        assertTrue(dto.isArtistNew());
+        assertFalse(dto.isNewSong());
+        assertFalse(dto.isGenrePopular());
+        assertFalse(dto.isGenreNew());
+        assertFalse(dto.isArtistClassic());
+        assertFalse(dto.isArtistPopular());
     }
 
     @Test

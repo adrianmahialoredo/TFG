@@ -10,7 +10,7 @@ This script orchestrates the insertion of all entities in the correct order:
 6. Songs (their song lessons and tab sections are created in cascade)
 7. Tunes (tunings of the instruments, used by the tuner)
 
-Run this script after ensuring the backend API is running on http://localhost:8080
+Run this script after ensuring the backend API is running (on API_BASE_URL from .env, default http://localhost:8080)
 """
 
 import os

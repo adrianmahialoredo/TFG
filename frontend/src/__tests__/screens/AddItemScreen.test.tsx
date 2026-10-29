@@ -14,12 +14,13 @@ jest.mock('@react-navigation/native', () => ({
 // El mock oficial de reanimated falla al cargar react-native-worklets en Jest: stub mínimo
 jest.mock('react-native-reanimated', () => {
   const { View } = require('react-native');
-  const chain: any = { duration: () => chain };
+  const chain: any = { duration: () => chain, delay: () => chain };
   return {
     __esModule: true,
     default: { View },
+    FadeIn: chain,
     FadeOut: chain,
-    LinearTransition: {},
+    LinearTransition: chain,
   };
 });
 

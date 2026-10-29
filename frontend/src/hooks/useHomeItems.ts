@@ -1,5 +1,5 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
-import { useAuthStore, useItemEntitiesStore, useItemListEntitiesStore, useRecentItemsStore, useUserEntitiesStore } from '../stores/entities';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { useAuthStore, useItemEntitiesStore, useRecentItemsStore, useUserEntitiesStore } from '../stores/entities';
 import * as itemFeedRepository from '../repositories/itemFeed.repository';
 import * as instrumentGenreRepository from '../repositories/instrumentGenre.repository';
 import * as genreRepository from '../repositories/genre.repository';
@@ -7,10 +7,11 @@ import * as songRepository from '../repositories/song.repository';
 import { itemsToCarouselItems } from '../utils/mappers.utils';
 import { ItemSummaryDTO, ItemType } from '../types';
 import { OnFresh } from '../utils/entityCache.utils';
+import { useItemListsKey, useUserTasteKey } from './useUserTasteKey';
 
 /**
  * IDs de una tarjeta de sugerencia del Home (Cache-First + refresco vía `onFresh`).
- * Se vuelven a pedir cuando cambia `refreshKey`.
+ * Se vuelven a pedir cuando cambia `refreshKey`, sin vaciar la tarjeta mientras llegan.
  */
 const useSuggestionIds = (
   userId: string | null,
@@ -20,8 +21,12 @@ const useSuggestionIds = (
 ): string[] => {
   const [suggestionIds, setSuggestionIds] = useState<string[]>([]);
 
+  // Solo se vacía al cambiar de usuario: al refrescar se mantiene la tarjeta hasta que llega la nueva
   useEffect(() => {
     setSuggestionIds([]);
+  }, [userId]);
+
+  useEffect(() => {
     if (!userId) return;
 
     let cancelled = false;
@@ -64,6 +69,8 @@ const pickSuggestion = (
  *  - "Recientes": items que ha abierto el usuario actual, del más reciente al más antiguo.
  *    Salen de la RecentItemsStore (solo del front) y se pintan con el catálogo de items.
  *  - "Recomendaciones": items recomendados al usuario (`/recommendations/items/by-user`).
+ *  - "Desde tu Spotify": items recomendados a partir de sus canciones y artistas top en Spotify
+ *    (`/spotify/recommendations/items`); solo con la cuenta de Spotify vinculada.
  *  - "Prueba esta combinación": un género-instrumento que combina un género y un instrumento
  *    favoritos del usuario y no está en sus listas; el primero que no salga ya en los carruseles.
  *  - "Explora este género": uno de los géneros más usados en las listas del usuario (o, si no hay,
@@ -71,6 +78,9 @@ const pickSuggestion = (
  *  - Artistas favoritos (los más repetidos en las canciones de sus listas): una tarjeta y un carrusel
  *    con sus canciones nuevas, y otra tarjeta y otro carrusel con las populares. La tarjeta destaca la
  *    primera canción que no salga ya en Recientes o Recomendaciones, y su carrusel muestra el resto.
+ *
+ * Todo lo personalizado se vuelve a pedir cuando cambian las listas, los favoritos o el nivel
+ * del usuario (`useUserTasteKey`), aunque el cambio se haga en otra pantalla.
  *
  * También expone `getItemById` para que la UI pueda resolver el item completo
  * (con su `type`) y decidir la navegación al pulsarlo.
@@ -80,6 +90,10 @@ export const useHomeItems = () => {
   const allItems = useItemEntitiesStore((state) => state.items);
   const currentUserId = useAuthStore((state) => state.currentUserId);
   const recentIds = useRecentItemsStore((state) => (currentUserId ? state.byUser[currentUserId] : undefined));
+  // undefined mientras no se sabe (usuario aún sin cargar o caché antigua sin el campo)
+  const spotifyConnected = useUserEntitiesStore((state) =>
+    currentUserId ? state.users[currentUserId]?.spotifyConnected : undefined
+  );
 
   // Estados locales para los IDs (la "lista de llaves")
   const [ids, setIds] = useState({
@@ -88,6 +102,12 @@ export const useHomeItems = () => {
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Cambia al modificar las listas, los favoritos o el nivel: las recomendaciones dependen de ello
+  const tasteKey = useUserTasteKey();
+  const itemListsKey = useItemListsKey();
+  // El spinner solo se ve al entrar con otro usuario; al refrescar se mantiene lo que ya se ve
+  const loadedUserRef = useRef<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -101,7 +121,8 @@ export const useHomeItems = () => {
     };
 
     const fetchIds = async () => {
-      setLoading(true);
+      if (loadedUserRef.current !== currentUserId) setLoading(true);
+      loadedUserRef.current = currentUserId;
       try {
         // Los resúmenes ya están en la Store (catálogo); aquí solo guardamos los IDs
         await Promise.all([
@@ -124,7 +145,7 @@ export const useHomeItems = () => {
     return () => {
       cancelled = true;
     };
-  }, [currentUserId]);
+  }, [currentUserId, tasteKey]);
 
   // HIDRATACIÓN REACTIVA CON MAPEO:
   // Si un item cambia en la Store, estos useMemo se disparan automáticamente.
@@ -140,27 +161,46 @@ export const useHomeItems = () => {
     return itemsToCarouselItems(items);
   }, [ids.recommendations, allItems]);
 
-  // --- Tarjetas de sugerencia ---
-  // Se vuelven a pedir si cambian los favoritos o el contenido de las listas del usuario
-  // (las sugerencias excluyen lo que ya está en las listas)
-  const favouritesKey = useUserEntitiesStore((state) => {
-    const user = currentUserId ? state.users[currentUserId] : undefined;
-    return [user?.favouriteGenresIds ?? [], user?.favouriteInstrumentsIds ?? []].map((ids) => ids.join(',')).join('|');
-  });
-  const itemListsKey = useItemListEntitiesStore((state) =>
-    Object.values(state.itemLists)
-      .filter((list) => currentUserId && list.userId?.toString() === currentUserId.toString())
-      .map((list) => `${list.id}:${(list.itemIds ?? []).join(',')}`)
-      .sort()
-      .join('|')
-  );
+  // --- Desde tu Spotify ---
+  // Va aparte: solo se pide con la cuenta vinculada y se vuelve a pedir en cuanto el usuario la
+  // vincula (cambia `spotifyConnected`) o cambian sus listas (se excluye lo que ya está en ellas).
+  // Si falla (p. ej. token revocado) solo se queda vacío este carrusel, no el Home entero.
+  const [spotifyIds, setSpotifyIds] = useState<string[]>([]);
 
+  useEffect(() => {
+    setSpotifyIds([]);
+  }, [currentUserId, spotifyConnected]);
+
+  useEffect(() => {
+    if (!currentUserId || !spotifyConnected) return;
+
+    let cancelled = false;
+    const apply = (sectionIds: string[]) => {
+      if (!cancelled) setSpotifyIds(sectionIds);
+    };
+    itemFeedRepository.getFromSpotifyForUser(currentUserId, apply)
+      .then(apply)
+      .catch((err) => console.error('[useHomeItems] Error en Spotify:', err));
+
+    return () => {
+      cancelled = true;
+    };
+  }, [currentUserId, spotifyConnected, tasteKey]);
+
+  const spotifyItems = useMemo(() => {
+    const items = spotifyIds.map((id) => allItems[id]).filter(Boolean) as ItemSummaryDTO[];
+    return itemsToCarouselItems(items);
+  }, [spotifyIds, allItems]);
+
+  // --- Tarjetas de sugerencia ---
+  // Se vuelven a pedir si cambian los favoritos, el nivel o el contenido de las listas del usuario
+  // (las sugerencias excluyen lo que ya está en las listas)
   const combinationIds = useSuggestionIds(
     currentUserId, instrumentGenreRepository.getFavouriteCombinations,
-    `${favouritesKey}#${itemListsKey}`, 'la combinación de favoritos');
+    tasteKey, 'la combinación de favoritos');
   const mostUsedGenreIds = useSuggestionIds(
     currentUserId, genreRepository.getMostUsedInItemLists,
-    itemListsKey, 'el género más usado en las listas');
+    tasteKey, 'el género más usado en las listas');
 
   // --- Artistas favoritos ---
   // Se vuelven a pedir si cambia el contenido de las listas (de ahí salen los artistas)
@@ -171,6 +211,9 @@ export const useHomeItems = () => {
 
   useEffect(() => {
     setFavouriteArtistSongIds({ newSongs: [], popularSongs: [] });
+  }, [currentUserId]);
+
+  useEffect(() => {
     if (!currentUserId) return;
 
     let cancelled = false;
@@ -190,10 +233,10 @@ export const useHomeItems = () => {
     };
   }, [currentUserId, itemListsKey]);
 
-  // Mejor una sugerencia que no se vea ya en Recientes o Recomendaciones
+  // Mejor una sugerencia que no se vea ya en Recientes, Recomendaciones o Desde tu Spotify
   const shownIds = useMemo(
-    () => new Set([...(recentIds ?? []), ...ids.recommendations]),
-    [recentIds, ids.recommendations]
+    () => new Set([...(recentIds ?? []), ...ids.recommendations, ...spotifyIds]),
+    [recentIds, ids.recommendations, spotifyIds]
   );
 
   const newFavouriteArtistSong = useMemo(
@@ -247,6 +290,8 @@ export const useHomeItems = () => {
   return {
     recentItems,
     recommendations,
+    spotifyItems,
+    spotifyConnected,
     favouriteCombination,
     mostUsedGenre,
     newFavouriteArtistSong,

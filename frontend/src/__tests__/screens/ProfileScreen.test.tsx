@@ -70,14 +70,29 @@ jest.mock('../../components/ProfileInput', () => {
 });
 jest.mock('../../components/carousels/ListCarousel', () => {
   const { View, Text } = require('react-native');
-  return ({ data, onItemPress, onEmptyPress }: any) => (
+  return ({ data, onItemPress, onEmptyPress, onSeeAllPress }: any) => (
     <View>
       {data.map((d: any) => (
         <Text key={d.id} onPress={() => onItemPress(d.id)}>{`Lista ${d.title} img=${d.imgUrl}`}</Text>
       ))}
       <Text onPress={onEmptyPress}>Crear lista</Text>
+      <Text onPress={onSeeAllPress}>Ver todas</Text>
     </View>
   );
+});
+jest.mock('../../components/ItemListPickerModal', () => {
+  const { View, Text } = require('react-native');
+  return ({ visible, lists, onSelect, onClose, footer }: any) =>
+    visible ? (
+      <View>
+        <Text>Mis listas</Text>
+        {lists.map((l: any) => (
+          <Text key={l.id} onPress={() => onSelect(l.id)}>{`Modal ${l.name}`}</Text>
+        ))}
+        <Text onPress={onClose}>Cerrar mis listas</Text>
+        {footer}
+      </View>
+    ) : null;
 });
 jest.mock('../../components/GenreViewer', () => {
   const { Text } = require('react-native');
@@ -188,6 +203,25 @@ describe('ProfileScreen', () => {
     await render(<ProfileScreen />);
     await fireEvent.press(screen.getByText('Lista Favoritas img='));
     expect(mockNavigation.navigate).toHaveBeenCalledWith('ListScreen', { itemListId: 'l1' });
+  });
+
+  describe('todas las listas (lupa)', () => {
+    it('abre el modal y navega a la lista elegida cerrándolo', async () => {
+      await render(<ProfileScreen />);
+      expect(screen.queryByText('Mis listas')).toBeNull();
+      await fireEvent.press(screen.getByText('Ver todas'));
+      await fireEvent.press(screen.getByText('Modal Favoritas'));
+      expect(mockNavigation.navigate).toHaveBeenCalledWith('ListScreen', { itemListId: 'l1' });
+      expect(screen.queryByText('Mis listas')).toBeNull();
+    });
+
+    it('el botón de añadir del modal abre el de crear lista', async () => {
+      await render(<ProfileScreen />);
+      await fireEvent.press(screen.getByText('Ver todas'));
+      await fireEvent.press(screen.getByText('Añadir lista'));
+      expect(screen.queryByText('Mis listas')).toBeNull();
+      expect(screen.getByText('Nueva lista')).toBeTruthy();
+    });
   });
 
   describe('crear lista', () => {

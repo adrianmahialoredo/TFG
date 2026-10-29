@@ -197,8 +197,8 @@ class EntityEqualityTest {
         assertEquals(0, preferences.getDifficultyLevel());
         assertTrue(preferences.getFavoriteGenres().isEmpty());
         assertTrue(preferences.getFavoriteInstruments().isEmpty());
-        assertEquals(2, Preferences.MIN_NUMBER_OF_FAVOURITE_GENRES);
-        assertEquals(2, Preferences.MIN_NUMBER_OF_FAVOURITE_INSTRUMENTS);
+        assertEquals(2, Preferences.MIN_N_FAVOURITE_GENRES);
+        assertEquals(2, Preferences.MIN_N_FAVOURITE_INSTRUMENTS);
     }
 
     @Test

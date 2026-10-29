@@ -1,3 +1,4 @@
+import {memo} from "react";
 import {Text, TouchableOpacity, View} from "react-native";
 import {COLORS} from "../../constants/Theme";
 
@@ -18,7 +19,7 @@ type TunerStringSelectorProps = {
  * TouchableOpacity con estilos en línea y sin className a propósito: con NativeWind,
  * TouchableOpacity + className se queda "pulsado" y Pressable con estilo en función pierde el estilo.
  */
-export default function TunerStringSelector({notes, activeIndex, lockedIndex, onSelect}: TunerStringSelectorProps) {
+function TunerStringSelector({notes, activeIndex, lockedIndex, onSelect}: TunerStringSelectorProps) {
     return (
         <View style={{flexDirection: 'row', justifyContent: 'center', gap: 6}}>
             {notes.map((note, index) => {
@@ -51,3 +52,6 @@ export default function TunerStringSelector({notes, activeIndex, lockedIndex, on
         </View>
     );
 }
+
+// memo: con cada lectura del micrófono solo se vuelve a pintar si cambia la cuerda resaltada
+export default memo(TunerStringSelector);

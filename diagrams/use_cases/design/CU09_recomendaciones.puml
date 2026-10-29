@@ -24,6 +24,8 @@ title DSD-CU-09 - Consultar recomendaciones adaptativas
 '   ItemRecommendationServiceImpl.findForUser, a través de useHomeItems).
 ' - Máximo 20 ítems por lista: 10 canciones + 1 género + 3 instrument-genres + 6 lecciones.
 '   La app solo muestra 5 a la vez (VISIBLE_RECOMMENDATIONS); el resto espera su turno.
+' - Las tarjetas y carruseles de artistas favoritos del Home están en DSD-CU-09b
+'   (CU09b_artistas_favoritos.puml).
 autonumber
 hide footbox
 skinparam sequenceMessageAlign center
@@ -66,7 +68,7 @@ note right of controller : JwtAuthenticationFilter + @PreAuthorize(\n"hasRole('A
 controller -> itemRec : findForItemList(id)
 note right of itemRec : @Transactional(readOnly = true)\nitems = new LinkedHashSet<Item>() (SequencedSet)
 
-itemRec -> songRec : findForItemList(id, RECOMMENDED_SONGS_COUNT = 10)
+itemRec -> songRec : findForItemList(id, N_RECOMMENDED_SONGS = 10)
 songRec -> songRec : EntityResolver.resolveItemList(id)\nexcluding = idsOf(itemList.getSongs())
 note right of songRec : Lista inexistente: EntityNotFoundException -> 404
 songRec -> itemList : getOnlyGenre().or(getMainGenreFromSongs)
@@ -88,19 +90,19 @@ loop Niveles, mientras falten canciones hasta el límite
 end
 songRec --> itemRec : SequencedSet<Song>
 
-itemRec -> genreRec : findForItemList(id, RECOMMENDED_GENRES_COUNT = 1)
+itemRec -> genreRec : findForItemList(id, N_RECOMMENDED_GENRES = 1)
 genreRec -> itemList : getMainGenreFrom{Songs,InstrumentGenres,Lessons}()\ngetTopGenresFrom{Songs,InstrumentGenres,Lessons}(2)
 itemList --> genreRec : candidatos
 note right of genreRec : Niveles: géneros principales -> top géneros ->\nfavoritos del usuario -> aleatorios (GenreRepository.findByIdNotIn).\nNunca uno que ya esté en la lista (itemList.containsItem)
 genreRec --> itemRec : SequencedSet<Genre>
 
-itemRec -> igRec : findForItemList(id, RECOMMENDED_INSTRUMENT_GENRES_COUNT = 3)
+itemRec -> igRec : findForItemList(id, N_RECOMMENDED_INSTRUMENT_GENRES = 3)
 igRec -> itemList : getOnlyGenre().or(getMainGenreFromItems)\ngetMainInstrumentFromItems()\ngetTopGenresFromItems(3), getTopInstrumentsFromItems(3)
 itemList --> igRec : géneros e instrumentos dominantes
 note right of igRec : Nivel 1: combinación principal; Nivel 2: combinaciones top x top.\nInstrumentGenreRepository.findByGenreIdAndInstrumentId(...)\n(sin los que ya están en la lista)
 igRec --> itemRec : SequencedSet<InstrumentGenre>
 
-itemRec -> lessonRec : findForItemList(id, RECOMMENDED_LESSONS_COUNT = 6)
+itemRec -> lessonRec : findForItemList(id, N_RECOMMENDED_LESSONS = 6)
 lessonRec -> itemList : getItemsOfType(Lesson.class)\ngetTopGenresFromItems(1)
 itemList --> lessonRec : lecciones de la lista, género top
 note right of lessonRec : Nivel 1: 2/3 del límite del género top; Nivel 2: géneros favoritos;\nNivel 3: aleatorias. LessonRepository...IdNotIn con exclusión acumulada
@@ -143,10 +145,10 @@ feedRepo -> service : getRecommendedByUser(userId)
 service -> controller : GET /api/recommendations/items/by-user/{id}
 note right of controller : @PreAuthorize("hasRole('ADMIN') or @ownership.isSelf(#id, authentication)")
 controller -> itemRec : findForUser(id)
-itemRec -> songRec : findForUser(id, HOME_RECOMMENDED_SONGS_COUNT = 6)
-itemRec -> genreRec : findForUser(id, HOME_RECOMMENDED_GENRES_COUNT = 1)
-itemRec -> igRec : findForUser(id, HOME_RECOMMENDED_INSTRUMENT_GENRES_COUNT = 2)
-itemRec -> lessonRec : findForUser(id, HOME_RECOMMENDED_LESSONS_COUNT = 3)
+itemRec -> songRec : findForUser(id, N_HOME_RECOMMENDED_SONGS = 6)
+itemRec -> genreRec : findForUser(id, N_HOME_RECOMMENDED_GENRES = 1)
+itemRec -> igRec : findForUser(id, N_HOME_RECOMMENDED_INSTRUMENT_GENRES = 2)
+itemRec -> lessonRec : findForUser(id, N_HOME_RECOMMENDED_LESSONS = 3)
 note right of itemRec : Por usuario: rankings de todas sus listas (User.getTop...FromItemLists),\nfavoritos y nivel de dificultad. Mismo LinkedHashSet + DtoMapper.itemsToItemDTOs\n(sin barajar: el Home mantiene el orden de prioridad)
 itemRec --> controller : List<ItemDTO>
 controller --> service : 200 OK\nList<ItemDTO>

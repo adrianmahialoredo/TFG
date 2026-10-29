@@ -8,18 +8,17 @@ import static org.springframework.test.web.client.match.MockRestRequestMatchers.
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.header;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.method;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
-import static org.springframework.test.web.client.response.MockRestResponseCreators.withServerError;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withStatus;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
-import com.uo289390.toco.service.SpotifyAuthService;
-import com.uo289390.toco.service.SpotifyRecommendationServiceImpl;
+import com.uo289390.toco.service.recommendation.SpotifyRecommendationServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -39,7 +38,11 @@ import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 
 import com.uo289390.toco.dto.SongDTO;
+import com.uo289390.toco.model.Genre;
+import com.uo289390.toco.model.Instrument;
+import com.uo289390.toco.model.InstrumentGenre;
 import com.uo289390.toco.model.Item;
+import com.uo289390.toco.model.Lesson;
 import com.uo289390.toco.model.Song;
 import com.uo289390.toco.model.User;
 import com.uo289390.toco.repository.ChordRepository;
@@ -86,6 +89,12 @@ class SpotifyRecommendationServiceImplTest {
     private SongRepository songRepository;
 
     @Mock
+    private LessonRepository lessonRepository;
+
+    @Mock
+    private InstrumentGenreRepository instrumentGenreRepository;
+
+    @Mock
     private DtoMapper dtoMapper;
 
     @Mock
@@ -101,7 +110,8 @@ class SpotifyRecommendationServiceImplTest {
     void setUp() {
         RestTemplate restTemplate = new RestTemplate();
         server = MockRestServiceServer.bindTo(restTemplate).build();
-        service = new SpotifyRecommendationServiceImpl(restTemplate, spotifyAuthService, songRepository, dtoMapper);
+        service = new SpotifyRecommendationServiceImpl(restTemplate, spotifyAuthService, songRepository,
+                lessonRepository, instrumentGenreRepository, dtoMapper);
 
         new EntityResolver(mock(ChordRepository.class), mock(GenreRepository.class), mock(InstrumentRepository.class),
                 mock(InstrumentGenreRepository.class), mock(ItemRepository.class), mock(ItemListRepository.class),
@@ -159,7 +169,7 @@ class SpotifyRecommendationServiceImplTest {
     }
 
     private void expectTopArtists(String responseJson) {
-        server.expect(requestTo(TOP_ARTISTS_URL + "?limit=" + RecommendationConstants.NUMBER_OF_TOP_ARTISTS_TO_FETCH_FROM_SPOTIFY + "&time_range=medium_term"))
+        server.expect(requestTo(TOP_ARTISTS_URL + "?limit=" + RecommendationConstants.N_TOP_ARTISTS_USED_IN_SPOTIFY_SONG_RECOMMENDATION + "&time_range=medium_term"))
                 .andExpect(method(HttpMethod.GET))
                 .andExpect(header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN))
                 .andRespond(withSuccess(responseJson, MediaType.APPLICATION_JSON));
@@ -447,7 +457,65 @@ class SpotifyRecommendationServiceImplTest {
     @Nested
     class FindItemsForUser {
 
-        private static final String TOP_TWO_ARTISTS_URL = "https://api.spotify.com/v1/me/top/artists?limit=2";
+        @SuppressWarnings("unchecked")
+        private final ArgumentCaptor<Collection<Item>> itemsCaptor = ArgumentCaptor.forClass(Collection.class);
+
+        // Item IDs are unique across all item types: songs 1-9, genres 30-39, lessons 100+, instrument-genres 200+
+
+        private static Genre genre(long id) {
+            Genre genre = new Genre();
+            genre.setId(id);
+            return genre;
+        }
+
+        private static Instrument instrument(long id) {
+            Instrument instrument = new Instrument();
+            instrument.setId(id);
+            return instrument;
+        }
+
+        private static Song songWith(long id, List<Genre> genres, List<Instrument> instruments) {
+            Song song = song(id);
+            song.setGenres(new HashSet<>(genres));
+            song.setInstruments(new HashSet<>(instruments));
+            return song;
+        }
+
+        private static Lesson lesson(long id) {
+            Lesson lesson = new Lesson();
+            lesson.setId(id);
+            return lesson;
+        }
+
+        private static InstrumentGenre instrumentGenre(long id) {
+            InstrumentGenre instrumentGenre = new InstrumentGenre();
+            instrumentGenre.setId(id);
+            return instrumentGenre;
+        }
+
+        /**
+         * Spotify returns the given songs as the top tracks (6 recommended songs: 12 requested, 6 + 3 + 3)
+         * and no top artists, so nothing is completed from them.
+         */
+        private void expectTopSongs(Song... songs) {
+            String[] tracks = Arrays.stream(songs).map(song -> track(song.getTitle(), song.getArtist())).toArray(String[]::new);
+            expectTopTracks(6, "medium_term", items(tracks));
+            expectTopTracks(3, "long_term", EMPTY_ITEMS);
+            expectTopTracks(3, "short_term", EMPTY_ITEMS);
+            expectTopArtists(EMPTY_ITEMS);
+            when(songRepository.findByTitleAndArtistIn(any())).thenReturn(List.of(songs));
+        }
+
+        private List<Item> mappedItems() {
+            verify(dtoMapper).itemsToItemDTOs(itemsCaptor.capture());
+            return List.copyOf(itemsCaptor.getValue());
+        }
+
+        @BeforeEach
+        void setUpItems() {
+            when(user.getIdsFromItemListsOfType(any())).thenReturn(new HashSet<>());
+            when(dtoMapper.itemsToItemDTOs(any())).thenReturn(List.of());
+        }
 
         @Test
         void testFindItemsForUser_NullUserId_ThrowsIllegalArgument() {
@@ -456,100 +524,108 @@ class SpotifyRecommendationServiceImplTest {
         }
 
         @Test
-        void testFindItemsForUser_NoTopArtists_ThrowsIllegalState() {
+        void testFindItemsForUser_NoSpotifySongsInDatabase_ReturnsEmptyWithoutQueryingOtherItems() {
             // Arrange
-            server.expect(requestTo(TOP_TWO_ARTISTS_URL))
-                    .andExpect(header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN))
-                    .andRespond(withSuccess(EMPTY_ITEMS, MediaType.APPLICATION_JSON));
-
-            // Act
-            IllegalStateException ex = assertThrows(IllegalStateException.class, () -> service.findItemsForUser(USER_ID));
-
-            // Assert
-            assertEquals("No se encontraron artistas del usuario", ex.getMessage());
-            server.verify();
-        }
-
-        @Test
-        void testFindItemsForUser_ResponseWithoutItems_ThrowsIllegalState() {
-            // Arrange
-            server.expect(requestTo(TOP_TWO_ARTISTS_URL)).andRespond(withSuccess("{}", MediaType.APPLICATION_JSON));
-
-            // Act & Assert
-            assertThrows(IllegalStateException.class, () -> service.findItemsForUser(USER_ID));
-        }
-
-        @Test
-        void testFindItemsForUser_SeedArtistWithoutId_ThrowsIllegalState() {
-            // Arrange
-            server.expect(requestTo(TOP_TWO_ARTISTS_URL))
-                    .andRespond(withSuccess(items("{\"name\":\"No id\",\"id\":\"\"}"), MediaType.APPLICATION_JSON));
-
-            // Act
-            IllegalStateException ex = assertThrows(IllegalStateException.class, () -> service.findItemsForUser(USER_ID));
-
-            // Assert
-            assertEquals("El ID del artista semilla no es válido", ex.getMessage());
-        }
-
-        @Test
-        void testFindItemsForUser_TopTracksServerError_ThrowsWrappedIllegalState() {
-            // Arrange
-            server.expect(requestTo(TOP_TWO_ARTISTS_URL))
-                    .andRespond(withSuccess(items("{\"name\":\"Seed\",\"id\":\"seed-1\"}"), MediaType.APPLICATION_JSON));
-            server.expect(requestTo("https://api.spotify.com/v1/artists/seed-1/top-tracks"))
-                    .andExpect(header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN))
-                    .andRespond(withServerError());
-
-            // Act
-            IllegalStateException ex = assertThrows(IllegalStateException.class, () -> service.findItemsForUser(USER_ID));
-
-            // Assert
-            assertEquals("Error fetching recommendations from Spotify API", ex.getMessage());
-            assertNotNull(ex.getCause());
-            server.verify();
-        }
-
-        @Test
-        void testFindItemsForUser_TopTracksRedirectStatus_ThrowsWrappedIllegalState() {
-            // Arrange: RestTemplate only raises on 4xx/5xx, so a 3xx reaches the explicit status check
-            server.expect(requestTo(TOP_TWO_ARTISTS_URL))
-                    .andRespond(withSuccess(items("{\"name\":\"Seed\",\"id\":\"seed-1\"}"), MediaType.APPLICATION_JSON));
-            server.expect(requestTo("https://api.spotify.com/v1/artists/seed-1/top-tracks"))
-                    .andRespond(withStatus(HttpStatus.MULTIPLE_CHOICES));
-
-            // Act
-            IllegalStateException ex = assertThrows(IllegalStateException.class, () -> service.findItemsForUser(USER_ID));
-
-            // Assert
-            assertEquals("Error fetching recommendations from Spotify API", ex.getMessage());
-            assertInstanceOf(IllegalStateException.class, ex.getCause());
-            server.verify();
-        }
-
-        @Test
-        void testFindItemsForUser_SuccessfulTopTracks_RequestsSeedArtistAndReturnsNoItems() {
-            // Arrange
-            server.expect(requestTo(TOP_TWO_ARTISTS_URL))
-                    .andRespond(withSuccess(items("{\"name\":\"Seed\",\"id\":\"seed-1\"}", "{\"name\":\"Second\",\"id\":\"seed-2\"}"),
-                            MediaType.APPLICATION_JSON));
-            server.expect(requestTo("https://api.spotify.com/v1/artists/seed-1/top-tracks"))
-                    .andExpect(method(HttpMethod.GET))
-                    .andExpect(header(HttpHeaders.AUTHORIZATION, "Bearer " + ACCESS_TOKEN))
-                    .andRespond(withSuccess("{\"tracks\":[{\"name\":\"T\"}]}", MediaType.APPLICATION_JSON));
+            expectTopSongs();
 
             // Act
             List<?> result = service.findItemsForUser(USER_ID);
 
-            // Assert: the fetched tracks are not mapped to items yet, the method returns null (unfinished feature)
-            assertNull(result);
+            // Assert
+            assertTrue(result.isEmpty());
+            verifyNoInteractions(lessonRepository, instrumentGenreRepository);
+            verify(dtoMapper, mockitoNever()).itemsToItemDTOs(any());
             server.verify();
         }
 
         @Test
-        void testFindItemsForUser_TopArtistsUnauthorized_PropagatesClientError() {
+        void testFindItemsForUser_MergesSongsLessonsInstrumentGenresAndTopGenre() {
+            // Arrange: genre 30 is in both songs, genre 31 only in one; instrument 10 in both, 11 in one
+            Song first = songWith(1, List.of(genre(30), genre(31)), List.of(instrument(10)));
+            Song second = songWith(2, List.of(genre(30)), List.of(instrument(10), instrument(11)));
+            expectTopSongs(first, second);
+            when(lessonRepository.findByGenreIdInAndBelongsToGenreTrueAndIdNotIn(any(), any(), any())).thenReturn(List.of(lesson(100)));
+            when(instrumentGenreRepository.findByGenreIdInAndInstrumentIdInAndIdNotIn(any(), any(), any(), any()))
+                    .thenReturn(List.of(instrumentGenre(200)));
+
+            // Act
+            service.findItemsForUser(USER_ID);
+
+            // Assert: the songs, the lesson, the instrument-genre and only the most repeated genre
+            Set<Long> ids = new HashSet<>(mappedItems().stream().map(Item::getId).toList());
+            assertEquals(Set.of(1L, 2L, 30L, 100L, 200L), ids);
+
+            ArgumentCaptor<Pageable> lessonsPage = ArgumentCaptor.forClass(Pageable.class);
+            verify(lessonRepository).findByGenreIdInAndBelongsToGenreTrueAndIdNotIn(eq(List.of(30L, 31L)), any(), lessonsPage.capture());
+            assertEquals(RecommendationConstants.N_SPOTIFY_RECOMMENDED_LESSONS, lessonsPage.getValue().getPageSize());
+
+            ArgumentCaptor<Pageable> instrumentGenresPage = ArgumentCaptor.forClass(Pageable.class);
+            verify(instrumentGenreRepository).findByGenreIdInAndInstrumentIdInAndIdNotIn(
+                    eq(List.of(30L, 31L)), eq(List.of(10L, 11L)), any(), instrumentGenresPage.capture());
+            assertEquals(RecommendationConstants.N_SPOTIFY_RECOMMENDED_INSTRUMENT_GENRES, instrumentGenresPage.getValue().getPageSize());
+            server.verify();
+        }
+
+        @Test
+        void testFindItemsForUser_ExcludesItemsInUserLists() {
             // Arrange
-            server.expect(requestTo(TOP_TWO_ARTISTS_URL)).andRespond(withStatus(HttpStatus.UNAUTHORIZED));
+            when(user.getIdsFromItemListsOfType(Lesson.class)).thenReturn(new HashSet<>(Set.of(100L)));
+            when(user.getIdsFromItemListsOfType(InstrumentGenre.class)).thenReturn(new HashSet<>(Set.of(200L)));
+            expectTopSongs(songWith(1, List.of(genre(30)), List.of(instrument(10))));
+
+            // Act
+            service.findItemsForUser(USER_ID);
+
+            // Assert
+            verify(lessonRepository).findByGenreIdInAndBelongsToGenreTrueAndIdNotIn(any(), eq(Set.of(100L)), any());
+            verify(instrumentGenreRepository).findByGenreIdInAndInstrumentIdInAndIdNotIn(any(), any(), eq(Set.of(200L)), any());
+        }
+
+        @Test
+        void testFindItemsForUser_GenreAlreadyInLists_RecommendsTheNextMostRepeated() {
+            // Arrange
+            when(user.getIdsFromItemListsOfType(Genre.class)).thenReturn(new HashSet<>(Set.of(30L)));
+            Song first = songWith(1, List.of(genre(30), genre(31)), List.of());
+            Song second = songWith(2, List.of(genre(30)), List.of());
+            expectTopSongs(first, second);
+
+            // Act
+            service.findItemsForUser(USER_ID);
+
+            // Assert: songs 1 and 2 and genre 31 (genre 30 is already in the user's lists)
+            Set<Long> ids = new HashSet<>(mappedItems().stream().map(Item::getId).toList());
+            assertEquals(Set.of(1L, 2L, 31L), ids);
+        }
+
+        @Test
+        void testFindItemsForUser_SongsWithoutInstruments_SkipsInstrumentGenres() {
+            // Arrange
+            expectTopSongs(songWith(1, List.of(genre(30)), List.of()));
+
+            // Act
+            service.findItemsForUser(USER_ID);
+
+            // Assert
+            verifyNoInteractions(instrumentGenreRepository);
+        }
+
+        @Test
+        void testFindItemsForUser_SongsWithoutGenres_ReturnsOnlySongs() {
+            // Arrange
+            expectTopSongs(songWith(1, List.of(), List.of(instrument(10))));
+
+            // Act
+            service.findItemsForUser(USER_ID);
+
+            // Assert
+            verifyNoInteractions(lessonRepository, instrumentGenreRepository);
+            assertEquals(List.of(1L), mappedItems().stream().map(Item::getId).toList());
+        }
+
+        @Test
+        void testFindItemsForUser_SpotifyUnauthorized_PropagatesClientError() {
+            // Arrange
+            server.expect(anything()).andRespond(withStatus(HttpStatus.UNAUTHORIZED));
 
             // Act & Assert
             assertThrows(HttpClientErrorException.class, () -> service.findItemsForUser(USER_ID));

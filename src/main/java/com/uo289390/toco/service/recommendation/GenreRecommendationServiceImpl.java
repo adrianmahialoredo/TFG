@@ -43,7 +43,7 @@ public class GenreRecommendationServiceImpl implements GenreRecommendationServic
         }
 
         // Nivel 2: completar primero con los géneros principales de las canciones, luego con los de los intrumentGenres y finalmente con los de las lecciones
-        int topN = RecommendationConstants.NUMBER_OF_GENRES_USED_IN_GENRE_RECOMMENDATION + 1;
+        int topN = RecommendationConstants.N_GENRES_USED_IN_GENRE_RECOMMENDATION + 1;
         addCandidates(genres, itemList.getTopGenresFromSongs(topN), itemList, limit);
         addCandidates(genres, itemList.getTopGenresFromInstrumentGenres(topN), itemList, limit);
         addCandidates(genres, itemList.getTopGenresFromLessons(topN), itemList, limit);

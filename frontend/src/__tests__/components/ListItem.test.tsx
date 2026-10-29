@@ -41,6 +41,20 @@ describe('ListItem', () => {
     expect(onRemove).toHaveBeenCalledTimes(1);
   });
 
+  it('con onAdd muestra el botón + y lo llama sin abrir el item', async () => {
+    const onPress = jest.fn();
+    const onAdd = jest.fn();
+    await render(<ListItem item={item} onPress={onPress} onAdd={onAdd} />);
+    await fireEvent.press(screen.getByLabelText('Añadir Rock a una lista'));
+    expect(onAdd).toHaveBeenCalledTimes(1);
+    expect(onPress).not.toHaveBeenCalled();
+  });
+
+  it('sin onAdd no muestra el botón +', async () => {
+    await render(<ListItem item={item} onPress={jest.fn()} />);
+    expect(screen.queryByLabelText('Añadir Rock a una lista')).toBeNull();
+  });
+
   it('funciona igual en modo invertido', async () => {
     const onPress = jest.fn();
     await render(<ListItem item={item} onPress={onPress} inverted />);

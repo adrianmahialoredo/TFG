@@ -1,7 +1,9 @@
+import { useState } from "react";
 import { View, Text } from "react-native";
 import { useNavigation, NavigationProp } from "@react-navigation/native";
 import ListItem from "./ListItem";
-import { RootStackParamList } from "../types";
+import AddToListModal from "./AddToListModal";
+import { ItemSummaryDTO, RootStackParamList } from "../types";
 import { SearchSection } from "../hooks/useCatalogSearch";
 import { SearchField } from "../utils/search.utils";
 import { navigateToItem } from "../utils/navigation.utils";
@@ -23,10 +25,13 @@ type SearchResultsProps = {
 
 /**
  * Resultados del buscador: una lista vertical por cada campo con coincidencias,
- * en orden de prioridad.
+ * en orden de prioridad. Cada resultado tiene un botón + que abre el modal para añadirlo
+ * a una de las listas del usuario.
  */
 export default function SearchResults({ sections, emptyText }: SearchResultsProps) {
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
+  // Item que se está añadiendo a una lista (null = modal cerrado)
+  const [itemToAdd, setItemToAdd] = useState<ItemSummaryDTO | null>(null);
 
   if (sections.length === 0) {
     return (
@@ -48,11 +53,17 @@ export default function SearchResults({ sections, emptyText }: SearchResultsProp
                 item={itemToListItem(item)}
                 inverted={index % 2 !== 0}
                 onPress={() => navigateToItem(navigation, item)}
+                onAdd={() => setItemToAdd(item)}
               />
             ))}
           </View>
         </View>
       ))}
+
+      <AddToListModal
+        item={itemToAdd ? { id: itemToAdd.id.toString(), title: itemToAdd.title } : null}
+        onClose={() => setItemToAdd(null)}
+      />
     </View>
   );
 }

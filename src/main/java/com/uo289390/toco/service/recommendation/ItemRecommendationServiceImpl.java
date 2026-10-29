@@ -29,10 +29,10 @@ public class ItemRecommendationServiceImpl implements ItemRecommendationService 
     public List<ItemDTO> findForItemList(Long id) {
         SequencedSet<Item> items = new LinkedHashSet<>();
 
-        items.addAll(songRecommendationService.findForItemList(id, RecommendationConstants.RECOMMENDED_SONGS_COUNT));
-        items.addAll(genreRecommendationService.findForItemList(id, RecommendationConstants.RECOMMENDED_GENRES_COUNT));
-        items.addAll(instrumentGenreRecommendationService.findForItemList(id, RecommendationConstants.RECOMMENDED_INSTRUMENT_GENRES_COUNT));
-        items.addAll(lessonRecommendationService.findForItemList(id, RecommendationConstants.RECOMMENDED_LESSONS_COUNT));
+        items.addAll(songRecommendationService.findForItemList(id, RecommendationConstants.N_RECOMMENDED_SONGS));
+        items.addAll(genreRecommendationService.findForItemList(id, RecommendationConstants.N_RECOMMENDED_GENRES));
+        items.addAll(instrumentGenreRecommendationService.findForItemList(id, RecommendationConstants.N_RECOMMENDED_INSTRUMENT_GENRES));
+        items.addAll(lessonRecommendationService.findForItemList(id, RecommendationConstants.N_RECOMMENDED_LESSONS));
 
         // Mixed types: the app shows only the first few at a time, which in priority order
         // would always be songs. Shuffling the (at most 20) entities is cheaper than the mapping.
@@ -45,11 +45,13 @@ public class ItemRecommendationServiceImpl implements ItemRecommendationService 
     public List<ItemDTO> findForUser(Long id) {
         SequencedSet<Item> items = new LinkedHashSet<>();
 
-        items.addAll(songRecommendationService.findForUser(id, RecommendationConstants.HOME_RECOMMENDED_SONGS_COUNT));
-        items.addAll(genreRecommendationService.findForUser(id, RecommendationConstants.HOME_RECOMMENDED_GENRES_COUNT));
-        items.addAll(instrumentGenreRecommendationService.findForUser(id, RecommendationConstants.HOME_RECOMMENDED_INSTRUMENT_GENRES_COUNT));
-        items.addAll(lessonRecommendationService.findForUser(id, RecommendationConstants.HOME_RECOMMENDED_LESSONS_COUNT));
+        items.addAll(songRecommendationService.findForUser(id, RecommendationConstants.N_HOME_RECOMMENDED_SONGS));
+        items.addAll(genreRecommendationService.findForUser(id, RecommendationConstants.N_HOME_RECOMMENDED_GENRES));
+        items.addAll(instrumentGenreRecommendationService.findForUser(id, RecommendationConstants.N_HOME_RECOMMENDED_INSTRUMENT_GENRES));
+        items.addAll(lessonRecommendationService.findForUser(id, RecommendationConstants.N_HOME_RECOMMENDED_LESSONS));
 
-        return dtoMapper.itemsToItemDTOs(items);
+        List<Item> toShuffle = new ArrayList<>(items);
+        Collections.shuffle(toShuffle);
+        return dtoMapper.itemsToItemDTOs(toShuffle);
     }
 }

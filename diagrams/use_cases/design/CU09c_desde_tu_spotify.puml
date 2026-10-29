@@ -1,0 +1,117 @@
+@startuml DSD-CU-09c
+title DSD-CU-09c - Recomendaciones a partir de Spotify (Inicio, "Desde tu Spotify")
+
+' Diagrama de secuencia de diseño: tercera parte de CU-09 (análisis en
+' diagrams/use_cases/description/CU09_recomendaciones.puml, bloque "Desde tu Spotify").
+' Va aparte de DSD-CU-09 y DSD-CU-09b porque sus participantes son los de Spotify (DCD-04).
+' Fuentes: frontend/src/screens/HomeScreen.tsx, components/buttons/SpotifyButton.tsx, hooks/useHomeItems.ts,
+' repositories/itemFeed.repository.ts, repositories/item.repository.ts, utils/entityCache.utils.ts,
+' services/item.service.ts, config/apiConfig.ts; SpotifyRecommendationController.java,
+' SpotifyRecommendationServiceImpl.java, SpotifyAuthServiceImpl.java, repository/SongRepository.java,
+' LessonRepository.java, InstrumentGenreRepository.java, utils/RecommendationConstants.java, utils/Utils.java.
+' - Solo se piden con la cuenta vinculada (UserDTO.spotifyConnected). Sin vincular se muestra el botón
+'   "Conectar con Spotify" (CU-10); mientras no se sabe (usuario sin cargar) no se pinta nada.
+' - Cantidades (RecommendationConstants): N_SPOTIFY_RECOMMENDED_SONGS = 6, _LESSONS = 3,
+'   _INSTRUMENT_GENRES = 2, _GENRES = 1; los instrument-genres cruzan los 5 géneros y los 5 instrumentos
+'   más repetidos en las canciones (N_TOP_*_USED_IN_SPOTIFY_INSTRUMENT_GENRE_RECOMMENDATION).
+' - Feed mixto con DTO completo (como "Recomendaciones"); su índice 'items_spotify_user' se borra en el logout.
+autonumber
+hide footbox
+skinparam sequenceMessageAlign center
+skinparam roundcorner 6
+skinparam maxMessageSize 260
+skinparam BoxPadding 10
+
+actor "Músico" as actor
+
+box "App (React Native)" #F3F8FF
+    participant "HomeScreen\n<<Nivel 7>>" as screen
+    participant "useHomeItems\n<<Nivel 6>>" as hook
+    participant "itemFeedRepository\n<<Nivel 3>>" as feedRepo
+    participant "itemService\n<<Nivel 1>>" as service
+end box
+
+box "Backend (Spring Boot)" #FFF9F0
+    participant "SpotifyRecommendation\nController\n<<controller>>" as controller
+    participant "SpotifyRecommendation\nServiceImpl\n<<service>>" as spotifyService
+    participant "SpotifyAuthServiceImpl\n<<service>>" as authService
+    participant "SongRepository\n<<repository>>" as songRepository
+    participant "LessonRepository\n<<repository>>" as lessonRepository
+    participant "InstrumentGenre\nRepository\n<<repository>>" as igRepository
+end box
+
+participant "Spotify Web API\n<<sistema externo>>" as spotify
+
+actor -> screen : abre Inicio
+screen -> hook : useHomeItems()
+hook -> hook : spotifyConnected = UserEntitiesStore.users[currentUserId].spotifyConnected
+
+alt 3a. spotifyConnected === false
+    hook --> screen : spotifyConnected = false
+    screen --> actor : título "Desde tu Spotify" + SpotifyButton ("Conectar con Spotify")
+    note right of screen : Al vincular la cuenta (CU-10) se recarga el usuario,\ncambia spotifyConnected y el hook pide las recomendaciones
+else spotifyConnected === true
+    note right of hook : useEffect([currentUserId, spotifyConnected, tasteKey]):\nse repite al vincular la cuenta o al cambiar sus listas
+    hook -> feedRepo : getFromSpotifyForUser(userId, onFresh)
+    feedRepo -> feedRepo : itemRepository.getCustomFeed('items_spotify_user', ...)
+    note right of feedRepo : Cache-First: si hay índice guardado, devuelve sus IDs al instante\ny la red avisa después con onFresh(ids)
+    feedRepo -> service : getRecommendedFromSpotify(userId)
+    service -> controller : GET /api/spotify/recommendations/items/{userId}\nAuthorization: Bearer <JWT>
+    note right of controller : @PreAuthorize("hasRole('ADMIN') or @ownership.isSelf(#userId, authentication)")\nOtro usuario: 403. Sin token: 401
+    controller -> spotifyService : findItemsForUser(userId)
+
+    group findSongEntitiesForUser(userId, 6)
+        spotifyService -> authService : getValidAccessToken(userId)
+        note right of authService : Renueva el token con el refresh token\nsi caduca en menos de 1 min
+        authService --> spotifyService : accessToken
+        spotifyService -> spotify : GET /v1/me/top/tracks?limit=6&time_range=medium_term\n(+ long_term 3, short_term 3)
+        spotify --> spotifyService : canciones top
+        spotifyService -> songRepository : findByTitleAndArtistIn(títulos y artistas)
+        songRepository --> spotifyService : canciones de la app (sin las de sus listas, en el orden de Spotify)
+        opt Faltan canciones hasta 6
+            spotifyService -> spotify : GET /v1/me/top/artists?limit=5&time_range=medium_term
+            spotify --> spotifyService : artistas top
+            loop Por cada artista (el primero se queda con el resto del reparto)
+                spotifyService -> songRepository : findByArtistIgnoreCaseAndArtist{Popular|Classic|New}TrueAndIdNotIn(...)
+                songRepository --> spotifyService : canciones del artista
+            end
+        end
+    end
+
+    alt 14a. Ninguna canción de Spotify está en la app
+        spotifyService --> controller : List.of()
+        controller --> service : 200 OK []
+        service --> feedRepo : []
+        feedRepo --> hook : []
+        hook --> screen : spotifyItems = []
+        screen --> actor : carrusel vacío: "Escucha música en Spotify para que te\nrecomendemos canciones, lecciones y géneros"
+    else Hay canciones
+        spotifyService -> spotifyService : géneros e instrumentos de las canciones (con repetidos)\ntopGenres = getTopNMostRepeated(géneros)
+        opt Las canciones tienen géneros
+            spotifyService -> lessonRepository : findByGenreIdInAndBelongsToGenreTrueAndIdNotIn(\nidsOf(topGenres), idsToExclude(lecciones de sus listas), Pageable(3))
+            lessonRepository --> spotifyService : lecciones del género
+            opt Las canciones tienen instrumentos
+                spotifyService -> igRepository : findByGenreIdInAndInstrumentIdInAndIdNotIn(\n5 géneros top, 5 instrumentos top, idsToExclude(sus instrument-genres), Pageable(2))
+                igRepository --> spotifyService : instrument-genres
+            end
+            spotifyService -> spotifyService : el género más repetido que no esté en sus listas\n(ya cargado: sin consulta)
+        end
+        spotifyService -> spotifyService : unificar en LinkedHashSet y Collections.shuffle
+        spotifyService -> spotifyService : dtoMapper.itemsToItemDTOs(...)
+        spotifyService --> controller : List<ItemDTO>
+        controller --> service : 200 OK [SongDTO, LessonDTO, InstrumentGenreDTO, GenreDTO...]
+        service --> feedRepo : AnyItemDTO[]
+        feedRepo -> feedRepo : hydrateMixed(dtos): cada DTO a la Store de su subtipo\ny su resumen a la ItemEntitiesStore; saveQueryIndex
+        feedRepo --> hook : ids
+        hook -> hook : spotifyItems = itemsToCarouselItems(ids)\nshownIds incluye estos ids (las tarjetas de sugerencia no los repiten)
+        hook --> screen : spotifyItems
+        screen --> actor : carrusel "Desde tu Spotify"
+    end
+end
+
+opt Error de Spotify, de red o de la API (p. ej. permisos revocados)
+    hook -> hook : console.error('[useHomeItems] Error en Spotify:', ...)
+    note right of hook : Solo se queda vacío este carrusel;\nel resto del Inicio no muestra error
+end
+
+@enduml

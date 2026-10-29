@@ -46,7 +46,7 @@ public interface UserService {
      * their lists (see {@link com.uo289390.toco.model.User#getTopArtistsFromItemLists(int)}).
      *
      * @param userId       the ID of the user
-     * @param totalArtists how many artists to return (1 to {@code MAX_TOP_ARTISTS_COUNT})
+     * @param totalArtists how many artists to return (1 to {@code MAX_N_TOP_ARTISTS})
      * @return the artist names from most to least repeated (empty if the lists have no songs),
      *         or empty if the user does not exist
      * @throws IllegalArgumentException if {@code totalArtists} is out of range

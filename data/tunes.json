@@ -7,5 +7,12 @@
   { "id": 6, "title": "Estándar", "instrumentId": 3, "notes": ["E1", "A1", "D2", "G2"] },
   { "id": 7, "title": "Drop D", "instrumentId": 3, "notes": ["D1", "A1", "D2", "G2"] },
   { "id": 8, "title": "5 cuerdas", "instrumentId": 3, "notes": ["B0", "E1", "A1", "D2", "G2"] },
-  { "id": 9, "title": "Estándar", "instrumentId": 2, "notes": ["G4", "C4", "E4", "A4"] }
+  { "id": 9, "title": "Estándar", "instrumentId": 2, "notes": ["G4", "C4", "E4", "A4"] },
+  { "id": 10, "title": "Open D", "instrumentId": 1, "notes": ["D2", "A2", "D3", "F#3", "A3", "D4"] },
+  { "id": 11, "title": "Drop C", "instrumentId": 1, "notes": ["C2", "G2", "C3", "F3", "A3", "D4"] },
+  { "id": 12, "title": "D Standard", "instrumentId": 1, "notes": ["D2", "G2", "C3", "F3", "A3", "D4"] },
+  { "id": 13, "title": "Low G", "instrumentId": 2, "notes": ["G3", "C4", "E4", "A4"] },
+  { "id": 14, "title": "Barítono", "instrumentId": 2, "notes": ["D3", "G3", "B3", "E4"] },
+  { "id": 15, "title": "Drop C", "instrumentId": 3, "notes": ["C1", "G1", "C2", "F2"] },
+  { "id": 16, "title": "6 cuerdas", "instrumentId": 3, "notes": ["B0", "E1", "A1", "D2", "G2", "C3"] }
 ]

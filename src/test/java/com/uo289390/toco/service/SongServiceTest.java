@@ -129,10 +129,11 @@ class SongServiceTest {
         return instrument;
     }
 
-    private static Chord chord(Long id) {
+    private static Chord chord(Long id, Instrument instrument) {
         Chord chord = new Chord();
         chord.setId(id);
         chord.setName("Chord " + id);
+        chord.setInstrument(instrument);
         return chord;
     }
 
@@ -285,6 +286,40 @@ class SongServiceTest {
     }
 
     @Test
+    void testCreate_CopiesCarouselFlags() {
+        // Arrange
+        SongDTO dto = basicDto();
+        dto.setGenreIds(null);
+        dto.setInstrumentIds(null);
+        dto.setLessons(null);
+        dto.setPopular(true);
+        dto.setNewSong(true);
+        dto.setGenrePopular(true);
+        dto.setGenreNew(true);
+        dto.setArtistPopular(true);
+        dto.setArtistNew(true);
+        when(songRepository.saveAndFlush(any(Song.class))).thenAnswer(SongServiceTest::savedArgument);
+
+        // Act
+        SongDTO result = songService.create(dto);
+
+        // Assert
+        ArgumentCaptor<Song> captor = ArgumentCaptor.forClass(Song.class);
+        verify(songRepository).saveAndFlush(captor.capture());
+        Song saved = captor.getValue();
+        assertTrue(saved.isPopular());
+        assertTrue(saved.isNewSong());
+        assertTrue(saved.isGenrePopular());
+        assertTrue(saved.isGenreNew());
+        assertFalse(saved.isGenreClassic());
+        assertTrue(saved.isArtistPopular());
+        assertTrue(saved.isArtistNew());
+        assertFalse(saved.isArtistClassic());
+        assertTrue(result.isPopular());
+        assertTrue(result.isGenreNew());
+    }
+
+    @Test
     void testCreate_ResolvesGenresAndInstruments() {
         // Arrange
         SongDTO dto = basicDto();
@@ -349,10 +384,9 @@ class SongServiceTest {
         lessonDto.setTabSections(List.of(intro, solo));
         dto.setLessons(List.of(lessonDto));
 
-        Chord c7 = chord(7L);
-        Chord c8 = chord(8L);
         when(instrumentRepository.findById(1L)).thenReturn(Optional.of(guitar));
-        when(chordRepository.findAllById(List.of(7L, 8L))).thenReturn(List.of(c7, c8));
+        when(chordRepository.findById(7L)).thenReturn(Optional.of(chord(7L, guitar)));
+        when(chordRepository.findById(8L)).thenReturn(Optional.of(chord(8L, guitar)));
         when(songRepository.saveAndFlush(any(Song.class))).thenAnswer(SongServiceTest::savedArgument);
 
         // Act
@@ -381,6 +415,26 @@ class SongServiceTest {
         assertSame(lesson, tabs.get(1).getSongLesson());
 
         assertEquals(List.of(500L), result.getLessonIds());
+    }
+
+    @Test
+    void testCreate_LessonWithChordOfAnotherInstrument_ThrowsAndDoesNotSave() {
+        // Arrange
+        SongDTO dto = basicDto();
+        dto.setGenreIds(null);
+        dto.setInstrumentIds(null);
+        SongLessonDTO lessonDto = new SongLessonDTO();
+        lessonDto.setId(502L);
+        lessonDto.setDifficulty("EASY");
+        lessonDto.setInstrumentId(2L);
+        lessonDto.setChordIds(List.of(7L));
+        dto.setLessons(List.of(lessonDto));
+        when(instrumentRepository.findById(2L)).thenReturn(Optional.of(piano));
+        when(chordRepository.findById(7L)).thenReturn(Optional.of(chord(7L, guitar)));
+
+        // Act & Assert
+        assertThrows(IllegalArgumentException.class, () -> songService.create(dto));
+        verify(songRepository, never()).saveAndFlush(any());
     }
 
     @Test
@@ -587,6 +641,27 @@ class SongServiceTest {
 
         // Assert
         assertEquals(3, testSong.getLevel());
+    }
+
+    @Test
+    void testUpdate_OverwritesCarouselFlags() {
+        // Arrange
+        testSong.setPopular(true);
+        testSong.setGenreClassic(true);
+        when(songRepository.findById(1L)).thenReturn(Optional.of(testSong));
+        when(songRepository.save(any(Song.class))).thenAnswer(SongServiceTest::savedArgument);
+        SongDTO dto = basicDto();
+        dto.setGenreNew(true);
+        dto.setArtistClassic(true);
+
+        // Act
+        songService.update(1L, dto);
+
+        // Assert
+        assertFalse(testSong.isPopular());
+        assertFalse(testSong.isGenreClassic());
+        assertTrue(testSong.isGenreNew());
+        assertTrue(testSong.isArtistClassic());
     }
 
     @Test

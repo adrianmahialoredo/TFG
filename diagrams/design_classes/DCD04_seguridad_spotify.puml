@@ -194,12 +194,24 @@ package "service" {
         - restTemplate : RestTemplate
         - spotifyAuthService : SpotifyAuthService
         - songRepository : SongRepository
+        - lessonRepository : LessonRepository
+        - instrumentGenreRepository : InstrumentGenreRepository
         - dtoMapper : DtoMapper
+        - findSongEntitiesForUser(userId : Long, limit : int) : List<Song>
         - authorizedRequest(userId : Long) : HttpEntity<Void>
-        - fetchTopTracks(request, limit, timeRange) : List<TitleArtist>
-        - fetchTopArtists(request, limit, timeRange) : List<String>
+        - fetchTopTracks(request, count, timeRange) : List<TitleArtist>
+        - fetchTopArtists(request, count, timeRange) : List<String>
+        - fetchTopItems(request, endpoint, count, timeRange) : List<Map>
     }
-    note bottom of SpotifyRecommendationServiceImpl : Top tracks (medium, long y short_term) ->\nSongRepository.findByTitleAndArtistIn (una consulta);\nsi faltan, canciones de sus artistas top.\nfindItemsForUser: en desarrollo
+    note bottom of SpotifyRecommendationServiceImpl
+        findSongsForUser: top tracks (medium, long y short_term) ->
+        SongRepository.findByTitleAndArtistIn (una consulta);
+        si faltan, canciones de sus 5 artistas top.
+        findItemsForUser: 6 canciones de lo anterior + 3 lecciones de sus
+        géneros + 2 instrument-genres (5 géneros x 5 instrumentos más
+        repetidos) + el género más repetido; nada de lo que ya está en
+        sus listas. Barajado. Cantidades: RecommendationConstants.N_SPOTIFY_*
+    end note
 }
 
 package "repository" {
@@ -209,6 +221,9 @@ package "repository" {
         + existsByEmailIgnoreCase(email : String) : boolean
     }
     interface SpotifyUserRepository <<Repository>>
+    interface SongRepository <<Repository>>
+    interface LessonRepository <<Repository>>
+    interface InstrumentGenreRepository <<Repository>>
 }
 
 class "Spotify Web API /\nSpotify Accounts" as SpotifyApi <<external>>
@@ -245,6 +260,9 @@ SpotifyAuthServiceImpl ..> SpotifyApi : RestTemplate
 SpotifyRecommendationController --> SpotifyRecommendationService
 SpotifyRecommendationService <|.. SpotifyRecommendationServiceImpl
 SpotifyRecommendationServiceImpl --> SpotifyAuthService
+SpotifyRecommendationServiceImpl --> SongRepository
+SpotifyRecommendationServiceImpl --> LessonRepository
+SpotifyRecommendationServiceImpl --> InstrumentGenreRepository
 SpotifyRecommendationServiceImpl ..> SpotifyApi : RestTemplate
 AppConfig ..> SpotifyAuthServiceImpl : RestTemplate
 AppConfig ..> UserServiceImpl : BCryptPasswordEncoder

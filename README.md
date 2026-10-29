@@ -22,6 +22,8 @@ La aplicación utiliza:
 
 ### Instalación
 
+> ⚠️ **Windows: clona el repositorio en una ruta corta**, por ejemplo `C:\TFG`. Al compilar la app nativa de Android (`frontend/`), CMake repite la ruta del proyecto dentro de sus carpetas y supera el límite de 260 caracteres de Windows: con una ruta de unos 35 caracteres como `D:\Universidad\UO\Nueva carpeta\TFG` la compilación ya falla. No afecta al backend ni a Expo Go. Ver [Problemas en Windows](#problemas-en-windows).
+
 ```bash
 # Clonar el repositorio
 git clone <repository-url>
@@ -37,9 +39,104 @@ cp .env.example .env
 ./mvnw spring-boot:run
 ```
 
-El servidor estará disponible en: `http://192.168.0.22:8080`
+El servidor escucha en el puerto `8080` de todas las interfaces (`http://localhost:8080` en el propio PC y `http://<IP local del PC>:8080` desde la red).
 
-> **App móvil:** el afinador usa el micrófono con `react-native-audio-api`, un módulo nativo que **no está en Expo Go**. La app se ejecuta con una *development build*: `cd frontend && npx expo run:android` (o `run:ios`), que compila e instala la app; después basta `npx expo start` para servirle el código. En Expo Go (`npx expo start --go`) la app funciona y el afinador entra en modo demostración, con una cuerda simulada en lugar del micrófono. Detalle en [`architecture.md`](architecture.md) §12 (*Afinador*).
+---
+
+## 📱 App móvil (`frontend/`)
+
+Hay dos formas de probar la app:
+
+| | **A. Expo Go** (lo más rápido) | **B. Development build** (app nativa completa) |
+|---|---|---|
+| Dónde | Móvil físico (Android o iOS) o emulador | Emulador de Android / simulador de iOS (o móvil por USB) |
+| Qué hay que instalar | Node.js y la app **Expo Go** | Node.js, Android Studio (o Xcode en macOS), JDK 17–23 |
+| Compilar | No | Sí (la primera vez, 5–15 min) |
+| Afinador | Modo demostración: una cuerda simulada en vez del micrófono | Micrófono real |
+
+El afinador usa `react-native-audio-api`, un módulo nativo que **no está en Expo Go**: ahí todo funciona igual salvo el micrófono, que se sustituye por una cuerda simulada que pasa por el mismo análisis. Detalle en [`architecture.md`](architecture.md) §12 (*Afinador*).
+
+### Configuración (común)
+
+Con el backend arrancado (ver arriba):
+
+```bash
+cd frontend
+npm install
+cp .env.example .env   # y rellenar
+```
+
+`EXPO_PUBLIC_API_URL` es la URL del backend (sin `/api`):
+
+| Dónde se ejecuta la app | Valor |
+|---|---|
+| Emulador de Android | vacío (usa `http://10.0.2.2:8080`, el PC visto desde el emulador) |
+| Simulador de iOS | vacío (usa `http://localhost:8080`) |
+| Móvil físico | `http://<IP local del PC>:8080` (por ejemplo `http://192.168.1.20:8080`); el móvil y el PC en la misma wifi |
+
+La IP local del PC se ve con `ipconfig` (Windows, "Dirección IPv4") o `ipconfig getifaddr en0` (macOS). En Windows, la primera vez que arranca el backend el firewall pregunta si se permite Java en la red: hay que permitirlo en **redes privadas** o el móvil no llegará al puerto `8080`.
+
+Las variables `EXPO_PUBLIC_*` se incrustan al empaquetar: tras cambiarlas, `npx expo start --clear` (o volver a compilar).
+
+### A. Expo Go
+
+1. Instalar **Expo Go** en el móvil (Play Store / App Store). Tiene que ser la versión compatible con el **SDK 57** de Expo (la última de la tienda).
+2. Arrancar Metro en modo Expo Go:
+
+   ```bash
+   npx expo start --go
+   ```
+
+3. Escanear el código QR: con la cámara en iOS o desde Expo Go en Android.
+
+También sirve en el emulador: con el emulador abierto, pulsar `a` en la terminal de Metro instala Expo Go en él y abre la app.
+
+Si el móvil no conecta con Metro (redes de universidad o con aislamiento de clientes), `npx expo start --go --tunnel` lo hace a través de internet. Ojo: el backend sigue teniendo que ser accesible desde el móvil por la IP local.
+
+### B. Development build
+
+> ⚠️ **Windows:** el repositorio tiene que estar en una ruta corta (por ejemplo `C:\TFG`); si no, la compilación falla en `react-native-audio-api:buildCMake…` con `ninja: error: mkdir(...)`. Ver [Problemas en Windows](#problemas-en-windows).
+
+#### Requisitos
+
+| | Android | iOS |
+|---|---|---|
+| Sistema | Windows, macOS o Linux | **Solo macOS** |
+| Node.js | 20 LTS o superior | 20 LTS o superior |
+| Herramientas | [Android Studio](https://developer.android.com/studio) con un emulador (AVD) creado (*Device Manager*) | Xcode (App Store) con un simulador, y CocoaPods (`brew install cocoapods`) |
+| JDK | **17 a 23** (por ejemplo [Temurin 17](https://adoptium.net/)). El que trae Android Studio puede ser más nuevo y no sirve (ver *Problemas en Windows*) | — |
+| Variables de entorno | `ANDROID_HOME` = carpeta del SDK y `%ANDROID_HOME%\platform-tools` en el `PATH`; `JAVA_HOME` = el JDK 17–23 | — |
+
+La carpeta del SDK aparece en Android Studio en *Settings → Languages & Frameworks → Android SDK* (en Windows suele ser `C:\Users\<usuario>\AppData\Local\Android\Sdk`). En Windows, las variables se crean en *Editar las variables de entorno de esta cuenta*; después hay que **cerrar y volver a abrir** las terminales y VS Code para que las vean.
+
+#### Ejecutar
+
+Con el backend arrancado y el emulador abierto:
+
+```bash
+npm run android          # compila, instala la app en el emulador y arranca Metro
+npm run ios              # ídem en el simulador de iOS (macOS)
+```
+
+La app instalada es una *development build*: al abrirla sin Metro muestra el lanzador de `expo-dev-client` ("Development servers"). Con la app ya instalada no hace falta volver a compilar: basta con `npx expo start` y pulsar `a` (o tocar el servidor en el lanzador). Solo hay que recompilar si cambian las dependencias nativas o `app.json`.
+
+Para probar la app **sin Metro** (el JavaScript va dentro de la app):
+
+```bash
+npm run android:release  # instala una release; el APK queda en android/app/build/outputs/apk/release/
+npm run ios:release      # release en el simulador de iOS
+```
+
+Las carpetas `android/` e `ios/` se generan desde `app.json` y no se versionan. Si se cambia `app.json` (permisos, plugins…) o se mueve el proyecto de carpeta, hay que regenerarlas con `npm run prebuild` (o `npx expo prebuild --clean --platform android`).
+
+#### Problemas en Windows
+
+| Error | Causa | Solución |
+|---|---|---|
+| `SDK location not found` | La terminal no ve `ANDROID_HOME` | Crear la variable y abrir una terminal nueva (cerrar también VS Code). |
+| `WARNING: A restricted method in java.lang.System has been called` en `configureCMake…` | Gradle usa un JDK 24 o superior (el que trae Android Studio, por ejemplo) | Instalar un JDK 17–23 y añadir a `%USERPROFILE%\.gradle\gradle.properties` la línea `org.gradle.java.home=C:/Program Files/Java/jdk-17` (con la ruta de ese JDK). Después, `cd android && gradlew --stop`. |
+| `mkdir: command not found` / `rm: command not found` en `react-native-audio-api:downloadPrebuiltBinaries` | El script que descarga los binarios del afinador se ejecuta con el Bash de Git y necesita sus comandos | Compilar desde **Git Bash**, o añadir `C:\Program Files\Git\usr\bin` **al final** del `PATH` (en cmd, solo para esa ventana: `set "PATH=%PATH%;C:\Program Files\Git\usr\bin"`). |
+| `ninja: error: mkdir(...): No such file or directory` en `react-native-audio-api:buildCMake…` | La ruta del proyecto es demasiado larga: CMake la repite dentro de sus carpetas y supera el límite de 260 caracteres de Windows | Clonar el repositorio en una **ruta corta**, por ejemplo `C:\TFG` (una ruta de unos 35 caracteres como `D:\Universidad\UO\Nueva carpeta\TFG` ya falla). Una unidad `subst` no sirve: Gradle resuelve la ruta real. Tras moverlo, `npx expo prebuild --clean --platform android`. |
 
 ---
 
@@ -159,8 +256,6 @@ Todos los controladores siguen la misma estructura:
 | `GET` | `/api/songs/new?limit={n}` | Canciones nuevas (DTO completo) |
 | `GET` | `/api/songs/by-artists/new?limit={n}&artist1={a}&artist2={b}…` | Canciones nuevas de esos artistas, mezclados por turnos (DTO completo; hasta 10 artistas y 50 canciones, 10 por defecto) |
 | `GET` | `/api/songs/by-artists/popular?limit={n}&artist1={a}&artist2={b}…` | Canciones populares de esos artistas, mezclados por turnos (DTO completo; mismos límites) |
-| `GET` | `/api/songs/recommended/ids?limit={n}` | IDs de las canciones recomendadas para el usuario (**pendiente**: aún sin implementar) |
-| `GET` | `/api/songs/spotify?limit={n}` | Canciones recomendadas por Spotify (DTO completo) |
 | `POST` | `/api/songs` | Crear canción |
 | `PUT` | `/api/songs/{id}` | Actualizar canción |
 | `DELETE` | `/api/songs/{id}` | Eliminar canción |
@@ -230,10 +325,13 @@ Todos los controladores siguen la misma estructura:
   "open": true, "barre": false, "powerChord": false,
   "minor": false, "major": true, "seventh": true,
   "capo": false,
-  "capoFret": 0
+  "capoFret": 0,
+  "instrumentId": 1
 }
 ```
 `capoFret` es el traste del capo (0 a 12; 0 = sin capo). La app muestra estos datos en un modal al pulsar un acorde de una canción.
+
+`instrumentId` es obligatorio: cada acorde pertenece a un instrumento, así que un mismo nombre (p. ej. `Cm`) puede existir una vez para guitarra, otra para piano, etc. (el nombre es único **por instrumento**). Una lección de canción solo puede usar acordes de su propio instrumento; si `chordIds` incluye uno de otro instrumento, crear o actualizar la lección devuelve `400`.
 
 ---
 
@@ -370,7 +468,10 @@ Devuelven `ItemSummaryDTO` (`id`, `title`, `imageUrl`, `type`, `level`, `artist`
 |--------|----------|-------------|
 | `GET` | `/api/spotify/login` | Iniciar sesión con Spotify |
 | `GET` | `/api/spotify/callback?code={code}` | Callback de autenticación Spotify |
-| `GET` | `/api/spotify/recommendations/{spotifyUserId}` | Obtener recomendaciones |
+| `GET` | `/api/spotify/recommendations/songs/{userId}?limit={n}` | Canciones recomendadas a partir de su Spotify (DTO completo): sus canciones top que están en la app, completadas con las de sus 5 artistas top |
+| `GET` | `/api/spotify/recommendations/items/{userId}` | Elementos recomendados a partir de su Spotify, DTO completo de cada subtipo (carrusel "Desde tu Spotify" del Inicio): 6 canciones como las anteriores, 3 lecciones de sus géneros, 2 instrument-genres de sus géneros e instrumentos más repetidos y el género más repetido. Barajados y sin nada de lo que ya está en sus listas; vacío si ninguna canción de Spotify está en la app |
+
+`{userId}` es el ID del usuario de la app, que debe tener Spotify vinculado. Si no lo tiene, el Inicio muestra el botón "Conectar con Spotify" en lugar del carrusel.
 
 ---
 
@@ -572,7 +673,7 @@ npm run export   # genera src/main/resources/templates/email/<plantilla>.html y 
 
 ```bash
 ./mvnw clean package -DskipTests
-java -jar target/demo-0.0.1-SNAPSHOT.jar
+java -jar target/TOCO-0.0.1-SNAPSHOT.jar
 ```
 
 ### Variables de entorno necesarias
@@ -615,7 +716,7 @@ Este proyecto está bajo licencia MIT.
 ## 🔗 Enlaces Útiles
 
 - [Documentación Spring Boot](https://spring.io/projects/spring-boot)
-- [Swagger/OpenAPI Docs](http://192.168.0.22:8080/swagger-ui.html) (si está configurado)
+- [Swagger/OpenAPI Docs](http://localhost:8080/swagger-ui.html) (si está configurado)
 - [API Config Frontend](../frontend/src/config/apiConfig.ts)
 
 ---

@@ -135,7 +135,7 @@ class SongRecommendationServiceImplTest {
         @Test
         void testFindForItemList_Level1_GenreAndTopInstrumentsFillLimit() {
             // Arrange
-            int topN = RecommendationConstants.NUMBER_OF_MATCHING_INSTRUMENTS_IN_SONG_RECOMMENDATION;
+            int topN = RecommendationConstants.N_MATCHING_INSTRUMENTS_USED_IN_SONG_RECOMMENDATION;
             List<Instrument> topInstruments = List.of(instrument(11), instrument(12));
             when(itemList.getSongs()).thenReturn(Set.of(song(90)));
             when(itemList.getMainGenreFromSongs()).thenReturn(Optional.of(genre(1)));
@@ -312,9 +312,9 @@ class SongRecommendationServiceImplTest {
             assertEquals(songs(1, 2), List.copyOf(result));
             verify(songRepository).findDistinctByGenresInAndInstrumentsInAndIdNotIn(
                     genresCaptor.capture(), instrumentsCaptor.capture(), excludedCaptor.capture(), pageableCaptor.capture());
-            assertEquals(Preferences.MIN_NUMBER_OF_FAVOURITE_GENRES, genresCaptor.getValue().size());
+            assertEquals(Preferences.MIN_N_FAVOURITE_GENRES, genresCaptor.getValue().size());
             assertTrue(favouriteGenres.containsAll(genresCaptor.getValue()));
-            assertEquals(Preferences.MIN_NUMBER_OF_FAVOURITE_INSTRUMENTS, instrumentsCaptor.getValue().size());
+            assertEquals(Preferences.MIN_N_FAVOURITE_INSTRUMENTS, instrumentsCaptor.getValue().size());
             assertTrue(favouriteInstruments.containsAll(instrumentsCaptor.getValue()));
             assertEquals(3, pageableCaptor.getValue().getPageSize());
         }
@@ -403,7 +403,7 @@ class SongRecommendationServiceImplTest {
         @Test
         void testFindForUser_GenresAreListTopsCompletedWithFavouritesUpToMax() {
             // Arrange (half of 6 = 3 split among 4 genres -> 1, 1, 1, 0)
-            int listGenresTopN = RecommendationConstants.NUMBER_OF_GENRES_USED_IN_BY_USER_SONG_RECOMMENDATION - 1;
+            int listGenresTopN = RecommendationConstants.N_GENRES_USED_IN_BY_USER_SONG_RECOMMENDATION - 1;
             when(user.getTopGenresFromItemLists(listGenresTopN)).thenReturn(List.of(genre(1), genre(2)));
             when(user.getPreferences()).thenReturn(preferences(List.of(genre(2), genre(3), genre(4), genre(5)), List.of()));
             when(songRepository.findByGenresIdAndLevelLessThanEqualAndIdNotIn(eq(1L), anyInt(), any(), any())).thenReturn(songs(1));
@@ -428,7 +428,7 @@ class SongRecommendationServiceImplTest {
         @Test
         void testFindForUser_InstrumentsCappedAtConfiguredMaximum() {
             // Arrange (half of 8 = 4 split among 4 instruments -> 1 each)
-            int listInstrumentsTopN = RecommendationConstants.NUMBER_OF_INSTRUMENTS_USED_IN_BY_USER_SONG_RECOMMENDATION - 1;
+            int listInstrumentsTopN = RecommendationConstants.N_INSTRUMENTS_USED_IN_BY_USER_SONG_RECOMMENDATION - 1;
             when(user.getTopInstrumentsFromItemLists(listInstrumentsTopN)).thenReturn(List.of(instrument(11), instrument(12), instrument(13)));
             when(user.getPreferences()).thenReturn(preferences(List.of(), List.of(instrument(14), instrument(15))));
 
@@ -447,7 +447,7 @@ class SongRecommendationServiceImplTest {
         @Test
         void testFindForUser_FavouriteInstrumentAlreadyInListTops_IsNotRepeated() {
             // Arrange (half of 4 = 2 split among 2 distinct instruments -> 1 each)
-            int listInstrumentsTopN = RecommendationConstants.NUMBER_OF_INSTRUMENTS_USED_IN_BY_USER_SONG_RECOMMENDATION - 1;
+            int listInstrumentsTopN = RecommendationConstants.N_INSTRUMENTS_USED_IN_BY_USER_SONG_RECOMMENDATION - 1;
             when(user.getTopInstrumentsFromItemLists(listInstrumentsTopN)).thenReturn(List.of(instrument(11)));
             when(user.getPreferences()).thenReturn(preferences(List.of(), List.of(instrument(11), instrument(12))));
 

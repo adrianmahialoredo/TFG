@@ -13,7 +13,7 @@ import * as genreRepository from '../../repositories/genre.repository';
 import * as songRepository from '../../repositories/song.repository';
 import { ItemType } from '../../types';
 
-jest.mock('../../repositories/itemFeed.repository', () => ({ getRecommendedForUser: jest.fn() }));
+jest.mock('../../repositories/itemFeed.repository', () => ({ getRecommendedForUser: jest.fn(), getFromSpotifyForUser: jest.fn() }));
 jest.mock('../../repositories/instrumentGenre.repository', () => ({ getFavouriteCombinations: jest.fn() }));
 jest.mock('../../repositories/genre.repository', () => ({ getMostUsedInItemLists: jest.fn() }));
 jest.mock('../../repositories/song.repository', () => ({ getByFavouriteArtists: jest.fn() }));
@@ -52,6 +52,53 @@ describe('useHomeItems', () => {
     mockedIG.getFavouriteCombinations.mockResolvedValue(['s1', 'ig1', 'ig2']);
     mockedGenre.getMostUsedInItemLists.mockResolvedValue(['g1', 'g2']);
     mockedSong.getByFavouriteArtists.mockResolvedValue({ newSongs: [], popularSongs: [] });
+    mockedFeed.getFromSpotifyForUser.mockResolvedValue([]);
+  });
+
+  describe('desde tu Spotify', () => {
+    const connectSpotify = (connected: boolean) =>
+      useUserEntitiesStore.setState({
+        users: { u1: { id: 'u1', favouriteGenresIds: ['1'], favouriteInstrumentsIds: ['2'], spotifyConnected: connected } as any },
+      });
+
+    it('sin Spotify vinculado no se pide', async () => {
+      const { result } = await renderHook(() => useHomeItems());
+      await waitFor(() => expect(result.current.loading).toBe(false));
+      expect(mockedFeed.getFromSpotifyForUser).not.toHaveBeenCalled();
+      expect(result.current.spotifyItems).toEqual([]);
+      expect(result.current.spotifyConnected).toBeUndefined();
+    });
+
+    it('con Spotify vinculado carga sus items y no los repite en las sugerencias', async () => {
+      connectSpotify(true);
+      mockedFeed.getFromSpotifyForUser.mockResolvedValue(['s1', 'g1']);
+      const { result } = await renderHook(() => useHomeItems());
+
+      await waitFor(() => expect(result.current.spotifyItems.map((i) => i.id)).toEqual(['s1', 'g1']));
+      expect(mockedFeed.getFromSpotifyForUser).toHaveBeenCalledWith('u1', expect.any(Function));
+      expect(result.current.spotifyConnected).toBe(true);
+      // g1 ya sale en el carrusel de Spotify: la tarjeta de género sugiere el siguiente
+      await waitFor(() => expect(result.current.mostUsedGenre?.id).toBe('g2'));
+    });
+
+    it('se pide en cuanto el usuario vincula la cuenta', async () => {
+      connectSpotify(false);
+      await renderHook(() => useHomeItems());
+      expect(mockedFeed.getFromSpotifyForUser).not.toHaveBeenCalled();
+
+      await act(async () => connectSpotify(true));
+      await waitFor(() => expect(mockedFeed.getFromSpotifyForUser).toHaveBeenCalledTimes(1));
+    });
+
+    it('si falla solo se registra el error, sin afectar al resto del Home', async () => {
+      connectSpotify(true);
+      mockedFeed.getFromSpotifyForUser.mockRejectedValue(new Error('401'));
+      const { result } = await renderHook(() => useHomeItems());
+
+      await waitFor(() => expect(console.error).toHaveBeenCalledWith('[useHomeItems] Error en Spotify:', expect.any(Error)));
+      expect(result.current.error).toBeNull();
+      expect(result.current.spotifyItems).toEqual([]);
+    });
   });
 
   it('carga recientes, recomendaciones y sugerencias que no se ven ya en el Home', async () => {

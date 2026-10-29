@@ -131,16 +131,27 @@ package "utils" {
         + {static} resolvePageable(limit : Integer) : Pageable
     }
     class RecommendationConstants {
-        + {static} RECOMMENDED_SONGS_COUNT : int = 10
-        + {static} RECOMMENDED_GENRES_COUNT : int = 1
-        + {static} RECOMMENDED_INSTRUMENT_GENRES_COUNT : int = 3
-        + {static} RECOMMENDED_LESSONS_COUNT : int = 6
-        + {static} HOME_RECOMMENDED_SONGS_COUNT : int = 6
-        + {static} HOME_RECOMMENDED_GENRES_COUNT : int = 1
-        + {static} HOME_RECOMMENDED_INSTRUMENT_GENRES_COUNT : int = 2
-        + {static} HOME_RECOMMENDED_LESSONS_COUNT : int = 3
+        + {static} N_RECOMMENDED_SONGS : int = 10
+        + {static} N_RECOMMENDED_GENRES : int = 1
+        + {static} N_RECOMMENDED_INSTRUMENT_GENRES : int = 3
+        + {static} N_RECOMMENDED_LESSONS : int = 6
+        + {static} N_HOME_RECOMMENDED_SONGS : int = 6
+        + {static} N_HOME_RECOMMENDED_GENRES : int = 1
+        + {static} N_HOME_RECOMMENDED_INSTRUMENT_GENRES : int = 2
+        + {static} N_HOME_RECOMMENDED_LESSONS : int = 3
+        + {static} N_SPOTIFY_RECOMMENDED_SONGS : int = 6
+        + {static} N_SPOTIFY_RECOMMENDED_LESSONS : int = 3
+        + {static} N_SPOTIFY_RECOMMENDED_INSTRUMENT_GENRES : int = 2
+        + {static} N_SPOTIFY_RECOMMENDED_GENRES : int = 1
         {method} ...
     }
+    note bottom of RecommendationConstants
+        Nomenclatura (N = número de):
+        N_[CONTEXTO_]RECOMMENDED_<ITEMS>: cuántos devuelve una recomendación.
+        N_<ITEMS>_USED_IN_[CONTEXTO_]<TIPO>_RECOMMENDATION: cuántos usa un algoritmo.
+        DEFAULT_N_... / MAX_N_...: valor por defecto y máximo de un parámetro.
+        Las N_SPOTIFY_* las usa SpotifyRecommendationServiceImpl (DCD-04).
+    end note
 }
 
 package "repository" {

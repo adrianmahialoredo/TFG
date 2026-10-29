@@ -22,9 +22,10 @@ import java.util.stream.Collectors;
 
 import static com.uo289390.toco.utils.Utils.idsToExclude;
 import static com.uo289390.toco.utils.Utils.resolvePageable;
-import static com.uo289390.toco.utils.RecommendationConstants.DEFAULT_SONGS_BY_ARTISTS_COUNT;
-import static com.uo289390.toco.utils.RecommendationConstants.MAX_ARTISTS_IN_SONGS_BY_ARTISTS;
-import static com.uo289390.toco.utils.RecommendationConstants.MAX_SONGS_BY_ARTISTS_COUNT;
+import static com.uo289390.toco.utils.RecommendationConstants.DEFAULT_N_SONGS_BY_ARTISTS;
+import static com.uo289390.toco.utils.RecommendationConstants.MAX_N_ARTISTS_IN_SONGS_BY_ARTISTS;
+import static com.uo289390.toco.utils.RecommendationConstants.MAX_N_SONGS_BY_ARTISTS;
+import static com.uo289390.toco.utils.EntityResolver.resolveChords;
 import static com.uo289390.toco.utils.EntityResolver.resolveGenres;
 import static com.uo289390.toco.utils.EntityResolver.resolveInstrument;
 import static com.uo289390.toco.utils.EntityResolver.resolveInstruments;
@@ -50,7 +51,6 @@ public class SongServiceImpl implements SongService {
     private final SongRepository songRepository;
     private final GenreRepository genreRepository;
     private final InstrumentRepository instrumentRepository;
-    private final ChordRepository chordRepository;
     private final UserRepository userRepository;
     private final ItemListRepository itemListRepository;
     private final DtoMapper dtoMapper;
@@ -83,6 +83,7 @@ public class SongServiceImpl implements SongService {
         // 2. Campos específicos de Song
         song.setArtist(dto.getArtist());
         song.setDecade(dto.getDecade());
+        applyFlags(song, dto);
 
         // 3. Relaciones ManyToMany (Géneros e Instrumentos)
         if (dto.getGenreIds() != null) {
@@ -106,7 +107,7 @@ public class SongServiceImpl implements SongService {
 
                 // Chords (ManyToMany)
                 if (lDto.getChordIds() != null) {
-                    lesson.setChords(new LinkedHashSet<>(chordRepository.findAllById(lDto.getChordIds())));
+                    lesson.setChords(resolveChords(lDto.getChordIds(), lesson.getInstrument()));
                 }
 
                 // CASCADA NIVEL 2: TabSections
@@ -230,6 +231,21 @@ public class SongServiceImpl implements SongService {
         if (dto.getLessonIds() != null) {
             replaceLessons(song, resolveSongLessons(dto.getLessonIds()));
         }
+        applyFlags(song, dto);
+    }
+
+    /**
+     * Copies the carousel flags (popular, new, classic... by catalog, genre and artist).
+     */
+    private void applyFlags(Song song, SongDTO dto) {
+        song.setPopular(dto.isPopular());
+        song.setNewSong(dto.isNewSong());
+        song.setGenreClassic(dto.isGenreClassic());
+        song.setGenrePopular(dto.isGenrePopular());
+        song.setGenreNew(dto.isGenreNew());
+        song.setArtistClassic(dto.isArtistClassic());
+        song.setArtistPopular(dto.isArtistPopular());
+        song.setArtistNew(dto.isArtistNew());
     }
 
     /**
@@ -272,9 +288,9 @@ public class SongServiceImpl implements SongService {
      * the whole limit: first song of each artist, then the second of each one... in the given order.
      */
     private List<SongDTO> findForArtists(List<String> artists, Integer limit, ArtistSongsQuery query) {
-        int total = limit == null ? DEFAULT_SONGS_BY_ARTISTS_COUNT : limit;
-        if (total < 1 || total > MAX_SONGS_BY_ARTISTS_COUNT) {
-            throw new IllegalArgumentException("limit must be between 1 and " + MAX_SONGS_BY_ARTISTS_COUNT);
+        int total = limit == null ? DEFAULT_N_SONGS_BY_ARTISTS : limit;
+        if (total < 1 || total > MAX_N_SONGS_BY_ARTISTS) {
+            throw new IllegalArgumentException("limit must be between 1 and " + MAX_N_SONGS_BY_ARTISTS);
         }
         Set<String> names = new LinkedHashSet<>();
         Optional.ofNullable(artists).orElseGet(List::of).stream()
@@ -285,8 +301,8 @@ public class SongServiceImpl implements SongService {
         if (names.isEmpty()) {
             throw new IllegalArgumentException("At least one artist is required");
         }
-        if (names.size() > MAX_ARTISTS_IN_SONGS_BY_ARTISTS) {
-            throw new IllegalArgumentException("At most " + MAX_ARTISTS_IN_SONGS_BY_ARTISTS + " artists are allowed");
+        if (names.size() > MAX_N_ARTISTS_IN_SONGS_BY_ARTISTS) {
+            throw new IllegalArgumentException("At most " + MAX_N_ARTISTS_IN_SONGS_BY_ARTISTS + " artists are allowed");
         }
 
         // Each artist could fill the limit on their own if the others have no songs

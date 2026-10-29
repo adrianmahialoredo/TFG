@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useAuthStore, useItemEntitiesStore, useUserEntitiesStore } from '../stores/entities';
 import * as lessonRepository from '../repositories/lesson.repository';
 import { itemsToCarouselItems } from '../utils/mappers.utils';
+import { useUserTasteKey } from './useUserTasteKey';
 import { useInstrumentsByIds } from './useInstruments';
 
 /**
@@ -42,10 +43,6 @@ export const useHomeLessons = () => {
         await Promise.all([
           lessonRepository.getPopular(setSection('popular')).then(setSection('popular')),
           lessonRepository.getNew(setSection('news')).then(setSection('news')),
-          // Las recomendaciones son por usuario: sin sesión no se piden
-          currentUserId
-            ? lessonRepository.getRecommended(currentUserId, setSection('recommendations')).then(setSection('recommendations'))
-            : Promise.resolve(setSection('recommendations')([])),
         ]);
 
         setError(null);
@@ -61,7 +58,33 @@ export const useHomeLessons = () => {
     return () => {
       cancelled = true;
     };
+  }, []);
+
+  // Las recomendaciones son por usuario (sin sesión no se piden) y se vuelven a pedir cuando
+  // cambian sus listas, sus favoritos o su nivel, sin vaciar el carrusel mientras llegan.
+  const tasteKey = useUserTasteKey();
+
+  useEffect(() => {
+    setIds((prev) => ({ ...prev, recommendations: [] }));
   }, [currentUserId]);
+
+  useEffect(() => {
+    if (!currentUserId) return;
+
+    let cancelled = false;
+    const apply = (sectionIds: string[]) => {
+      if (cancelled) return;
+      setIds((prev) => ({ ...prev, recommendations: sectionIds }));
+      if (sectionIds.length > 0) setLoading(false);
+    };
+    lessonRepository.getRecommended(currentUserId, apply)
+      .then(apply)
+      .catch((err) => console.error('[useHomeLessons] Error en las recomendaciones:', err));
+
+    return () => {
+      cancelled = true;
+    };
+  }, [currentUserId, tasteKey]);
 
   // HIDRATACIÓN REACTIVA CON MAPEO:
   // Si una lección cambia en la Store, estos useMemo se disparan automáticamente.

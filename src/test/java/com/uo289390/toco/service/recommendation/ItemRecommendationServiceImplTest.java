@@ -81,10 +81,10 @@ class ItemRecommendationServiceImplTest {
     void testFindForItemList_AggregatesAllTypesShuffledWithConfiguredCounts() {
         // Arrange
         List<ItemDTO> mapped = List.of(new SongDTO(), new LessonDTO());
-        when(songRecommendationService.findForItemList(ID, RecommendationConstants.RECOMMENDED_SONGS_COUNT)).thenReturn(setOf(List.of(song)));
-        when(genreRecommendationService.findForItemList(ID, RecommendationConstants.RECOMMENDED_GENRES_COUNT)).thenReturn(setOf(List.of(genre)));
-        when(instrumentGenreRecommendationService.findForItemList(ID, RecommendationConstants.RECOMMENDED_INSTRUMENT_GENRES_COUNT)).thenReturn(setOf(List.of(instrumentGenre)));
-        when(lessonRecommendationService.findForItemList(ID, RecommendationConstants.RECOMMENDED_LESSONS_COUNT)).thenReturn(setOf(List.of(lesson)));
+        when(songRecommendationService.findForItemList(ID, RecommendationConstants.N_RECOMMENDED_SONGS)).thenReturn(setOf(List.of(song)));
+        when(genreRecommendationService.findForItemList(ID, RecommendationConstants.N_RECOMMENDED_GENRES)).thenReturn(setOf(List.of(genre)));
+        when(instrumentGenreRecommendationService.findForItemList(ID, RecommendationConstants.N_RECOMMENDED_INSTRUMENT_GENRES)).thenReturn(setOf(List.of(instrumentGenre)));
+        when(lessonRecommendationService.findForItemList(ID, RecommendationConstants.N_RECOMMENDED_LESSONS)).thenReturn(setOf(List.of(lesson)));
         when(dtoMapper.itemsToItemDTOs(any())).thenReturn(mapped);
 
         // Act
@@ -98,10 +98,10 @@ class ItemRecommendationServiceImplTest {
         assertEquals(4, mappedItems.size());
         assertEquals(new LinkedHashSet<>(List.of(song, genre, instrumentGenre, lesson)), new LinkedHashSet<>(mappedItems));
         InOrder inOrder = inOrder(songRecommendationService, genreRecommendationService, instrumentGenreRecommendationService, lessonRecommendationService);
-        inOrder.verify(songRecommendationService).findForItemList(ID, RecommendationConstants.RECOMMENDED_SONGS_COUNT);
-        inOrder.verify(genreRecommendationService).findForItemList(ID, RecommendationConstants.RECOMMENDED_GENRES_COUNT);
-        inOrder.verify(instrumentGenreRecommendationService).findForItemList(ID, RecommendationConstants.RECOMMENDED_INSTRUMENT_GENRES_COUNT);
-        inOrder.verify(lessonRecommendationService).findForItemList(ID, RecommendationConstants.RECOMMENDED_LESSONS_COUNT);
+        inOrder.verify(songRecommendationService).findForItemList(ID, RecommendationConstants.N_RECOMMENDED_SONGS);
+        inOrder.verify(genreRecommendationService).findForItemList(ID, RecommendationConstants.N_RECOMMENDED_GENRES);
+        inOrder.verify(instrumentGenreRecommendationService).findForItemList(ID, RecommendationConstants.N_RECOMMENDED_INSTRUMENT_GENRES);
+        inOrder.verify(lessonRecommendationService).findForItemList(ID, RecommendationConstants.N_RECOMMENDED_LESSONS);
     }
 
     @Test
@@ -160,13 +160,13 @@ class ItemRecommendationServiceImplTest {
     }
 
     @Test
-    void testFindForUser_AggregatesAllTypesInOrderWithHomeCounts() {
+    void testFindForUser_AggregatesAllTypesShuffledWithHomeCounts() {
         // Arrange
         List<ItemDTO> mapped = List.of(new SongDTO());
-        when(songRecommendationService.findForUser(ID, RecommendationConstants.HOME_RECOMMENDED_SONGS_COUNT)).thenReturn(setOf(List.of(song)));
-        when(genreRecommendationService.findForUser(ID, RecommendationConstants.HOME_RECOMMENDED_GENRES_COUNT)).thenReturn(setOf(List.of(genre)));
-        when(instrumentGenreRecommendationService.findForUser(ID, RecommendationConstants.HOME_RECOMMENDED_INSTRUMENT_GENRES_COUNT)).thenReturn(setOf(List.of(instrumentGenre)));
-        when(lessonRecommendationService.findForUser(ID, RecommendationConstants.HOME_RECOMMENDED_LESSONS_COUNT)).thenReturn(setOf(List.of(lesson)));
+        when(songRecommendationService.findForUser(ID, RecommendationConstants.N_HOME_RECOMMENDED_SONGS)).thenReturn(setOf(List.of(song)));
+        when(genreRecommendationService.findForUser(ID, RecommendationConstants.N_HOME_RECOMMENDED_GENRES)).thenReturn(setOf(List.of(genre)));
+        when(instrumentGenreRecommendationService.findForUser(ID, RecommendationConstants.N_HOME_RECOMMENDED_INSTRUMENT_GENRES)).thenReturn(setOf(List.of(instrumentGenre)));
+        when(lessonRecommendationService.findForUser(ID, RecommendationConstants.N_HOME_RECOMMENDED_LESSONS)).thenReturn(setOf(List.of(lesson)));
         when(dtoMapper.itemsToItemDTOs(any())).thenReturn(mapped);
 
         // Act
@@ -175,7 +175,10 @@ class ItemRecommendationServiceImplTest {
         // Assert
         assertSame(mapped, result);
         verify(dtoMapper).itemsToItemDTOs(itemsCaptor.capture());
-        assertEquals(List.of(song, genre, instrumentGenre, lesson), new ArrayList<>(itemsCaptor.getValue()));
+        // Every type is there, each once, in a random order (shuffled to mix the types)
+        List<Item> mappedItems = new ArrayList<>(itemsCaptor.getValue());
+        assertEquals(4, mappedItems.size());
+        assertEquals(new LinkedHashSet<>(List.of(song, genre, instrumentGenre, lesson)), new LinkedHashSet<>(mappedItems));
         verify(songRecommendationService, never()).findForItemList(anyLong(), anyInt());
     }
 
@@ -194,6 +197,8 @@ class ItemRecommendationServiceImplTest {
 
         // Assert
         verify(dtoMapper).itemsToItemDTOs(itemsCaptor.capture());
-        assertEquals(List.of(song, lesson), new ArrayList<>(itemsCaptor.getValue()));
+        List<Item> mappedItems = new ArrayList<>(itemsCaptor.getValue());
+        assertEquals(2, mappedItems.size());
+        assertEquals(new LinkedHashSet<>(List.of(song, lesson)), new LinkedHashSet<>(mappedItems));
     }
 }

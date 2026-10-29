@@ -18,7 +18,7 @@ import java.util.TreeMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import static com.uo289390.toco.utils.RecommendationConstants.MAX_ARTISTS_IN_SONGS_BY_ARTISTS;
+import static com.uo289390.toco.utils.RecommendationConstants.MAX_N_ARTISTS_IN_SONGS_BY_ARTISTS;
 
 /**
  * REST controller for songs.
@@ -37,8 +37,6 @@ import static com.uo289390.toco.utils.RecommendationConstants.MAX_ARTISTS_IN_SON
  * - GET    /api/songs/new?limit={n}              Retrieve the new songs
  * - GET    /api/songs/by-artists/new?limit={n}&artist1={a}&artist2={b}...     Retrieve the new songs of some artists
  * - GET    /api/songs/by-artists/popular?limit={n}&artist1={a}&artist2={b}... Retrieve the popular songs of some artists
- * - GET    /api/songs/recommended/ids?limit={n}  Retrieve the IDs of the recommended songs for the user (not implemented yet)
- * - GET    /api/songs/spotify?limit={n}          Retrieve the songs recommended by Spotify
  * - POST   /api/songs                            Create a song
  * - PUT    /api/songs/{id}                       Update a song
  * - DELETE /api/songs/{id}                       Delete a song
@@ -231,7 +229,7 @@ public class SongController {
     /**
      * Reads the {@code artistN} query parameters, ordered by their number (artist1 first).
      *
-     * @throws IllegalArgumentException if a number is out of 1-{@code MAX_ARTISTS_IN_SONGS_BY_ARTISTS}
+     * @throws IllegalArgumentException if a number is out of 1-{@code MAX_N_ARTISTS_IN_SONGS_BY_ARTISTS}
      */
     private static List<String> artistsFrom(Map<String, String> params) {
         TreeMap<Integer, String> byNumber = new TreeMap<>();
@@ -239,9 +237,9 @@ public class SongController {
             Matcher matcher = ARTIST_PARAM.matcher(name);
             if (!matcher.matches()) return;
             int number = Integer.parseInt(matcher.group(1));
-            if (number < 1 || number > MAX_ARTISTS_IN_SONGS_BY_ARTISTS) {
+            if (number < 1 || number > MAX_N_ARTISTS_IN_SONGS_BY_ARTISTS) {
                 throw new IllegalArgumentException(
-                        "Artist parameters go from artist1 to artist" + MAX_ARTISTS_IN_SONGS_BY_ARTISTS + ": " + name);
+                        "Artist parameters go from artist1 to artist" + MAX_N_ARTISTS_IN_SONGS_BY_ARTISTS + ": " + name);
             }
             byNumber.put(number, value);
         });

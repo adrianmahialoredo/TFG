@@ -12,6 +12,8 @@ import GenreViewer from "../components/GenreViewer";
 import InstrumentViewer from "../components/InstrumentViewer";
 import ListCarousel from "../components/carousels/ListCarousel";
 import CreateListMiniModal from "../components/CreateListMiniModal";
+import ItemListPickerModal from "../components/ItemListPickerModal";
+import { COLORS } from "../constants/Theme";
 import FavoritesPickerModal from "../components/FavoritesPickerModal";
 import { SpotifyButton } from "../components/buttons/SpotifyButton";
 import { useProfile } from "../hooks/useProfile";
@@ -51,7 +53,17 @@ export default function ProfileScreen() {
   const [newListName, setNewListName] = useState('');
   const [createListError, setCreateListError] = useState<string | null>(null);
 
+  // Modal con todas las listas (lupa del carrusel cuando hay demasiadas)
+  const [allListsVisible, setAllListsVisible] = useState(false);
+  const sortedLists = useMemo(() => [...lists].sort((a, b) => a.name.localeCompare(b.name)), [lists]);
+
+  const handleOpenListFromModal = (listId: string) => {
+    setAllListsVisible(false);
+    navigation.navigate('ListScreen', { itemListId: listId });
+  };
+
   const handleCreateListPress = () => {
+    setAllListsVisible(false);
     setCreateListError(null);
     setNewListName('');
     setCreateListModalVisible(true);
@@ -188,6 +200,7 @@ export default function ProfileScreen() {
               data={carouselData}
               onItemPress={(id) => navigation.navigate('ListScreen', { itemListId: id })}
               onEmptyPress={handleCreateListPress}
+              onSeeAllPress={() => setAllListsVisible(true)}
           />
 
           <View className="h-[5px] bg-primary my-2 mx-4" />
@@ -295,6 +308,24 @@ export default function ProfileScreen() {
             )}
           </Pressable>
         </Modal>
+
+        <ItemListPickerModal
+            visible={allListsVisible}
+            title="Mis listas"
+            lists={sortedLists}
+            emptyText="Aún no tienes listas."
+            onSelect={handleOpenListFromModal}
+            onClose={() => setAllListsVisible(false)}
+            getAccessibilityLabel={(name) => `Abrir ${name}`}
+            footer={
+              <TouchableOpacity
+                  onPress={handleCreateListPress}
+                  style={{ paddingHorizontal: 16, paddingVertical: 8, borderRadius: 9999, backgroundColor: COLORS.primary }}
+              >
+                <Text style={{ color: COLORS.background, fontWeight: '600' }}>Añadir lista</Text>
+              </TouchableOpacity>
+            }
+        />
 
         <CreateListMiniModal
             visible={createListModalVisible}

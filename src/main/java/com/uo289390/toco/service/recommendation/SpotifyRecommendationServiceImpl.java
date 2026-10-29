@@ -1,11 +1,15 @@
-package com.uo289390.toco.service;
+package com.uo289390.toco.service.recommendation;
 
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import com.uo289390.toco.dto.ItemDTO;
-import com.uo289390.toco.utils.RecommendationConstants;
+import com.uo289390.toco.model.*;
+import com.uo289390.toco.repository.InstrumentGenreRepository;
+import com.uo289390.toco.repository.LessonRepository;
+import com.uo289390.toco.service.SpotifyAuthService;
+import com.uo289390.toco.utils.Identifiable;
 import com.uo289390.toco.dto.SongDTO;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpEntity;
@@ -18,15 +22,14 @@ import org.springframework.web.client.RestTemplate;
 
 import com.uo289390.toco.repository.SongRepository;
 import com.uo289390.toco.repository.SongRepository.TitleArtist;
-import com.uo289390.toco.model.Song;
 import com.uo289390.toco.utils.mapper.DtoMapper;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 import static com.uo289390.toco.utils.EntityResolver.resolveUser;
-import static com.uo289390.toco.utils.Utils.resolvePageable;
-import static com.uo289390.toco.utils.Utils.idsToExclude;
+import static com.uo289390.toco.utils.RecommendationConstants.*;
+import static com.uo289390.toco.utils.Utils.*;
 
 /**
  * Default implementation of {@link SpotifyRecommendationService}.
@@ -60,67 +63,99 @@ public class SpotifyRecommendationServiceImpl implements SpotifyRecommendationSe
     private final SpotifyAuthService spotifyAuthService;
 
     private final SongRepository songRepository;
+    private final LessonRepository lessonRepository;
+    private final InstrumentGenreRepository instrumentGenreRepository;
 
     private final DtoMapper dtoMapper;
 
+    /**
+     * Recomienda elementos de todos los tipos a partir de los gustos del usuario en Spotify.
+     *
+     * 1. Canciones: las de {@link #findSongsForUser} (top del usuario y de sus artistas favoritos).
+     * 2. Lecciones: de los géneros de esas canciones (solo las del género, no las de un instrument-genre).
+     * 3. Instrument-genres: combinaciones de los géneros e instrumentos más repetidos en esas canciones.
+     * 4. Géneros: los más repetidos en esas canciones.
+     *
+     * Nunca se recomienda nada que el usuario ya tenga en sus listas. El resultado se baraja,
+     * ya que la app solo muestra los primeros y en orden de prioridad siempre serían canciones.
+     *
+     * TODO: Este algoritmo trabaja sobre las canciones que existen en base de datos, pero Spotify devuelve los géneros
+     * de los artistas top del usuario, por lo que sería interesante utilizar esa info para las lecciones, géneros, etc,
+     * ya que ahora se pierden esos géneros en caso de que no haya canciones del artista en base de datos.
+     *
+     * @param userId el ID del usuario de la aplicación
+     * @return los elementos recomendados, barajados; vacío si ninguna canción de Spotify está en la base de datos
+     */
     @Override
     public List<ItemDTO> findItemsForUser(Long userId) {
         log.info("Fetching Spotify recommendations for user: {}", userId);
-        HttpEntity<Void> request = authorizedRequest(userId);
 
-        // 1. Obtener artistas top del usuario
-        ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
-                "https://api.spotify.com/v1/me/top/artists?limit=2",
-                HttpMethod.GET, request, (Class<Map<String, Object>>) (Class<?>) Map.class
-        );
+        // 1. Canciones de Spotify que están en la base de datos (valida el usuario y su token)
+        List<Song> songs = findSongEntitiesForUser(userId, N_SPOTIFY_RECOMMENDED_SONGS);
+        if (songs.isEmpty()) {
+            log.info("No Spotify songs found in the database for user: {}", userId);
+            return List.of();
+        }
 
-        List<Map<String, Object>> artists = Optional.ofNullable(response.getBody())
-                .map(body -> (List<Map<String, Object>>) body.get("items"))
-                .filter(items -> !items.isEmpty())
-                .orElseThrow(() -> {
-                    log.warn("No se encontraron artistas favoritos para el usuario con ID: {}", userId);
-                    return new IllegalStateException("No se encontraron artistas del usuario");
-                });
+        User user = resolveUser(userId);
+        SequencedSet<Item> items = new LinkedHashSet<>(songs);
 
-        String seedArtist = Optional.ofNullable((String) artists.get(0).get("id"))
-                .filter(id -> !id.isEmpty())
-                .orElseThrow(() -> {
-                    log.error("El ID del artista semilla está vacío o es nulo para el usuario con ID: {}", userId);
-                    return new IllegalStateException("El ID del artista semilla no es válido");
-                });
+        // Géneros e instrumentos de las canciones, con repetidos para saber cuáles son los más presentes
+        List<Genre> genresInSongs = songs.stream().flatMap(song -> song.getGenres().stream()).toList();
+        List<Instrument> instrumentsInSongs = songs.stream().flatMap(song -> song.getInstruments().stream()).toList();
 
-        // 2. Pedir recomendaciones
-        String url = "https://api.spotify.com/v1/artists/" + seedArtist + "/top-tracks";
-        log.info("Seed artist: {}", seedArtist);
-        log.info("Requesting recommendations from Spotify API: {}", url);
+        // Del más al menos repetido (getTopNMostRepeated agrupa por ID, así que no hay duplicados)
+        List<Genre> topGenres = getTopNMostRepeated(genresInSongs, genresInSongs.size());
 
-        try {
-            ResponseEntity<Map<String, Object>> recResponse = restTemplate.exchange(
-                    url, HttpMethod.GET, request, (Class<Map<String, Object>>) (Class<?>) Map.class
-            );
+        if (!topGenres.isEmpty()) {
+            // 2. Lecciones de los géneros (no de instrument-genre)
+            items.addAll(lessonRepository.findByGenreIdInAndBelongsToGenreTrueAndIdNotIn(
+                    idsOf(topGenres),
+                    idsToExclude(user.getIdsFromItemListsOfType(Lesson.class)),
+                    resolvePageable(N_SPOTIFY_RECOMMENDED_LESSONS)
+            ));
 
-            if (!recResponse.getStatusCode().is2xxSuccessful()) {
-                log.error("Spotify API returned non-successful status: {} with body: {}",
-                        recResponse.getStatusCode(), recResponse.getBody());
-                throw new IllegalStateException("Error fetching recommendations from Spotify API");
+            // 3. Combinaciones de los géneros e instrumentos más presentes en las canciones
+            List<Instrument> topInstruments = getTopNMostRepeated(instrumentsInSongs, N_TOP_INSTRUMENTS_USED_IN_SPOTIFY_INSTRUMENT_GENRE_RECOMMENDATION);
+            if (!topInstruments.isEmpty()) {
+                items.addAll(instrumentGenreRepository.findByGenreIdInAndInstrumentIdInAndIdNotIn(
+                        idsOf(topGenres.stream().limit(N_TOP_GENRES_USED_IN_SPOTIFY_INSTRUMENT_GENRE_RECOMMENDATION).toList()),
+                        idsOf(topInstruments),
+                        idsToExclude(user.getIdsFromItemListsOfType(InstrumentGenre.class)),
+                        resolvePageable(N_SPOTIFY_RECOMMENDED_INSTRUMENT_GENRES)
+                ));
             }
 
-            List<Map<String, Object>> recommendations = Optional.ofNullable(recResponse.getBody())
-                    .map(body -> (List<Map<String, Object>>) body.get("tracks"))
-                    .orElseGet(List::of);
-
-            log.info("Successfully fetched {} recommendations for user: {}",
-                    recommendations.size(), userId);
-
-            return null;
-        } catch (Exception e) {
-            log.error("Error fetching recommendations from Spotify API: {}", e.getMessage(), e);
-            throw new IllegalStateException("Error fetching recommendations from Spotify API", e);
+            // 4. Géneros más presentes que el usuario no tenga ya (ya están cargados, no hace falta consultar)
+            Set<Long> genresInLists = user.getIdsFromItemListsOfType(Genre.class);
+            topGenres.stream()
+                    .filter(genre -> !genresInLists.contains(genre.getId()))
+                    .limit(N_SPOTIFY_RECOMMENDED_GENRES)
+                    .forEach(items::add);
         }
+
+        log.info("Returning {} Spotify items for user: {}", items.size(), userId);
+
+        // Fusionar, barajar y devolver
+        List<Item> shuffled = new ArrayList<>(items);
+        Collections.shuffle(shuffled);
+        return dtoMapper.itemsToItemDTOs(shuffled);
     }
 
     @Override
     public List<SongDTO> findSongsForUser(Long userId, int limit) {
+        return findSongEntitiesForUser(userId, limit).stream().map(dtoMapper::songToSongDto).toList();
+    }
+
+    /**
+     * Canciones top del usuario en Spotify que están en la base de datos, completadas con las
+     * de sus artistas favoritos si no llegan al límite. Nunca incluye canciones de sus listas.
+     *
+     * @param userId el ID del usuario de la aplicación
+     * @param limit  número máximo de canciones; si no es positivo no se llama a Spotify
+     * @return las canciones, en orden de prioridad
+     */
+    private List<Song> findSongEntitiesForUser(Long userId, int limit) {
         if (limit <= 0) {
             return List.of();
         }
@@ -162,11 +197,11 @@ public class SpotifyRecommendationServiceImpl implements SpotifyRecommendationSe
 
         int missing = limit - songs.size();
         if (missing <= 0) {
-            return songs.stream().map(dtoMapper::songToSongDto).toList();
+            return songs;
         }
 
         // Si no están completas aún, sacamos canciones a partir de sus artistas favoritos en medium_term
-        List<String> topArtists = fetchTopArtists(request, RecommendationConstants.NUMBER_OF_TOP_ARTISTS_TO_FETCH_FROM_SPOTIFY, "medium_term");
+        List<String> topArtists = fetchTopArtists(request, N_TOP_ARTISTS_USED_IN_SPOTIFY_SONG_RECOMMENDATION, "medium_term");
 
         // Cada artista aporta la parte entera; el artista top se queda además con el resto,
         // para que entre todos sumen exactamente lo que falta (aunque Spotify devuelva menos artistas)
@@ -199,7 +234,7 @@ public class SpotifyRecommendationServiceImpl implements SpotifyRecommendationSe
 
         log.info("Returning {} Spotify songs for user: {} ({} from top artists)", songs.size(), userId, songs.size() - (limit - missing));
 
-        return songs.stream().map(dtoMapper::songToSongDto).toList();
+        return songs;
     }
 
     /**
@@ -289,6 +324,13 @@ public class SpotifyRecommendationServiceImpl implements SpotifyRecommendationSe
     @FunctionalInterface
     private interface ArtistSongsQuery {
         List<Song> find(String artist, Collection<Long> excludedIds, Pageable pageable);
+    }
+
+    /**
+     * IDs de los elementos dados, en el mismo orden.
+     */
+    private static List<Long> idsOf(Collection<? extends Identifiable<Long>> items) {
+        return items.stream().map(Identifiable::getId).toList();
     }
 
     /**

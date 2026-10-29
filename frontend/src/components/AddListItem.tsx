@@ -16,26 +16,43 @@ type ItemProps = {
   inverted?: boolean;
 };
 
+/**
+ * Fila de un item que se puede añadir a una lista (AddItemScreen).
+ *
+ * Estilos en línea y sin className: la fila va dentro de un Animated.View con animaciones de
+ * entrada, salida y layout, y `inverted` cambia cuando el item sube un puesto. Con className,
+ * NativeWind a veces no aplicaba el cambio de clases y la fila se quedaba sin fondo (negra) o
+ * con colores mezclados. Tampoco lleva sombra: en Android la `elevation` se pinta como un
+ * recuadro negro mientras la fila se desvanece.
+ */
 export default function AddListItem({ item, onPress, added = false, inverted = false }: ItemProps ) {
-  const cardClassName = inverted
-    ? 'flex-row flex-1 bg-primary border border-secondary rounded-2xl shadow-md'
-    : 'flex-row flex-1 bg-secondary rounded-2xl shadow-md';
-  const infoClassName = inverted
-    ? 'text-base text-secondary justify-center text-center'
-    : 'text-base text-primary justify-center text-center';
-  const iconColor = inverted ? COLORS.secondary : COLORS.primary;
+  const textColor = inverted ? COLORS.secondary : COLORS.primary;
 
   return (
-    <View className={cardClassName}>
+    <View
+      style={{
+        flexDirection: 'row',
+        flex: 1,
+        borderRadius: 16,
+        overflow: 'hidden',
+        backgroundColor: inverted ? COLORS.primary : COLORS.secondary,
+        borderWidth: 1,
+        borderColor: COLORS.secondary,
+      }}
+    >
         <Image
-          source={{ uri: item.imageUrl }} // Placeholder image
-          className="h-24 w-24 rounded-l-xl"
+          source={{ uri: item.imageUrl }}
+          style={{ width: 96, height: 96 }}
         />
-        <View className="self-center items-center flex-1">
-          <Text className={infoClassName}>{item.info}</Text>
+        <View style={{ flex: 1, alignSelf: 'center', alignItems: 'center' }}>
+          <Text style={{ fontSize: 16, lineHeight: 24, color: textColor, textAlign: 'center' }}>{item.info}</Text>
         </View>
-        <TouchableOpacity onPress={onPress} disabled={added} className="p-4 items-center justify-center">
-          <AddButton size={36} color={iconColor} checked={added} />
+        <TouchableOpacity
+          onPress={onPress}
+          disabled={added}
+          style={{ padding: 16, alignItems: 'center', justifyContent: 'center' }}
+        >
+          <AddButton size={36} color={textColor} checked={added} />
         </TouchableOpacity>
     </View>
   );

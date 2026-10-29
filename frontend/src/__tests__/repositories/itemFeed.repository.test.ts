@@ -68,6 +68,20 @@ describe('itemFeed.repository', () => {
     });
   });
 
+  describe('getFromSpotifyForUser', () => {
+    it('reparte los DTOs en sus Stores y guarda su propio índice', async () => {
+      service.getRecommendedFromSpotify.mockResolvedValue(mixed);
+
+      await expect(repo.getFromSpotifyForUser('u1')).resolves.toEqual(['1', '2', '3', '4']);
+      expect(service.getRecommendedFromSpotify).toHaveBeenCalledWith('u1');
+      expect(stores.useLessonEntitiesStore.getState().lessons['2'].title).toBe('Lesson');
+      expect(Object.keys(stores.useItemEntitiesStore.getState().items).sort()).toEqual(['1', '2', '3', '4']);
+
+      await flush();
+      expect(await readDisk('@item_index:items_spotify_user')).toEqual(['1', '2', '3', '4']);
+    });
+  });
+
   describe('getRecommendedByItemList', () => {
     it('usa un índice por lista', async () => {
       service.getRecommendedByItemList.mockResolvedValue([mixed[0]]);

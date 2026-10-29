@@ -194,7 +194,7 @@ class GenreRecommendationServiceImplTest {
         @Test
         void testFindForItemList_Level2_UsesTopGenresInSourceOrder() {
             // Arrange
-            int expectedTopN = RecommendationConstants.NUMBER_OF_GENRES_USED_IN_GENRE_RECOMMENDATION + 1;
+            int expectedTopN = RecommendationConstants.N_GENRES_USED_IN_GENRE_RECOMMENDATION + 1;
             when(itemList.getTopGenresFromSongs(expectedTopN)).thenReturn(List.of(genre(1), genre(2)));
             when(itemList.getTopGenresFromInstrumentGenres(expectedTopN)).thenReturn(List.of(genre(3)));
             when(itemList.getTopGenresFromLessons(expectedTopN)).thenReturn(List.of(genre(4), genre(5)));

@@ -39,6 +39,10 @@ jest.mock('../../components/SuggestionCard', () => {
   return ({ label, title, onPress }: any) => <Text onPress={onPress}>{`${label}: ${title}`}</Text>;
 });
 
+jest.mock('../../components/buttons/SpotifyButton', () => {
+  const { Text } = require('react-native');
+  return { SpotifyButton: () => <Text>Botón Spotify</Text> };
+});
 jest.mock('../../components/buttons/ToolButton', () => {
   const { Text } = require('react-native');
   return { ToolButton: ({ label, onPress }: any) => <Text onPress={onPress}>{label}</Text> };
@@ -55,6 +59,8 @@ const lesson = { id: 'l1', title: 'Acordes básicos', imageUrl: '', type: ItemTy
 const baseState = () => ({
   recentItems: [],
   recommendations: [],
+  spotifyItems: [] as any[],
+  spotifyConnected: undefined as boolean | undefined,
   favouriteCombination: null,
   mostUsedGenre: null,
   newFavouriteArtistSong: null,
@@ -79,6 +85,27 @@ describe('HomeScreen', () => {
     expect(screen.getByText('Carrusel Recomendaciones')).toBeTruthy();
     expect(screen.getByText(/se muestren tus recientes/)).toBeTruthy();
     expect(screen.getByText(/se muestren tus recomendaciones/)).toBeTruthy();
+  });
+
+  it('mientras no se sabe si hay Spotify vinculado no muestra ni carrusel ni botón', async () => {
+    await render(<HomeScreen />);
+    expect(screen.queryByText('Carrusel Desde tu Spotify')).toBeNull();
+    expect(screen.queryByText('Botón Spotify')).toBeNull();
+  });
+
+  it('sin Spotify vinculado ofrece conectarlo en vez del carrusel', async () => {
+    mockHomeState.spotifyConnected = false;
+    await render(<HomeScreen />);
+    expect(screen.queryByText('Carrusel Desde tu Spotify')).toBeNull();
+    expect(screen.getByText('Desde tu Spotify')).toBeTruthy();
+    expect(screen.getByText('Botón Spotify')).toBeTruthy();
+  });
+
+  it('con Spotify vinculado muestra su carrusel (con mensaje si está vacío)', async () => {
+    mockHomeState.spotifyConnected = true;
+    await render(<HomeScreen />);
+    expect(screen.getByText('Carrusel Desde tu Spotify')).toBeTruthy();
+    expect(screen.getByText(/Escucha música en Spotify/)).toBeTruthy();
   });
 
   it('mientras carga no muestra los mensajes de vacío', async () => {

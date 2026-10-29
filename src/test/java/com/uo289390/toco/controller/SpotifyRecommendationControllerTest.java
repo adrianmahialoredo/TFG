@@ -11,7 +11,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import java.util.List;
 
-import com.uo289390.toco.controller.SpotifyRecommendationController;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -25,7 +24,7 @@ import com.uo289390.toco.dto.ItemDTO;
 import com.uo289390.toco.dto.SongDTO;
 import com.uo289390.toco.security.JwtAuthenticationFilter;
 import com.uo289390.toco.security.JwtUtil;
-import com.uo289390.toco.service.SpotifyRecommendationService;
+import com.uo289390.toco.service.recommendation.SpotifyRecommendationService;
 
 /**
  * Web layer tests for {@link SpotifyRecommendationController}.

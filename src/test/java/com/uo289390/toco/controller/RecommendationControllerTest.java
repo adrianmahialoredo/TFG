@@ -135,7 +135,7 @@ class RecommendationControllerTest {
         Lesson first = new Lesson();
         Lesson second = new Lesson();
         LinkedHashSet<Lesson> lessons = new LinkedHashSet<>(List.of(first, second));
-        when(lessonRecommendationService.findForUser(7L, RecommendationConstants.RECOMMENDED_LESSONS_COUNT))
+        when(lessonRecommendationService.findForUser(7L, RecommendationConstants.N_RECOMMENDED_LESSONS))
                 .thenReturn(lessons);
         when(dtoMapper.lessonToLessonDto(first)).thenReturn(lessonDto(10L));
         when(dtoMapper.lessonToLessonDto(second)).thenReturn(lessonDto(11L));
@@ -146,7 +146,7 @@ class RecommendationControllerTest {
                 .andExpect(jsonPath("$[0].id").value(10))
                 .andExpect(jsonPath("$[1].id").value(11));
 
-        verify(lessonRecommendationService).findForUser(7L, RecommendationConstants.RECOMMENDED_LESSONS_COUNT);
+        verify(lessonRecommendationService).findForUser(7L, RecommendationConstants.N_RECOMMENDED_LESSONS);
     }
 
     @Test
@@ -160,14 +160,14 @@ class RecommendationControllerTest {
 
     @Test
     void getForGenre_usesByGenreCount() throws Exception {
-        when(lessonRecommendationService.findForGenre(3L, RecommendationConstants.BY_GENRE_RECOMMENDED_LESSONS_COUNT))
+        when(lessonRecommendationService.findForGenre(3L, RecommendationConstants.N_BY_GENRE_RECOMMENDED_LESSONS))
                 .thenReturn(List.of(lessonDto(1L), lessonDto(2L)));
 
         mockMvc.perform(get("/api/recommendations/lessons/by-genre/3"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(2));
 
-        verify(lessonRecommendationService).findForGenre(3L, RecommendationConstants.BY_GENRE_RECOMMENDED_LESSONS_COUNT);
+        verify(lessonRecommendationService).findForGenre(3L, RecommendationConstants.N_BY_GENRE_RECOMMENDED_LESSONS);
     }
 
     @Test
@@ -212,7 +212,7 @@ class RecommendationControllerTest {
         first.setId(30L);
         InstrumentGenre second = new InstrumentGenre();
         second.setId(31L);
-        when(instrumentGenreRecommendationService.findFavouriteCombinationsForUser(7L, RecommendationConstants.FAVOURITE_INSTRUMENT_GENRE_COMBINATIONS_COUNT))
+        when(instrumentGenreRecommendationService.findFavouriteCombinationsForUser(7L, RecommendationConstants.N_FAVOURITE_INSTRUMENT_GENRE_COMBINATIONS))
                 .thenReturn(new LinkedHashSet<>(List.of(first, second)));
 
         mockMvc.perform(get("/api/recommendations/instrument-genres/favourite-combinations/by-user/7/ids"))
@@ -237,7 +237,7 @@ class RecommendationControllerTest {
         first.setId(40L);
         Genre second = new Genre();
         second.setId(41L);
-        when(genreRecommendationService.findMostUsedInItemListsForUser(7L, RecommendationConstants.MOST_USED_GENRES_IN_ITEM_LISTS_COUNT))
+        when(genreRecommendationService.findMostUsedInItemListsForUser(7L, RecommendationConstants.N_MOST_USED_GENRES_IN_ITEM_LISTS))
                 .thenReturn(new LinkedHashSet<>(List.of(first, second)));
 
         mockMvc.perform(get("/api/recommendations/genres/most-used-in-item-lists/by-user/7/ids"))

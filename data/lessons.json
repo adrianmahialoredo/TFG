@@ -1,20 +1,25 @@
 [
   {
     "id": 101,
-    "level": 3,
-    "title": "Power Chords: La base del Pop Punk",
+    "level": 2,
+    "title": "Ritmos del Pop Punk",
     "belongsToGenre": true,
     "genreId": 1,
+    "belongsToInstrumentGenre": false,
+    "instrumentGenreId": null,
+    "genrePopular": true,
     "popular": true,
     "sections": [
       {
-        "title": "El acorde de quinta",
-        "htmlContent": "<h3>El acorde de quinta</h3><p>Para tocar Pop Punk necesitas dominar los <b>Power Chords</b>. Coloca tu dedo índice en la sexta cuerda y el anular en la quinta cuerda, dos trastes más adelante.</p>",
+        "title": "El pulso acelerado del Pop Punk",
+        "htmlContent": "<h3>El pulso acelerado del Pop Punk</h3><p>La base rítmica del género se caracteriza por compases 4/4 a tempos elevados (entre 160 y 190 BPM). El acento constante en corcheas define la energía característica del estilo californiano.</p>",
+        "videoUrl": "https://www.youtube.com/watch?v=NstT7n8KzZQ",
         "orderIndex": 1
       },
       {
-        "title": "Palm Mute rítmico",
-        "htmlContent": "<h3>Técnica de Palm Mute</h3><p>Apoya el lateral de tu mano derecha sobre las cuerdas cerca del puente para obtener ese sonido 'ahogado' tan característico.</p>",
+        "title": "Dinámicas entre estrofa y estribillo",
+        "htmlContent": "<h3>Contraste de dinámicas</h3><p>Aprende a pasar de una estrofa contenida y percusiva a un estribillo explosivo con sonido abierto y saturado, el recurso más repetido en bandas como Blink-182 o Green Day.</p>",
+        "videoUrl": "https://www.youtube.com/watch?v=hTWKbfoikeg",
         "orderIndex": 2
       }
     ]
@@ -22,67 +27,458 @@
   {
     "id": 102,
     "level": 3,
-    "title": "Fundamentos del Rock",
+    "title": "La Pentatónica en el Rock",
     "belongsToGenre": true,
     "genreId": 2,
+    "belongsToInstrumentGenre": false,
+    "instrumentGenreId": null,
+    "genrePopular": true,
     "popular": true,
     "sections": [
       {
-        "title": "Escala Pentatónica Menor",
-        "htmlContent": "<h3>Estructura de la escala</h3><p>La pentatónica es la reina del Rock. En tonalidad de La (A), empieza en el traste 5 de la sexta cuerda.</p>",
+        "title": "Estructura de la Escala Pentatónica",
+        "htmlContent": "<h3>La reina de las escalas</h3><p>La escala pentatónica menor (T - b3 - 4 - 5 - b7) constituye la base del 90% de los solos y riffs clásicos de Rock and Roll por su fuerza y ausencia de notas disonantes.</p>",
+        "videoUrl": "https://www.youtube.com/watch?v=zDdiF1fl5Vg",
         "orderIndex": 1
       },
       {
-        "title": "Bending y Vibrato",
-        "htmlContent": "<h3>Expresividad</h3><p>El bending consiste en estirar la cuerda hacia arriba para alcanzar una nota superior, esencial en los solos de Rock.</p>",
+        "title": "Resolución y notas diana",
+        "htmlContent": "<h3>Fraseo y acentuación</h3><p>No basta con recorrer el patrón: aprende a reposar en la fundamental y en la quinta justa al cambiar de compás para que tus melodías tengan coherencia armónica.</p>",
+        "videoUrl": "https://www.youtube.com/watch?v=gj0Rz-uP4Mk",
         "orderIndex": 2
       }
     ]
   },
   {
     "id": 103,
-    "level": 3,
-    "title": "Groove y Rítmica Funk",
+    "level": 2,
+    "title": "Texturas acústicas del Pop Rock",
     "belongsToGenre": true,
-    "genreId": 4,
+    "genreId": 3,
+    "belongsToInstrumentGenre": false,
+    "instrumentGenreId": null,
+    "genrePopular": true,
     "popular": true,
     "sections": [
       {
-        "title": "El Rasgueo de 16 notas",
-        "htmlContent": "<h3>Mano derecha constante</h3><p>En el Funk, la mano derecha nunca para de moverse en semicorcheas, incluso cuando no tocas notas (ghost notes).</p>",
+        "title": "Arreglos en capas",
+        "htmlContent": "<h3>El sonido Pop Rock moderno</h3><p>El Pop Rock combina elementos acústicos orgánicos con una base rítmica contundente, dejando espacio en el rango medio para que la voz principal lidere el tema.</p>",
+        "videoUrl": "https://www.youtube.com/watch?v=kEl3WnM4F9I",
         "orderIndex": 1
       },
       {
-        "title": "Acordes de Novena",
-        "htmlContent": "<h3>El sonido Funk</h3><p>Usa posiciones de acordes con la 9ª añadida para obtener ese brillo característico del estilo James Brown.</p>",
+        "title": "Construcción del crescendo",
+        "htmlContent": "<h3>Añadiendo tensión progresiva</h3><p>Cómo sumar elementos sección a sección: empezar con rasgueo suave, añadir arpegios y desembocar en un estribillo con instrumentación completa.</p>",
+        "videoUrl": "https://www.youtube.com/watch?v=fJ9rUzIMcZQ",
         "orderIndex": 2
       }
     ]
   },
   {
     "id": 104,
-    "level": 3,
-    "title": "Texturas Pop Rock",
+    "level": 4,
+    "title": "Groove y rítmica del Funk",
     "belongsToGenre": true,
-    "genreId": 3,
+    "genreId": 4,
+    "belongsToInstrumentGenre": false,
+    "instrumentGenreId": null,
+    "genrePopular": true,
+    "popular": true,
     "sections": [
       {
-        "title": "Arpegios Abiertos",
-        "htmlContent": "<h3>Claridad melódica</h3><p>Tocar las notas de los acordes una a una permite que las canciones de Pop Rock respiren y tengan una textura cristalina.</p>",
+        "title": "El concepto de 'The One'",
+        "htmlContent": "<h3>Acentuar el primer tiempo</h3><p>En el Funk, toda la síncopa descansa sobre la fuerza indiscutible del tiempo uno del compás, principio universal popularizado por James Brown y Parliament.</p>",
+        "videoUrl": "https://www.youtube.com/watch?v=w2WBJbFg04s",
         "orderIndex": 1
+      },
+      {
+        "title": "Sincopación y notas fantasma",
+        "htmlContent": "<h3>El espacio entre notas</h3><p>Los silencios y notas apagadas son tan importantes como el sonido real. Aprende a crear huecos que inviten al movimiento y al baile.</p>",
+        "videoUrl": "https://www.youtube.com/watch?v=3XsuI3FZx9E",
+        "orderIndex": 2
       }
     ]
   },
   {
     "id": 105,
     "level": 3,
-    "title": "Técnicas de Country",
+    "title": "Técnicas esenciales del Country",
     "belongsToGenre": true,
     "genreId": 5,
+    "belongsToInstrumentGenre": false,
+    "instrumentGenreId": null,
+    "genrePopular": true,
+    "popular": true,
     "sections": [
       {
-        "title": "Hybrid Picking",
-        "htmlContent": "<h3>Púa y Dedos</h3><p>Esta técnica permite tocar cuerdas alejadas simultáneamente, usando la púa para los bajos y los dedos medio/anular para las agudas.</p>",
+        "title": "El bajo alternante 'Boom-Chick'",
+        "htmlContent": "<h3>La locomotora rítmica</h3><p>El pulso fundamental del country alterna entre la tónica y la quinta de cada acorde en los tiempos 1 y 3, arropado por rasgueos o golpes ligeros en los tiempos 2 y 4.</p>",
+        "videoUrl": "https://www.youtube.com/watch?v=XIR16j4GxxU",
+        "orderIndex": 1
+      },
+      {
+        "title": "Licks de paso entre acordes",
+        "htmlContent": "<h3>Conexiones cromáticas</h3><p>Aprende a hilar progresiones típicas de country utilizando escalas cromáticas en las notas más graves para transicionar con fluidez.</p>",
+        "videoUrl": "https://www.youtube.com/watch?v=4zLfCnGVeL4",
+        "orderIndex": 2
+      }
+    ]
+  },
+  {
+    "id": 106,
+    "level": 2,
+    "title": "Estructuras y armonía de la Nueva Ola",
+    "belongsToGenre": true,
+    "genreId": 6,
+    "belongsToInstrumentGenre": false,
+    "instrumentGenreId": null,
+    "genrePopular": true,
+    "popular": true,
+    "sections": [
+      {
+        "title": "El ciclo de acordes moderno",
+        "htmlContent": "<h3>Progresiones circulares</h3><p>La Nueva Ola pop española destaca por progresiones de cuatro acordes sin modulaciones complejas, priorizando la inmediatez emocional y melódica.</p>",
+        "videoUrl": "https://www.youtube.com/watch?v=xWIwOufhT-4",
+        "orderIndex": 1
+      },
+      {
+        "title": "La mezcla entre acústico y urbano",
+        "htmlContent": "<h3>Textura híbrida</h3><p>Comprende la interacción de instrumentos tradicionales con bombos y cajas 808 propios de la producción urbana actual.</p>",
+        "videoUrl": "https://www.youtube.com/watch?v=iipcx-L6yJQ",
+        "orderIndex": 2
+      }
+    ]
+  },
+  {
+    "id": 107,
+    "level": 3,
+    "title": "Sonoridad y arreglos del Indie",
+    "belongsToGenre": true,
+    "genreId": 7,
+    "belongsToInstrumentGenre": false,
+    "instrumentGenreId": null,
+    "genrePopular": true,
+    "popular": true,
+    "sections": [
+      {
+        "title": "Disolución armónica y espacio",
+        "htmlContent": "<h3>Texturas etéreas</h3><p>El rock independiente utiliza notas pedal, suspensiones (Sus2, Sus4) y efectos de reverberación y modulación para crear atmósferas envolventes.</p>",
+        "videoUrl": "https://www.youtube.com/watch?v=0qanF-91aJo",
+        "orderIndex": 1
+      }
+    ]
+  },
+  {
+    "id": 108,
+    "level": 4,
+    "title": "Armonía y cadencias del Soul",
+    "belongsToGenre": true,
+    "genreId": 8,
+    "belongsToInstrumentGenre": false,
+    "instrumentGenreId": null,
+    "genrePopular": true,
+    "popular": true,
+    "sections": [
+      {
+        "title": "Extensiones de séptima y novena",
+        "htmlContent": "<h3>Riqueza en los acordes</h3><p>El lenguaje armónico del Soul y R&B se nutre de acordes dominantes con extensiones y tensiones que dotan de calidez y sentimiento a la progresión.</p>",
+        "videoUrl": "https://www.youtube.com/watch?v=3XsuI3FZx9E",
+        "orderIndex": 1
+      }
+    ]
+  },
+  {
+    "id": 120,
+    "level": 2,
+    "title": "Power Chords y Palm Mute en Guitarra Pop Punk",
+    "belongsToGenre": false,
+    "genreId": null,
+    "belongsToInstrumentGenre": true,
+    "instrumentGenreId": 301,
+    "genrePopular": false,
+    "popular": true,
+    "sections": [
+      {
+        "title": "Posición del Power Chord",
+        "htmlContent": "<h3>Estructura del acorde de 5ª</h3><p>Coloca tu dedo índice en la tónica (6ª o 5ª cuerda) y el anular en la cuerda inferior dos trastes más adelante. Esta digitación neutra soporta altos niveles de distorsión sin perder definición.</p>",
+        "videoUrl": "https://www.youtube.com/watch?v=NstT7n8KzZQ",
+        "orderIndex": 1
+      },
+      {
+        "title": "Técnica de Palm Mute",
+        "htmlContent": "<h3>Apagado percusivo</h3><p>Apoya el lateral de tu mano derecha sobre las cuerdas cerca del puente para obtener un timbre seco y contundente sin cortar del todo el tono.</p>",
+        "videoUrl": "https://www.youtube.com/watch?v=hTWKbfoikeg",
+        "orderIndex": 2
+      }
+    ]
+  },
+  {
+    "id": 121,
+    "level": 3,
+    "title": "Bending, Vibrato y Riffs en Guitarra Rock",
+    "belongsToGenre": false,
+    "genreId": null,
+    "belongsToInstrumentGenre": true,
+    "instrumentGenreId": 302,
+    "genrePopular": false,
+    "popular": true,
+    "sections": [
+      {
+        "title": "Bending con apoyo de varios dedos",
+        "htmlContent": "<h3>Control del estiramiento</h3><p>Estira la cuerda utilizando la fuerza combinada del índice, medio y anular, asegurando la afinación exacta de un semitono o un tono entero.</p>",
+        "videoUrl": "https://www.youtube.com/watch?v=gj0Rz-uP4Mk",
+        "orderIndex": 1
+      },
+      {
+        "title": "El Riff Shuffle Chuck Berry",
+        "htmlContent": "<h3>Rítmica constante en corcheas</h3><p>Alterna la fundamental con la 5ª y la 6ª nota con la mano izquierda mientras ejecutas golpes secos hacia abajo con la púa.</p>",
+        "videoUrl": "https://www.youtube.com/watch?v=T38v3-SSGcM",
+        "orderIndex": 2
+      }
+    ]
+  },
+  {
+    "id": 122,
+    "level": 2,
+    "title": "Arpegios Abiertos y Cejillas en Guitarra Pop-Rock",
+    "belongsToGenre": false,
+    "genreId": null,
+    "belongsToInstrumentGenre": true,
+    "instrumentGenreId": 303,
+    "genrePopular": false,
+    "popular": false,
+    "sections": [
+      {
+        "title": "Arpegios nota por nota",
+        "htmlContent": "<h3>Claridad de acordes</h3><p>Toca cada cuerda de forma individual dentro de posiciones abiertas de G, C, D y Em para aportar aire y textura a las estrofas acústicas.</p>",
+        "videoUrl": "https://www.youtube.com/watch?v=1MwjX47qd64",
+        "orderIndex": 1
+      }
+    ]
+  },
+  {
+    "id": 123,
+    "level": 4,
+    "title": "Rasgueo de 16 notas y Acordes de 9ª en Guitarra Funk",
+    "belongsToGenre": false,
+    "genreId": null,
+    "belongsToInstrumentGenre": true,
+    "instrumentGenreId": 304,
+    "genrePopular": false,
+    "popular": true,
+    "sections": [
+      {
+        "title": "Mano derecha en semicorcheas",
+        "htmlContent": "<h3>El péndulo rítmico</h3><p>Mantén un movimiento constante arriba y abajo con la muñeca suelta en semicorcheas continuas, silenciando con la izquierda para intercalar notas sordas.</p>",
+        "videoUrl": "https://www.youtube.com/watch?v=OPf0YbXqDm0",
+        "orderIndex": 1
+      },
+      {
+        "title": "Digitación del acorde dominante con 9ª",
+        "htmlContent": "<h3>El acorde E9 clásico</h3><p>Posición: Dedo medio en traste 7 (5ª cuerda), índice en traste 6 (4ª cuerda), y cejilla de anular en traste 7 sobre 3ª, 2ª y 1ª cuerda.</p>",
+        "videoUrl": "https://www.youtube.com/watch?v=50VNCymT-Cs",
+        "orderIndex": 2
+      }
+    ]
+  },
+  {
+    "id": 124,
+    "level": 3,
+    "title": "Hybrid Picking y Boom-Chick en Guitarra Country",
+    "belongsToGenre": false,
+    "genreId": null,
+    "belongsToInstrumentGenre": true,
+    "instrumentGenreId": 305,
+    "genrePopular": false,
+    "popular": false,
+    "sections": [
+      {
+        "title": "Púa y Dedos Combinados",
+        "htmlContent": "<h3>Técnica Híbrida</h3><p>Usa la púa para percutir los bajos alternantes en cuerdas 6, 5 y 4, mientras los dedos medio y anular puntean simultáneamente las cuerdas agudas.</p>",
+        "videoUrl": "https://www.youtube.com/watch?v=XIR16j4GxxU",
+        "orderIndex": 1
+      }
+    ]
+  },
+  {
+    "id": 125,
+    "level": 2,
+    "title": "Progresiones Modernas en Guitarra Nueva Ola",
+    "belongsToGenre": false,
+    "genreId": null,
+    "belongsToInstrumentGenre": true,
+    "instrumentGenreId": 306,
+    "genrePopular": false,
+    "popular": false,
+    "sections": [
+      {
+        "title": "Rasgueo directo con púa fina",
+        "htmlContent": "<h3>Acompañamiento Pop Español</h3><p>Utiliza púas ligeras (0.50 - 0.60 mm) para conseguir un brillo acústico percusivo que complemente las cajas electrónicas urbanas.</p>",
+        "videoUrl": "https://www.youtube.com/watch?v=Zk-N8E6PZ9s",
+        "orderIndex": 1
+      }
+    ]
+  },
+  {
+    "id": 126,
+    "level": 1,
+    "title": "Iniciación y Rasgueo Calypso en Ukelele Pop-Rock",
+    "belongsToGenre": false,
+    "genreId": null,
+    "belongsToInstrumentGenre": true,
+    "instrumentGenreId": 307,
+    "genrePopular": false,
+    "popular": true,
+    "sections": [
+      {
+        "title": "Acordes esenciales: C, G, Am y F",
+        "htmlContent": "<h3>Los cuatro acordes clave</h3><p>Aprende las posiciones más cómodas y resonantes de ukelele estándar en afinación G-C-E-A para tocar casi cualquier repertorio pop.</p>",
+        "videoUrl": "https://www.youtube.com/watch?v=uJ_1HMAGb4k",
+        "orderIndex": 1
+      },
+      {
+        "title": "Patrón de Rasgueo Calypso",
+        "htmlContent": "<h3>D - D U - U D U</h3><p>El rasgueo básico más versátil: Abajo, Abajo-Arriba, Arriba-Abajo-Arriba manteniendo el compás con la muñeca completamente relajada.</p>",
+        "videoUrl": "https://www.youtube.com/watch?v=kEl3WnM4F9I",
+        "orderIndex": 2
+      }
+    ]
+  },
+  {
+    "id": 127,
+    "level": 4,
+    "title": "Slap, Pop y Ghost Notes en Bajo Funk",
+    "belongsToGenre": false,
+    "genreId": null,
+    "belongsToInstrumentGenre": true,
+    "instrumentGenreId": 308,
+    "genrePopular": false,
+    "popular": true,
+    "sections": [
+      {
+        "title": "Golpe de pulgar (Thump)",
+        "htmlContent": "<h3>Ataque percusivo en cuerdas graves</h3><p>Golpea la cuerda E o A con el lateral del pulgar sobre el último traste haciéndolo rebotar de inmediato para conseguir un sonido metálico y definido.</p>",
+        "videoUrl": "https://www.youtube.com/watch?v=3XsuI3FZx9E",
+        "orderIndex": 1
+      },
+      {
+        "title": "Tirón con dedo índice (Pluck / Pop)",
+        "htmlContent": "<h3>El chasquido del agudo</h3><p>Engancha la cuerda D o G con el índice y tira de ella hacia afuera soltando para que choque con fuerza contra el diapasón.</p>",
+        "videoUrl": "https://www.youtube.com/watch?v=w2WBJbFg04s",
+        "orderIndex": 2
+      }
+    ]
+  },
+  {
+    "id": 128,
+    "level": 3,
+    "title": "Patrones 4/4 y Coordinación en Batería Rock",
+    "belongsToGenre": false,
+    "genreId": null,
+    "belongsToInstrumentGenre": true,
+    "instrumentGenreId": 309,
+    "genrePopular": false,
+    "popular": false,
+    "sections": [
+      {
+        "title": "Independencia Bombo, Charles y Caja",
+        "htmlContent": "<h3>El pulso estándar</h3><p>Coordina corcheas en charles con mano derecha, bombo en tiempos 1 y 3 con pie derecho, y golpe de caja firme en tiempos 2 y 4 con mano izquierda.</p>",
+        "videoUrl": "https://www.youtube.com/watch?v=fXvI-EOn3L8",
+        "orderIndex": 1
+      }
+    ]
+  },
+  {
+    "id": 129,
+    "level": 2,
+    "title": "Independencia e Inversiones en Piano Pop",
+    "belongsToGenre": false,
+    "genreId": null,
+    "belongsToInstrumentGenre": true,
+    "instrumentGenreId": 310,
+    "genrePopular": false,
+    "popular": false,
+    "sections": [
+      {
+        "title": "Reparto de funciones entre manos",
+        "htmlContent": "<h3>Bajo en izquierda, tríada en derecha</h3><p>Toca la tónica en octavas con la mano izquierda y los acordes con la mano derecha, aplicando inversiones para no saltar por el teclado.</p>",
+        "videoUrl": "https://www.youtube.com/watch?v=QDYfEBY9NM4",
+        "orderIndex": 1
+      }
+    ]
+  },
+  {
+    "id": 130,
+    "level": 2,
+    "title": "Chucking y Rítmica Acelerada en Ukelele Pop Punk",
+    "belongsToGenre": false,
+    "genreId": null,
+    "belongsToInstrumentGenre": true,
+    "instrumentGenreId": 311,
+    "genrePopular": false,
+    "popular": false,
+    "sections": [
+      {
+        "title": "Técnica de Chucking",
+        "htmlContent": "<h3>Apagado con la palma</h3><p>Rasguea hacia abajo sofocando las cuerdas con el canto carnoso de la mano derecha en el mismo instante del impacto para emular una caja de batería.</p>",
+        "videoUrl": "https://www.youtube.com/watch?v=9Ht5RZ_6pXU",
+        "orderIndex": 1
+      }
+    ]
+  },
+  {
+    "id": 131,
+    "level": 3,
+    "title": "Baladas y Acompañamiento en Piano Pop-Rock",
+    "belongsToGenre": false,
+    "genreId": null,
+    "belongsToInstrumentGenre": true,
+    "instrumentGenreId": 312,
+    "genrePopular": false,
+    "popular": false,
+    "sections": [
+      {
+        "title": "Acordes en corcheas estilo Coldplay",
+        "htmlContent": "<h3>Pulso constante y dinámicas</h3><p>Mantén un pulso hipnótico a corcheas con la mano derecha mientras la mano izquierda marca el camino melódico con bajos descendentes.</p>",
+        "videoUrl": "https://www.youtube.com/watch?v=1MwjX47qd64",
+        "orderIndex": 1
+      }
+    ]
+  },
+  {
+    "id": 132,
+    "level": 3,
+    "title": "Jangle Pop y Arpegios Agudos en Guitarra Indie",
+    "belongsToGenre": false,
+    "genreId": null,
+    "belongsToInstrumentGenre": true,
+    "instrumentGenreId": 313,
+    "genrePopular": false,
+    "popular": false,
+    "sections": [
+      {
+        "title": "Cuerdas al aire en trastes altos",
+        "htmlContent": "<h3>Brillo y resonancia</h3><p>Toca posiciones de tríadas a partir del traste 7 dejando sonar las dos primeras cuerdas al aire para conseguir el timbre campaneante característico del Indie.</p>",
+        "videoUrl": "https://www.youtube.com/watch?v=0qanF-91aJo",
+        "orderIndex": 1
+      }
+    ]
+  },
+  {
+    "id": 133,
+    "level": 3,
+    "title": "Líneas de Bajo con Púa para Rock",
+    "belongsToGenre": false,
+    "genreId": null,
+    "belongsToInstrumentGenre": true,
+    "instrumentGenreId": 314,
+    "genrePopular": false,
+    "popular": false,
+    "sections": [
+      {
+        "title": "Ataque constante y articulación con púa",
+        "htmlContent": "<h3>Definición frente a la distorsión</h3><p>Tocar el bajo con púa acentúa el ataque inicial de cada nota, logrando que el bajo traspase la mezcla de guitarras distorsionadas.</p>",
+        "videoUrl": "https://www.youtube.com/watch?v=3dm_5qWWDV8",
         "orderIndex": 1
       }
     ]

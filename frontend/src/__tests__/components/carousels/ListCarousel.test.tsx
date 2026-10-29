@@ -8,7 +8,7 @@ jest.mock('lucide-react-native', () => {
   const { jsx: mockJsx } = require('react/jsx-runtime');
   const { View } = require('react-native');
   const make = (name: string) => (props: any) => mockJsx(View, { testID: `icon-${name}`, ...props });
-  return { Plus: make('Plus'), Check: make('Check') };
+  return { Plus: make('Plus'), Check: make('Check'), Search: make('Search') };
 });
 
 const data: CarouselItemDTO[] = [
@@ -58,6 +58,26 @@ describe('ListCarousel', () => {
     await render(<ListCarousel data={undefined as unknown as CarouselItemDTO[]} />);
     expect(screen.getByTestId('icon-Plus')).toBeTruthy();
     expect(images()).toHaveLength(0);
+  });
+
+  it('con más de 6 listas enseña solo 6 y cambia el + por la lupa', async () => {
+    const many = Array.from({ length: 7 }, (_, i) => ({ id: `l${i}`, title: `Lista ${i}`, imgUrl: '' }));
+    const onSeeAllPress = jest.fn();
+    const onEmptyPress = jest.fn();
+    await render(<ListCarousel data={many} onSeeAllPress={onSeeAllPress} onEmptyPress={onEmptyPress} />);
+    expect(screen.getByText('Lista 5')).toBeTruthy();
+    expect(screen.queryByText('Lista 6')).toBeNull();
+    expect(screen.queryByTestId('icon-Plus')).toBeNull();
+    await fireEvent.press(screen.getByTestId('icon-Search'));
+    expect(onSeeAllPress).toHaveBeenCalledTimes(1);
+    expect(onEmptyPress).not.toHaveBeenCalled();
+  });
+
+  it('con 6 listas aún se ve el +', async () => {
+    const six = Array.from({ length: 6 }, (_, i) => ({ id: `l${i}`, title: `Lista ${i}`, imgUrl: '' }));
+    await render(<ListCarousel data={six} />);
+    expect(screen.getByTestId('icon-Plus')).toBeTruthy();
+    expect(screen.queryByTestId('icon-Search')).toBeNull();
   });
 
   it('pulsar una lista sin onItemPress no rompe', async () => {

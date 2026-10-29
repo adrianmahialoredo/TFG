@@ -92,6 +92,15 @@ describe('createEntityCache', () => {
       expect(disk['3']).toBeDefined();
     });
 
+    it('acepta IDs numéricos (como llegan del backend) y devuelve las entidades', async () => {
+      const { cache, ram } = setup({ disk: { '2': { id: 2 } } });
+      ram['1'] = { id: 1 };
+
+      const result = await cache.getAllById([1, 2, 3] as unknown as string[]);
+
+      expect(result.map((e) => e.id.toString())).toEqual(['1', '2', '3']);
+    });
+
     it('no revalida lo que acaba de llegar de la API', async () => {
       const { cache, fetchByIds } = setup();
 

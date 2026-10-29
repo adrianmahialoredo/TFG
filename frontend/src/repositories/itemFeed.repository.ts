@@ -37,6 +37,10 @@ const getMixedFeed = (cacheKey: string, fetchDtos: () => Promise<AnyItemDTO[]>, 
 export const getRecommendedForUser = (userId: string, onFresh?: OnFresh): Promise<string[]> =>
     getMixedFeed('items_recommended_user', () => itemService.getRecommendedByUser(userId), onFresh);
 
+/** Items recomendados a partir del Spotify del usuario (Home "Desde tu Spotify"). Personalizado: se borra en el logout. */
+export const getFromSpotifyForUser = (userId: string, onFresh?: OnFresh): Promise<string[]> =>
+    getMixedFeed('items_spotify_user', () => itemService.getRecommendedFromSpotify(userId), onFresh);
+
 /** Items recomendados ("Para ti") para añadir a una lista concreta. */
 export const getRecommendedByItemList = (itemListId: string, onFresh?: OnFresh): Promise<string[]> =>
     getMixedFeed(`items_recommended_list_${itemListId}`, () => itemService.getRecommendedByItemList(itemListId), onFresh);

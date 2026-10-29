@@ -37,6 +37,33 @@ describe('API_ENDPOINTS', () => {
     );
   });
 
+  describe('BASE_URL', () => {
+    const original = process.env.EXPO_PUBLIC_API_URL;
+    afterEach(() => {
+      // Asignar undefined a process.env lo guarda como el texto "undefined"
+      if (original === undefined) delete process.env.EXPO_PUBLIC_API_URL;
+      else process.env.EXPO_PUBLIC_API_URL = original;
+      jest.resetModules();
+    });
+
+    const loadBaseUrl = (os: 'ios' | 'android') => {
+      jest.resetModules();
+      jest.doMock('react-native', () => ({ Platform: { OS: os } }));
+      return require('../../config/apiConfig').BASE_URL as string;
+    };
+
+    it('usa EXPO_PUBLIC_API_URL sin la barra final', () => {
+      process.env.EXPO_PUBLIC_API_URL = 'http://10.1.2.3:9000/';
+      expect(loadBaseUrl('ios')).toBe('http://10.1.2.3:9000');
+    });
+
+    it('sin variable, apunta al PC desde el emulador de cada plataforma', () => {
+      process.env.EXPO_PUBLIC_API_URL = '';
+      expect(loadBaseUrl('android')).toBe('http://10.0.2.2:8080');
+      expect(loadBaseUrl('ios')).toBe('http://localhost:8080');
+    });
+  });
+
   it('los BY_IDS de cada recurso terminan en /by-ids', () => {
     leaves(API_ENDPOINTS)
       .filter(([path]) => path.endsWith('.BY_IDS'))

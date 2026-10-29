@@ -2,7 +2,7 @@ import AppLayout from "../components/AppLayout";
 import ProfileHeader from "../components/ProfileHeader";
 import { View, Text, ActivityIndicator } from "react-native";
 import FadeScrollView from "../components/FadeScrollView";
-import Animated, { FadeOut, LinearTransition } from "react-native-reanimated";
+import Animated, { FadeIn, FadeOut, LinearTransition } from "react-native-reanimated";
 import { useRoute, RouteProp } from "@react-navigation/native";
 import SearchBar from "../components/SearchBar";
 import AddListItem from "../components/AddListItem";
@@ -20,7 +20,8 @@ export default function AddItemScreen() {
   const { items, query, setQuery, loading, searching, error, addItem, isAdded } =
     useAddItemScreen(itemListId);
 
-  const sectionTitle = query.trim() ? 'Resultados' : 'Para ti';
+  const isSearch = !!query.trim();
+  const sectionTitle = isSearch ? 'Resultados' : 'Para ti';
   const isBusy = loading || searching;
 
   return (
@@ -50,10 +51,20 @@ export default function AddItemScreen() {
               <Text className="text-red-500 text-center">{error}</Text>
             </View>
           ) : items.length > 0 ? (
-            <View className="flex-column gap-3 mb-7">
+            // Márgenes en línea en vez de `gap`: las animaciones de layout miden cada fila por separado
+            <View style={{ marginBottom: 28 }}>
               {items.map((item, index) => (
-                // Al quitarse de la lista (ya añadido) se desvanece y el resto se desliza a su hueco
-                <Animated.View key={item.id} exiting={FadeOut.duration(300)} layout={LinearTransition}>
+                // Solo se anima lo que provoca el usuario: el item añadido se desvanece, el resto se
+                // desliza a su hueco y entra la siguiente recomendación. Al escribir en el buscador
+                // los resultados cambian de golpe y se pintan sin animar (si no, decenas de filas
+                // saliendo y entrando a la vez se montaban unas encima de otras).
+                <Animated.View
+                  key={item.id}
+                  style={{ marginBottom: 12 }}
+                  entering={isSearch ? undefined : FadeIn.duration(300).delay(150)}
+                  exiting={isAdded(item.id) ? FadeOut.duration(300) : undefined}
+                  layout={isSearch ? undefined : LinearTransition.duration(300)}
+                >
                   <AddListItem
                     item={itemToListItem(item)}
                     added={isAdded(item.id)}

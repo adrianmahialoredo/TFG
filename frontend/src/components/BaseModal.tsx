@@ -8,6 +8,8 @@ type BaseModalProps = {
   animationType?: ModalProps['animationType'];
   /** Ancho máximo de la caja en px (por defecto max-w-sm, 384) */
   maxWidth?: number;
+  /** La caja ocupa todo el ancho disponible (hasta maxWidth) en vez de ajustarse al contenido */
+  fullWidth?: boolean;
 };
 
 export default function BaseModal({
@@ -16,6 +18,7 @@ export default function BaseModal({
   children,
   animationType = 'fade',
   maxWidth,
+  fullWidth = false,
 }: BaseModalProps) {
   return (
     <Modal
@@ -25,7 +28,7 @@ export default function BaseModal({
       onRequestClose={onClose}
     >
       <Pressable className="flex-1 bg-black/70 items-center justify-center px-6" onPress={onClose}>
-        <Pressable onPress={() => {}}>
+        <Pressable onPress={() => {}} style={fullWidth ? { width: '100%', alignItems: 'center' } : undefined}>
           <View
             className="w-full max-w-sm rounded-2xl bg-background border border-primary p-5"
             style={maxWidth ? { maxWidth } : undefined}

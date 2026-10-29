@@ -205,6 +205,22 @@ public class EntityResolver {
         return resolveAll(ids, EntityResolver::resolveChord);
     }
 
+    /**
+     * Resolves the chords of a song lesson, which must all belong to the lesson's instrument.
+     *
+     * @throws IllegalArgumentException (400) if any chord belongs to another instrument
+     */
+    public static Set<Chord> resolveChords(List<Long> ids, Instrument instrument) {
+        Set<Chord> chords = resolveChords(ids);
+        for (Chord chord : chords) {
+            if (chord.getInstrument() == null || !chord.getInstrument().getId().equals(instrument.getId())) {
+                throw new IllegalArgumentException(
+                        "Chord " + chord.getId() + " does not belong to instrument " + instrument.getId());
+            }
+        }
+        return chords;
+    }
+
     public static Set<Genre> resolveGenres(List<Long> ids) {
         return resolveAll(ids, EntityResolver::resolveGenre);
     }

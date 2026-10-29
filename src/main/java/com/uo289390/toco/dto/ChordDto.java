@@ -87,4 +87,11 @@ public class ChordDto {
     @Max(value = 12, message = "Capo fret must be at most 12")
     private int capoFret; 
 
+    /**
+     * ID of the instrument the chord is played on.
+     * Must not be null.
+     */
+    @NotNull(message = "Instrument ID is required")
+    private Long instrumentId;
+
 }

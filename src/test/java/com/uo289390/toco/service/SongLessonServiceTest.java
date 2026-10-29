@@ -39,7 +39,8 @@ import jakarta.persistence.EntityNotFoundException;
 
 /**
  * Unit tests for {@link SongLessonServiceImpl}.
- * Covers CRUD operations and the resolution of song, instrument and chords.
+ * Covers CRUD operations and the resolution of song, instrument and chords
+ * (which must belong to the lesson's instrument).
  */
 @ExtendWith(MockitoExtension.class)
 class SongLessonServiceTest {
@@ -81,8 +82,8 @@ class SongLessonServiceTest {
         song2 = song(2L);
         guitar = instrument(10L);
         piano = instrument(20L);
-        chordC = chord(100L);
-        chordG = chord(200L);
+        chordC = chord(100L, guitar);
+        chordG = chord(200L, guitar);
 
         testLesson = new SongLesson();
         testLesson.setId(50L);
@@ -112,10 +113,11 @@ class SongLessonServiceTest {
         return instrument;
     }
 
-    private static Chord chord(Long id) {
+    private static Chord chord(Long id, Instrument instrument) {
         Chord chord = new Chord();
         chord.setId(id);
         chord.setName("Chord " + id);
+        chord.setInstrument(instrument);
         return chord;
     }
 
@@ -138,8 +140,8 @@ class SongLessonServiceTest {
         // Arrange
         when(songRepository.findById(2L)).thenReturn(Optional.of(song2));
         when(instrumentRepository.findById(20L)).thenReturn(Optional.of(piano));
-        when(chordRepository.findById(200L)).thenReturn(Optional.of(chordG));
-        when(chordRepository.findById(100L)).thenReturn(Optional.of(chordC));
+        when(chordRepository.findById(200L)).thenReturn(Optional.of(chord(200L, piano)));
+        when(chordRepository.findById(100L)).thenReturn(Optional.of(chord(100L, piano)));
         when(songLessonRepository.save(any(SongLesson.class))).thenAnswer(inv -> inv.getArgument(0));
 
         // Act
@@ -213,6 +215,20 @@ class SongLessonServiceTest {
 
         // Act & Assert
         assertThrows(EntityNotFoundException.class, () -> songLessonService.create(dto(2L, 20L, List.of(999L))));
+        verify(songLessonRepository, never()).save(any());
+    }
+
+    @Test
+    void testCreate_ChordOfAnotherInstrument_ThrowsAndDoesNotSave() {
+        // Arrange
+        when(songRepository.findById(2L)).thenReturn(Optional.of(song2));
+        when(instrumentRepository.findById(20L)).thenReturn(Optional.of(piano));
+        when(chordRepository.findById(100L)).thenReturn(Optional.of(chordC));
+
+        // Act & Assert
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+                () -> songLessonService.create(dto(2L, 20L, List.of(100L))));
+        assertTrue(ex.getMessage().contains("instrument"));
         verify(songLessonRepository, never()).save(any());
     }
 
@@ -390,6 +406,19 @@ class SongLessonServiceTest {
         assertTrue(testLesson.getChords().isEmpty());
         assertEquals(2L, result.get().getSongId());
         assertEquals(20L, result.get().getInstrumentId());
+    }
+
+    @Test
+    void testUpdate_NewInstrumentWithChordsOfTheOldOne_ThrowsAndDoesNotSave() {
+        // Arrange
+        when(songLessonRepository.findById(50L)).thenReturn(Optional.of(testLesson));
+        when(instrumentRepository.findById(20L)).thenReturn(Optional.of(piano));
+        when(chordRepository.findById(100L)).thenReturn(Optional.of(chordC));
+
+        // Act & Assert
+        assertThrows(IllegalArgumentException.class,
+                () -> songLessonService.update(50L, dto(1L, 20L, List.of(100L))));
+        verify(songLessonRepository, never()).save(any());
     }
 
     @Test

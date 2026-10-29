@@ -102,11 +102,11 @@ public class LessonRecommendationServiceImpl implements LessonRecommendationServ
         // Candidatos: el genero/instrumento favorito principal y los mas usados en las listas del usuario
         Set<Long> genreIds = candidateIds(
                 user.getPreferences().getFavoriteGenres(),
-                user.getTopGenresFromItemLists(RecommendationConstants.NUMBER_OF_ITEM_LISTS_GENRES_USED_IN_BY_USER_LESSON_RECOMMENDATION)
+                user.getTopGenresFromItemLists(RecommendationConstants.N_ITEM_LISTS_GENRES_USED_IN_BY_USER_LESSON_RECOMMENDATION)
         );
         Set<Long> instrumentIds = candidateIds(
                 user.getPreferences().getFavoriteInstruments(),
-                user.getTopInstrumentsFromItemLists(RecommendationConstants.NUMBER_OF_ITEM_LISTS_INSTRUMENTS_USED_IN_BY_USER_LESSON_RECOMMENDATION)
+                user.getTopInstrumentsFromItemLists(RecommendationConstants.N_ITEM_LISTS_INSTRUMENTS_USED_IN_BY_USER_LESSON_RECOMMENDATION)
         );
 
         // La mitad del limite son lecciones de esos generos/instrumentos (repartida entre ambos, la parte

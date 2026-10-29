@@ -30,6 +30,7 @@ class ChordValidationTest {
         chord.setName("C Major");
         chord.setImageUrl("https://example.com/cmajor.png");
         chord.setNotes(java.util.List.of("C", "E", "G"));
+        chord.setInstrument(new Instrument());
     }
 
     @Test
@@ -39,6 +40,19 @@ class ChordValidationTest {
 
         // Assert
         assertEquals(0, violations.size());
+    }
+
+    @Test
+    void testInstrumentValidation_Null() {
+        // Arrange
+        chord.setInstrument(null);
+
+        // Act
+        Set<ConstraintViolation<Chord>> violations = validator.validate(chord);
+
+        // Assert
+        assertEquals(1, violations.size());
+        assertEquals("instrument", violations.iterator().next().getPropertyPath().toString());
     }
 
     @Test

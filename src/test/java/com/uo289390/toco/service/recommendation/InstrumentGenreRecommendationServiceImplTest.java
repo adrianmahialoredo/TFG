@@ -199,7 +199,7 @@ class InstrumentGenreRecommendationServiceImplTest {
         @Test
         void testFindForItemList_Level2_CombinesTopGenresAndInstrumentsInOrder() {
             // Arrange
-            int topN = RecommendationConstants.NUMBER_OF_MAX_TOP_INSTRUMENTS_AND_GENRES_USED_IN_INSTRUMENT_GENRE_RECOMMENDATION;
+            int topN = RecommendationConstants.N_MAX_TOP_INSTRUMENTS_AND_GENRES_USED_IN_INSTRUMENT_GENRE_RECOMMENDATION;
             Genre g1 = genre(1);
             Genre g2 = genre(2);
             Instrument i1 = instrument(11);
@@ -324,9 +324,9 @@ class InstrumentGenreRecommendationServiceImplTest {
         @Test
         void testFindForUser_CandidatesAreItemListTopsFollowedByLimitedFavourites() {
             // Arrange
-            when(user.getTopGenresFromItemLists(RecommendationConstants.NUMBER_OF_ITEM_LISTS_GENRES_USED_IN_BY_USER_INSTRUMENT_GENRE_RECOMMENDATION))
+            when(user.getTopGenresFromItemLists(RecommendationConstants.N_ITEM_LISTS_GENRES_USED_IN_BY_USER_INSTRUMENT_GENRE_RECOMMENDATION))
                     .thenReturn(List.of(genre(5), genre(1)));
-            when(user.getTopInstrumentsFromItemLists(RecommendationConstants.NUMBER_OF_ITEM_LISTS_INSTRUMENTS_USED_IN_BY_USER_INSTRUMENT_GENRE_RECOMMENDATION))
+            when(user.getTopInstrumentsFromItemLists(RecommendationConstants.N_ITEM_LISTS_INSTRUMENTS_USED_IN_BY_USER_INSTRUMENT_GENRE_RECOMMENDATION))
                     .thenReturn(List.of(instrument(15)));
             when(user.getPreferences()).thenReturn(preferences(
                     List.of(genre(1), genre(2), genre(3)),

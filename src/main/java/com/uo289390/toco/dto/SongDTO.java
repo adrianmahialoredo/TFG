@@ -64,6 +64,20 @@ public class SongDTO extends ItemDTO {
      */
     private List<SongLessonDTO> lessons = new ArrayList<>();
 
+    /**
+     * Flags that place the song in the carousels: popular and new songs of the catalog
+     * ({@code popular}, {@code genreNew}), of each of its genres ({@code genre*}) and of its
+     * artist ({@code artist*}). On update they are always overwritten, like the rest of the item fields.
+     */
+    private boolean popular;
+    private boolean newSong;
+    private boolean genreClassic;
+    private boolean genrePopular;
+    private boolean genreNew;
+    private boolean artistClassic;
+    private boolean artistPopular;
+    private boolean artistNew;
+
     @Override
     public Item.Type getType() {
         return Item.Type.Song;

@@ -14,6 +14,9 @@ import { useHomeItems } from '../hooks/useHomeItems';
 import { navigateToItem } from '../utils/navigation.utils';
 import UserAvatar from "../components/UserAvatar";
 import SuggestionCard from "../components/SuggestionCard";
+import { SpotifyButton } from "../components/buttons/SpotifyButton";
+
+const SPOTIFY_TITLE = 'Desde tu Spotify';
 
 export default function HomeScreen() {
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
@@ -25,6 +28,8 @@ export default function HomeScreen() {
   const {
     recentItems,
     recommendations,
+    spotifyItems,
+    spotifyConnected,
     favouriteCombination,
     mostUsedGenre,
     newFavouriteArtistSong,
@@ -127,6 +132,22 @@ export default function HomeScreen() {
                     onPress={() => navigateToItem(navigation, mostUsedGenre)}
                 />
               </View>
+          )}
+
+          {/* Carrusel: Desde tu Spotify. Con la cuenta sin vincular se ofrece conectarla
+              (mientras no se sabe, p. ej. usuario aún sin cargar, no se pinta nada) */}
+          {spotifyConnected ? (
+            <HorizontalItemsCarousel
+              title={SPOTIFY_TITLE}
+              data={spotifyItems}
+              onItemPress={handleItemPress}
+              emptyMessage={loading ? undefined : 'Escucha música en Spotify para que te recomendemos canciones, lecciones y géneros'}
+            />
+          ) : spotifyConnected === false && (
+            <View className="my-4">
+              <Text className="text-2xl font-semibold text-secondary mb-6">{SPOTIFY_TITLE}</Text>
+              <SpotifyButton />
+            </View>
           )}
 
           {/* Card: una canción nueva de uno de los artistas favoritos (los más repetidos en sus listas) */}

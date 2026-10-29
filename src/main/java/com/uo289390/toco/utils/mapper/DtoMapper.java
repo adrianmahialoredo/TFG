@@ -29,6 +29,7 @@ public class DtoMapper {
         dto.setSeventh(chord.isSeventh());
         dto.setCapo(chord.isCapo());
         dto.setCapoFret(chord.getCapoFret());
+        dto.setInstrumentId(chord.getInstrument() != null ? chord.getInstrument().getId() : null);
         return dto;
     }
 
@@ -165,6 +166,14 @@ public class DtoMapper {
         dto.setGenreIds(song.getGenres().stream().map(Genre::getId).collect(Collectors.toList()));
         dto.setInstrumentIds(song.getInstruments().stream().map(Instrument::getId).collect(Collectors.toList()));
         dto.setLessonIds(song.getLessons().stream().map(SongLesson::getId).collect(Collectors.toList()));
+        dto.setPopular(song.isPopular());
+        dto.setNewSong(song.isNewSong());
+        dto.setGenreClassic(song.isGenreClassic());
+        dto.setGenrePopular(song.isGenrePopular());
+        dto.setGenreNew(song.isGenreNew());
+        dto.setArtistClassic(song.isArtistClassic());
+        dto.setArtistPopular(song.isArtistPopular());
+        dto.setArtistNew(song.isArtistNew());
         return dto;
     }
 

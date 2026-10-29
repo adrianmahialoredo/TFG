@@ -22,15 +22,17 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.uo289390.toco.dto.ChordDto;
 import com.uo289390.toco.model.Chord;
+import com.uo289390.toco.model.Instrument;
 import com.uo289390.toco.model.SongLesson;
 import com.uo289390.toco.repository.ChordRepository;
+import com.uo289390.toco.repository.InstrumentRepository;
 import com.uo289390.toco.repository.SongLessonRepository;
 import com.uo289390.toco.utils.mapper.DtoMapper;
 import com.uo289390.toco.utils.mapper.EntityMapper;
 
 /**
  * Unit tests for {@link ChordServiceImpl}.
- * Covers CRUD operations, bulk lookups and chord ids by song lesson.
+ * Covers CRUD operations, the chord instrument, bulk lookups and chord ids by song lesson.
  */
 @ExtendWith(MockitoExtension.class)
 class ChordServiceTest {
@@ -40,6 +42,9 @@ class ChordServiceTest {
 
     @Mock
     private SongLessonRepository songLessonRepository;
+
+    @Mock
+    private InstrumentRepository instrumentRepository;
 
     @Spy
     private DtoMapper dtoMapper = new DtoMapper();
@@ -51,10 +56,15 @@ class ChordServiceTest {
     private ChordServiceImpl chordService;
 
     private Chord testChord;
+    private Instrument guitar;
+    private Instrument piano;
 
     @BeforeEach
     void setUp() {
-        initResolver(chordRepository, songLessonRepository);
+        initResolver(chordRepository, songLessonRepository, instrumentRepository);
+
+        guitar = instrument(1L);
+        piano = instrument(2L);
 
         testChord = chord(1L, "C");
         testChord.setNotes(List.of("C", "E", "G"));
@@ -62,6 +72,13 @@ class ChordServiceTest {
         testChord.setOpen(true);
         testChord.setMajor(true);
         testChord.setCapoFret(0);
+        testChord.setInstrument(guitar);
+    }
+
+    private static Instrument instrument(Long id) {
+        Instrument instrument = new Instrument();
+        instrument.setId(id);
+        return instrument;
     }
 
     private static Chord chord(Long id, String name) {
@@ -85,6 +102,7 @@ class ChordServiceTest {
         dto.setSeventh(true);
         dto.setCapo(true);
         dto.setCapoFret(3);
+        dto.setInstrumentId(2L);
         return dto;
     }
 
@@ -168,6 +186,7 @@ class ChordServiceTest {
     void testCreate_SavesAllFieldsAndReturnsSavedDto() {
         // Arrange
         ChordDto dto = fullDto();
+        when(instrumentRepository.findById(2L)).thenReturn(Optional.of(piano));
         when(chordRepository.save(any(Chord.class))).thenAnswer(inv -> inv.getArgument(0));
 
         // Act
@@ -189,12 +208,14 @@ class ChordServiceTest {
         assertTrue(saved.isSeventh());
         assertTrue(saved.isCapo());
         assertEquals(3, saved.getCapoFret());
+        assertSame(piano, saved.getInstrument());
         assertEquals(dto, result);
     }
 
     @Test
     void testCreate_ReturnsDtoOfPersistedEntity() {
         // Arrange
+        when(instrumentRepository.findById(2L)).thenReturn(Optional.of(piano));
         when(chordRepository.save(any(Chord.class))).thenReturn(testChord);
 
         // Act
@@ -203,6 +224,17 @@ class ChordServiceTest {
         // Assert
         assertEquals(1L, result.getId());
         assertEquals("C", result.getName());
+        assertEquals(1L, result.getInstrumentId());
+    }
+
+    @Test
+    void testCreate_UnknownInstrument_DoesNotSave() {
+        // Arrange
+        when(instrumentRepository.findById(2L)).thenReturn(Optional.empty());
+
+        // Act & Assert
+        assertThrows(jakarta.persistence.EntityNotFoundException.class, () -> chordService.create(fullDto()));
+        verify(chordRepository, never()).save(any());
     }
 
     // ---------- update ----------
@@ -211,6 +243,7 @@ class ChordServiceTest {
     void testUpdate_Found_UpdatesEveryField() {
         // Arrange
         when(chordRepository.findById(1L)).thenReturn(Optional.of(testChord));
+        when(instrumentRepository.findById(2L)).thenReturn(Optional.of(piano));
         when(chordRepository.save(any(Chord.class))).thenAnswer(inv -> inv.getArgument(0));
         ChordDto dto = fullDto();
 
@@ -232,8 +265,26 @@ class ChordServiceTest {
         assertTrue(testChord.isSeventh());
         assertTrue(testChord.isCapo());
         assertEquals(3, testChord.getCapoFret());
+        assertSame(piano, testChord.getInstrument());
         assertEquals(1L, result.get().getId());
         assertEquals("F", result.get().getName());
+        assertEquals(2L, result.get().getInstrumentId());
+    }
+
+    @Test
+    void testUpdate_SameInstrument_DoesNotResolveItAgain() {
+        // Arrange
+        when(chordRepository.findById(1L)).thenReturn(Optional.of(testChord));
+        when(chordRepository.save(any(Chord.class))).thenAnswer(inv -> inv.getArgument(0));
+        ChordDto dto = fullDto();
+        dto.setInstrumentId(1L);
+
+        // Act
+        chordService.update(1L, dto);
+
+        // Assert
+        assertSame(guitar, testChord.getInstrument());
+        verifyNoInteractions(instrumentRepository);
     }
 
     @Test

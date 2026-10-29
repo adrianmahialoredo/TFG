@@ -15,7 +15,7 @@ Entidad/DTO: `Chord` / `ChordDto`
 
 Estructura (por item):
 - `id` (number, opcional)
-- `name` (string, obligatorio, unico)
+- `name` (string, obligatorio, unico por instrumento)
 - `notes` (array string, obligatorio, no vacio)
 - `imageUrl` (string, obligatorio, URL http/https)
 - `open` (boolean)
@@ -26,9 +26,13 @@ Estructura (por item):
 - `seventh` (boolean)
 - `capo` (boolean)
 - `capoFret` (number, 0-12)
+- `instrumentId` (number, obligatorio)
 
 Notas:
 - `capoFret` esta validado entre 0 y 12 en el backend.
+- El mismo nombre puede repetirse en instrumentos distintos (p. ej. `Cm` de guitarra y `Cm` de piano), con `id` distinto.
+- Los `chordIds` de una lección de canción deben ser acordes del `instrumentId` de esa lección; si no, el backend responde 400.
+- Todos los acordes actuales son de guitarra (`instrumentId: 1`).
 
 Ejemplo real (ya hay datos):
 ```json
@@ -43,7 +47,8 @@ Ejemplo real (ya hay datos):
   "major": true,
   "seventh": true,
   "capo": false,
-  "capoFret": 0
+  "capoFret": 0,
+  "instrumentId": 1
 }
 ```
 
@@ -123,11 +128,15 @@ Estructura (por item):
 - `imageUrl` (string, URL http/https)
 - `genreIds` (array number, opcional)
 - `instrumentIds` (array number, opcional)
+- `decade` (string, formato `1990s`)
+- `popular`, `newSong` (boolean): carrusel "Populares" del catalogo; `newSong` no lo usa ningun carrusel
+- `genreClassic`, `genrePopular`, `genreNew` (boolean): carruseles del genero. `genreNew` tambien es el carrusel "Nuevas" de la pantalla de canciones
+- `artistClassic`, `artistPopular`, `artistNew` (boolean): carruseles de artistas favoritos del Home
 - `lessons` (array number, opcional)
 
 Validaciones sensibles:
 - `Song` hereda `imageUrl` desde `Item` y lo marca como obligatorio en entidad, aunque `SongDTO` no lo requiere.
-- Campos como `popular`, `decade`, `genreClassic`, `genrePopular` y `genreNew` existen en entidad pero no en DTO.
+- Los flags de carrusel solo se guardan si vienen en el JSON: una cancion sin ellos no sale en ningun carrusel (solo en busqueda y recomendaciones).
 
 Estado actual: `[]` (vacio).
 
@@ -140,7 +149,7 @@ Estructura (por item):
 - `id` (number, opcional)
 - `difficulty` (string: `EASY` | `MEDIUM` | `ORIGINAL`)
 - `tabSectionsIds` (array number, opcional)
-- `chordIds` (array number, opcional)
+- `chordIds` (array number, opcional; todos del mismo `instrumentId` que la leccion)
 - `cordedLyrics` (string, max 5000)  
 - `videoUrl` (string, URL http/https)
 - `songId` (number, obligatorio)

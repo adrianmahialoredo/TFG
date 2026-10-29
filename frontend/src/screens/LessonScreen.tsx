@@ -4,6 +4,8 @@ import { View, Text, Image, ActivityIndicator } from "react-native";
 import FadeScrollView from "../components/FadeScrollView";
 import ProfileHeader from "../components/ProfileHeader";
 import React from "react";
+import GradientBackground from '../components/GradientBackground';
+import { useImageGradient } from '../hooks/useImageGradient';
 import AppLayout from "../components/AppLayout";
 import DifficultyStars from "../components/DifficultyStars";
 import LessonSectionViewer from "../components/LessonSectionViewer";
@@ -16,6 +18,9 @@ export default function LessonScreen() {
   const {lessonId} = route.params;
 
   const {lesson, genre, ...sectionState} = useLesson(lessonId);
+
+  // Fondo: degradado del color principal de la imagen de la lección al negro
+  const gradient = useImageGradient(lesson?.imageUrl);
 
   if (sectionState.loading && !lesson) {
     return (
@@ -39,32 +44,36 @@ export default function LessonScreen() {
 
   return (
       <AppLayout>
-        <View className="bg-background flex-1 pt-2">
+        <GradientBackground color={gradient.color} height={gradient.height} />
+        {/* Sin fondo propio: deja ver el degradado */}
+        <View className="flex-1 pt-2" onLayout={gradient.onContainerLayout}>
           {/* Icono de perfil y titulo */}
           <ProfileHeader title="Aprender" />
 
-          <FadeScrollView className="bg-background p-4 flex-1">
-            {/* Información de la lección */}
-            <View className="items-center mb-1 mx-4">
-              <Image
-                  source={{ uri: lesson.imageUrl }}
-                  className="w-24 h-24 rounded-lg mb-2"
-                  resizeMode="cover"
-              />
-              <Text className="text-songTitle text-base text-center">{lesson.title}</Text>
-              {genre && (
-                <Text className="text-artistName text-base text-center mb-2">{genre.title}</Text>
-              )}
-            </View>
+          <View style={{ flex: 1 }} onLayout={gradient.onScrollLayout}>
+            <FadeScrollView className="p-4 flex-1" fadeColor={gradient.fadeColor}>
+              {/* Información de la lección */}
+              <View className="items-center mb-1 mx-4">
+                <Image
+                    source={{ uri: lesson.imageUrl }}
+                    className="w-24 h-24 rounded-lg mb-2"
+                    resizeMode="cover"
+                />
+                <Text className="text-songTitle text-base text-center">{lesson.title}</Text>
+                {genre && (
+                  <Text className="text-artistName text-base text-center mb-2">{genre.title}</Text>
+                )}
+              </View>
 
-            {/* Estrellas de dificultad */}
-            <View className="mb-5">
-              <DifficultyStars level={lesson.level} />
-            </View>
+              {/* Estrellas de dificultad */}
+              <View className="mb-5">
+                <DifficultyStars level={lesson.level} />
+              </View>
 
-            {/* Navegación entre secciones y contenido HTML */}
-            <LessonSectionViewer {...sectionState} />
-          </FadeScrollView>
+              {/* Navegación entre secciones y contenido HTML */}
+              <LessonSectionViewer {...sectionState} />
+            </FadeScrollView>
+          </View>
         </View>
       </AppLayout>
   );

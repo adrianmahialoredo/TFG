@@ -63,7 +63,7 @@ import com.uo289390.toco.service.recommendation.ItemRecommendationService;
 import com.uo289390.toco.service.recommendation.LessonRecommendationService;
 import com.uo289390.toco.service.recommendation.SongRecommendationService;
 import com.uo289390.toco.utils.mapper.DtoMapper;
-import com.uo289390.toco.service.SpotifyRecommendationService;
+import com.uo289390.toco.service.recommendation.SpotifyRecommendationService;
 import com.uo289390.toco.service.TuneService;
 import com.uo289390.toco.service.UserService;
 import com.uo289390.toco.utils.EntityResolver;
@@ -551,8 +551,10 @@ class AccessRulesTest {
         void lessonsForGenre_isCatalogAndAllowed() throws Exception {
             expectAllowed(get("/api/recommendations/lessons/by-genre/3").with(asUser(OTHER_ID)));
         }
-
-
+
+
+
+
     }
 
     @Nested

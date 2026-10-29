@@ -7,7 +7,8 @@
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.anonymous.frontend"
     },
     "android": {
       "adaptiveIcon": {
@@ -52,7 +53,23 @@
           "androidForegroundService": false
         }
       ],
-      "expo-dev-client"
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "TOCO usa tus fotos para la imagen de tu perfil y de tus listas.",
+          "cameraPermission": false,
+          "microphonePermission": false
+        }
+      ],
+      "expo-dev-client",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "usesCleartextTraffic": true
+          }
+        }
+      ]
     ]
   }
 }

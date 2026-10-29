@@ -72,6 +72,7 @@ class ChordControllerTest {
         chord.setOpen(true);
         chord.setMinor(true);
         chord.setCapoFret(0);
+        chord.setInstrumentId(1L);
     }
 
     private ChordDto validRequest() {
@@ -80,6 +81,7 @@ class ChordControllerTest {
         dto.setNotes(List.of("G", "B", "D"));
         dto.setImageUrl("https://example.com/g.png");
         dto.setMajor(true);
+        dto.setInstrumentId(1L);
         return dto;
     }
 
@@ -258,6 +260,20 @@ class ChordControllerTest {
                         .content(objectMapper.writeValueAsString(negative)))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.errors.capoFret").value("Capo fret must be at least 0"));
+
+        verify(chordService, never()).create(any());
+    }
+
+    @Test
+    void create_withoutInstrument_returnsValidationError() throws Exception {
+        ChordDto dto = validRequest();
+        dto.setInstrumentId(null);
+
+        mockMvc.perform(post("/api/chords")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(dto)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors.instrumentId").value("Instrument ID is required"));
 
         verify(chordService, never()).create(any());
     }

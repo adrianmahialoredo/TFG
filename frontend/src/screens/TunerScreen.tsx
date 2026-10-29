@@ -51,15 +51,18 @@ export default function TunerScreen() {
         return () => { stop(); };
     }, [start, stop]));
 
-    const handleTuneSelect = (index: number) => {
+    // Callbacks estables: la rueda y las cuerdas van con memo y no se repintan con cada lectura
+    const handleTuneSelect = useCallback((index: number) => {
+        const next = tunes[index];
+        if (!next) return;
         stop();
-        setSelectedTuneId(tunes[index].id);
-    };
+        setSelectedTuneId(next.id);
+    }, [tunes, stop]);
 
-    const handleStringPress = (index: number) => {
+    const handleStringPress = useCallback((index: number) => {
         selectString(lockedString === index ? null : index);
         if (!isListening) start();
-    };
+    }, [selectString, lockedString, isListening, start]);
 
     const handleGaugePress = () => (isListening ? stop() : start());
 

@@ -100,7 +100,7 @@ enum Dificultad {
 
 class Chord <<entity>> {
     id
-    name
+    name {único por instrumento}
     notes [*] {ordered}
     imageUrl
     open
@@ -137,6 +137,13 @@ Song "1" *-- "1..*" SongLesson : se desglosa en >
 SongLesson "0..*" --> "0..*" Chord : usa {ordered}
 SongLesson "1" *-- "0..*" TabSection : contiene {ordered}
 SongLesson "0..*" --> "0..1" Instrument : para >
+Chord "0..*" --> "1" Instrument : para >
+note bottom of Chord
+  Un mismo acorde (p. ej. Do menor) existe una vez por
+  instrumento, con su propia digitación y diagrama.
+  {Los acordes de una SongLesson son del instrumento
+  de la lección}
+end note
 SongLesson ..> Dificultad
 
 Song "0..*" --> "1..*" Genre : clasificada en >
@@ -167,6 +174,7 @@ class User <<entity>> {
     hasItemInLists(item)
     getTopGenresFromItemLists(n)
     getTopInstrumentsFromItemLists(n)
+    getTopArtistsFromItemLists(n)
 }
 
 enum Rol {

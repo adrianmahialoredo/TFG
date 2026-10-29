@@ -6,7 +6,7 @@
     "level": 1,
     "instrumentId": 1,
     "genreId": 1,
-    "lessonIds": [101]
+    "lessonIds": [120]
   },
   {
     "id": 302,
@@ -15,7 +15,7 @@
     "level": 3,
     "instrumentId": 1,
     "genreId": 2,
-    "lessonIds": [102]
+    "lessonIds": [121]
   },
   {
     "id": 303,
@@ -24,7 +24,7 @@
     "level": 2,
     "instrumentId": 1,
     "genreId": 3,
-    "lessonIds": [104]
+    "lessonIds": [122]
   },
   {
     "id": 304,
@@ -33,7 +33,7 @@
     "level": 4,
     "instrumentId": 1,
     "genreId": 4,
-    "lessonIds": [103]
+    "lessonIds": [123]
   },
   {
     "id": 305,
@@ -42,7 +42,7 @@
     "level": 3,
     "instrumentId": 1,
     "genreId": 5,
-    "lessonIds": [105]
+    "lessonIds": [124]
   },
   {
     "id": 306,
@@ -51,7 +51,7 @@
     "level": 2,
     "instrumentId": 1,
     "genreId": 6,
-    "lessonIds": []
+    "lessonIds": [125]
   },
   {
     "id": 307,
@@ -60,7 +60,7 @@
     "level": 1,
     "instrumentId": 2,
     "genreId": 3,
-    "lessonIds": []
+    "lessonIds": [126]
   },
   {
     "id": 308,
@@ -69,7 +69,7 @@
     "level": 5,
     "instrumentId": 3,
     "genreId": 4,
-    "lessonIds": []
+    "lessonIds": [127]
   },
   {
     "id": 309,
@@ -78,7 +78,7 @@
     "level": 4,
     "instrumentId": 4,
     "genreId": 2,
-    "lessonIds": []
+    "lessonIds": [128]
   },
   {
     "id": 310,
@@ -87,6 +87,42 @@
     "level": 2,
     "instrumentId": 5,
     "genreId": 1,
-    "lessonIds": []
+    "lessonIds": [129]
+  },
+  {
+    "id": 311,
+    "title": "Ukelele Pop-Punk",
+    "imageUrl": "https://res.cloudinary.com/dvm8qkmuo/image/upload/v1750595587/instr_genre_7.jpg",
+    "level": 2,
+    "instrumentId": 2,
+    "genreId": 1,
+    "lessonIds": [130]
+  },
+  {
+    "id": 312,
+    "title": "Piano Pop-Rock",
+    "imageUrl": "https://res.cloudinary.com/dvm8qkmuo/image/upload/v1750595587/instr_genre_10.jpg",
+    "level": 3,
+    "instrumentId": 5,
+    "genreId": 3,
+    "lessonIds": [131]
+  },
+  {
+    "id": 313,
+    "title": "Guitarra Indie",
+    "imageUrl": "https://res.cloudinary.com/dvm8qkmuo/image/upload/v1750595587/instr_genre_3.jpg",
+    "level": 3,
+    "instrumentId": 1,
+    "genreId": 7,
+    "lessonIds": [132]
+  },
+  {
+    "id": 314,
+    "title": "Bajo Rock",
+    "imageUrl": "https://res.cloudinary.com/dvm8qkmuo/image/upload/v1750595587/instr_genre_8.jpg",
+    "level": 3,
+    "instrumentId": 3,
+    "genreId": 2,
+    "lessonIds": [133]
   }
 ]

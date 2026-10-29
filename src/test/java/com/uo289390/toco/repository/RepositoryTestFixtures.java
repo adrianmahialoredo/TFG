@@ -74,12 +74,13 @@ final class RepositoryTestFixtures {
         return instrumentGenre;
     }
 
-    static Chord chord(long id, String name) {
+    static Chord chord(long id, String name, Instrument instrument) {
         Chord chord = new Chord();
         chord.setId(id);
         chord.setName(name);
         chord.setNotes(List.of("C", "E", "G"));
         chord.setImageUrl("https://example.com/" + name + ".png");
+        chord.setInstrument(instrument);
         return chord;
     }
 

@@ -105,7 +105,6 @@ export default function LoginScreen() {
             disabled={loading}
             size={22}
           />
-          <Lock size={25} color={COLORS.secondary} />
         </View>
       </View>
 

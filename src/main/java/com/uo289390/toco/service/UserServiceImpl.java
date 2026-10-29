@@ -30,7 +30,7 @@ import static com.uo289390.toco.utils.EntityResolver.resolveGenres;
 import static com.uo289390.toco.utils.EntityResolver.resolveInstrument;
 import static com.uo289390.toco.utils.EntityResolver.resolveInstruments;
 import static com.uo289390.toco.utils.EntityResolver.findUser;
-import static com.uo289390.toco.utils.RecommendationConstants.MAX_TOP_ARTISTS_COUNT;
+import static com.uo289390.toco.utils.RecommendationConstants.MAX_N_TOP_ARTISTS;
 
 /**
  * Default implementation of {@link UserService}.
@@ -183,8 +183,8 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public Optional<List<String>> findTopArtistsForUser(Long userId, int totalArtists) {
-        if (totalArtists < 1 || totalArtists > MAX_TOP_ARTISTS_COUNT) {
-            throw new IllegalArgumentException("total_artists must be between 1 and " + MAX_TOP_ARTISTS_COUNT);
+        if (totalArtists < 1 || totalArtists > MAX_N_TOP_ARTISTS) {
+            throw new IllegalArgumentException("total_artists must be between 1 and " + MAX_N_TOP_ARTISTS);
         }
         log.debug("Fetching the top {} artists for user id: {}", totalArtists, userId);
         return findUser(userId).map(user -> user.getTopArtistsFromItemLists(totalArtists));
@@ -217,9 +217,9 @@ public class UserServiceImpl implements UserService {
         return findUser(userId).map(user -> {
             Set<Genre> favourites = user.getPreferences().getFavoriteGenres();
             boolean isFavourite = favourites.stream().anyMatch(genre -> genre.getId().equals(genreId));
-            if (isFavourite && favourites.size() <= Preferences.MIN_NUMBER_OF_FAVOURITE_GENRES) {
+            if (isFavourite && favourites.size() <= Preferences.MIN_N_FAVOURITE_GENRES) {
                 throw new IllegalArgumentException(
-                        "A user must have at least " + Preferences.MIN_NUMBER_OF_FAVOURITE_GENRES + " favourite genres");
+                        "A user must have at least " + Preferences.MIN_N_FAVOURITE_GENRES + " favourite genres");
             }
             favourites.removeIf(genre -> genre.getId().equals(genreId));
             return dtoMapper.userToUserDto(userRepository.save(user));
@@ -243,9 +243,9 @@ public class UserServiceImpl implements UserService {
         return findUser(userId).map(user -> {
             Set<Instrument> favourites = user.getPreferences().getFavoriteInstruments();
             boolean isFavourite = favourites.stream().anyMatch(instrument -> instrument.getId().equals(instrumentId));
-            if (isFavourite && favourites.size() <= Preferences.MIN_NUMBER_OF_FAVOURITE_INSTRUMENTS) {
+            if (isFavourite && favourites.size() <= Preferences.MIN_N_FAVOURITE_INSTRUMENTS) {
                 throw new IllegalArgumentException(
-                        "A user must have at least " + Preferences.MIN_NUMBER_OF_FAVOURITE_INSTRUMENTS + " favourite instruments");
+                        "A user must have at least " + Preferences.MIN_N_FAVOURITE_INSTRUMENTS + " favourite instruments");
             }
             favourites.removeIf(instrument -> instrument.getId().equals(instrumentId));
             return dtoMapper.userToUserDto(userRepository.save(user));
@@ -352,13 +352,13 @@ public class UserServiceImpl implements UserService {
      * the same rule applied when removing a single favourite.
      */
     private void ensureMinimumFavourites(Preferences preferences) {
-        if (preferences.getFavoriteGenres().size() < Preferences.MIN_NUMBER_OF_FAVOURITE_GENRES) {
+        if (preferences.getFavoriteGenres().size() < Preferences.MIN_N_FAVOURITE_GENRES) {
             throw new IllegalArgumentException(
-                    "A user must have at least " + Preferences.MIN_NUMBER_OF_FAVOURITE_GENRES + " favourite genres");
+                    "A user must have at least " + Preferences.MIN_N_FAVOURITE_GENRES + " favourite genres");
         }
-        if (preferences.getFavoriteInstruments().size() < Preferences.MIN_NUMBER_OF_FAVOURITE_INSTRUMENTS) {
+        if (preferences.getFavoriteInstruments().size() < Preferences.MIN_N_FAVOURITE_INSTRUMENTS) {
             throw new IllegalArgumentException(
-                    "A user must have at least " + Preferences.MIN_NUMBER_OF_FAVOURITE_INSTRUMENTS + " favourite instruments");
+                    "A user must have at least " + Preferences.MIN_N_FAVOURITE_INSTRUMENTS + " favourite instruments");
         }
     }
 

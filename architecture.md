@@ -71,6 +71,12 @@ Regla: **en el dominio musical nunca hay entidades repetidas**, así que las col
 
 En el código de servicios se aplica lo mismo: resultados como `Set`/`LinkedHashSet` (o `SequencedSet` si el orden importa). Excepciones deliberadas: los **rankings** (`getTopXFrom…`) son `List` porque están ordenados y se accede por posición, la lista interna de `getTopN` es `List` porque cuenta repeticiones, y las copias para `Collections.shuffle` necesitan `List`.
 
+### Acordes por instrumento
+
+- `Chord` pertenece a un `Instrument` (`@ManyToOne` obligatorio): el mismo acorde (p. ej. `Cm`) existe una vez por instrumento, con su digitación y su diagrama, y el nombre es único por `(name, instrument_id)`.
+- Una `SongLesson` es de un solo instrumento, así que sus `chords` son todos de ese instrumento. Los servicios lo comprueban con `EntityResolver.resolveChords(ids, instrument)` al crear o actualizar la lección (también en la creación en cascada de `SongServiceImpl`): un acorde de otro instrumento da **400**.
+- Una canción sí puede tener lecciones de varios instrumentos, cada una con sus acordes. Por eso no hacen falta rutas nuevas: el frontend pide los acordes por los `chordIds` de la lección elegida.
+
 ### Relaciones bidireccionales
 
 - Un solo dueño por relación. Ejemplo: `Lesson.instrumentGenre` (`@ManyToOne`, columna `lessons.instrument_genre_id`) es el dueño; `InstrumentGenre.lessons` es el lado inverso (`mappedBy`).
@@ -88,7 +94,7 @@ En el código de servicios se aplica lo mismo: resultados como `Set`/`LinkedHash
 
 - Hibernate añade columnas y tablas, pero nunca borra ni relaja columnas existentes.
 - Campos primitivos nuevos en tablas con datos: añadir `@ColumnDefault` (PostgreSQL rechaza añadir una columna `NOT NULL` sin valor por defecto si la tabla ya tiene filas).
-- Cambios que requieren mover datos se hacen con un script idempotente en `scripts/migrate_*.py` (ejemplos: `migrate_preferences_table.py`, `migrate_instrument_genre_lessons.py`, `migrate_song_chords_join_column.py`).
+- Cambios que requieren mover datos se hacen con un script idempotente en `scripts/migrate_*.py` (ejemplos: `migrate_preferences_table.py`, `migrate_instrument_genre_lessons.py`, `migrate_song_chords_join_column.py`, `migrate_chord_instrument.py`).
 - Hibernate tampoco renombra columnas: si cambia el nombre de una columna o de una columna de unión, hace falta un script de migración (si no, intenta añadir la nueva y falla si es `NOT NULL`).
 
 ---
@@ -102,6 +108,7 @@ Nadie llama a `repository.findById` fuera de `utils/EntityResolver`. Es un `@Com
 | `findX(id)` | `Optional<X>` | `Optional.empty()` | `Optional.empty()` | El recurso pedido en la URL: el controlador convierte el vacío en **404** |
 | `resolveX(id)` | `X` | `IllegalArgumentException` (**400**) | `EntityNotFoundException` (**404**) | Relaciones que tienen que existir (IDs en el body) |
 | `resolveXs(ids)` | `Set<X>` (`LinkedHashSet`) | colección vacía si la lista es `null`/vacía | `EntityNotFoundException` | Colecciones de relaciones, en el orden pedido |
+| `resolveChords(ids, instrument)` | `Set<Chord>` | colección vacía | `EntityNotFoundException`; `IllegalArgumentException` (**400**) si un acorde es de otro instrumento | Acordes de una `SongLesson` |
 
 Hay `findX`/`resolveX` para todas las entidades con repositorio. `resolveX` está construido sobre `findX`, así que la consulta vive en un único sitio.
 

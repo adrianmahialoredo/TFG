@@ -42,36 +42,47 @@ export const detectPitch = (samples: Float32Array, sampleRate: number): number |
   if (maxLag <= minLag) return null;
   const window = samples.length - maxLag;
 
-  // 1. Función diferencia: d(tau) = suma de (x[j] - x[j + tau])^2. Es mínima cuando tau es el periodo.
-  const difference = new Float32Array(maxLag + 1);
+  // 1-3. Para cada periodo candidato tau:
+  //  - Función diferencia: d(tau) = suma de (x[j] - x[j + tau])^2. Es mínima cuando tau es el periodo.
+  //  - Diferencia normalizada acumulada: evita que tau = 0 (o muy pequeño) gane siempre.
+  //  - Se busca el primer mínimo por debajo del umbral (el primero es el periodo; los siguientes, sus múltiplos).
+  // Se calcula tau a tau y se para en cuanto se encuentra el mínimo (más un vecino para la interpolación):
+  // la función diferencia es lo caro (lags x ventana) y con esto, en una cuerda de guitarra, se calcula
+  // una fracción de los lags. Importa porque corre en el hilo de JS (Hermes, sin JIT).
+  const normalized = new Float32Array(maxLag + 2);
+  normalized[0] = 1;
+  let runningSum = 0;
+  let found = -1;
+  let computed = 0;
   for (let tau = 1; tau <= maxLag; tau++) {
     let sum = 0;
     for (let j = 0; j < window; j++) {
       const delta = samples[j] - samples[j + tau];
       sum += delta * delta;
     }
-    difference[tau] = sum;
-  }
+    runningSum += sum;
+    normalized[tau] = runningSum === 0 ? 1 : (sum * tau) / runningSum;
+    computed = tau;
 
-  // 2. Diferencia normalizada acumulada: evita que tau = 0 (o muy pequeño) gane siempre.
-  const normalized = new Float32Array(maxLag + 1);
-  normalized[0] = 1;
-  let runningSum = 0;
-  for (let tau = 1; tau <= maxLag; tau++) {
-    runningSum += difference[tau];
-    normalized[tau] = runningSum === 0 ? 1 : (difference[tau] * tau) / runningSum;
+    if (tau <= minLag) continue;
+    if (found === -1) {
+      if (normalized[tau - 1] < YIN_THRESHOLD) found = tau - 1;
+      else continue;
+    }
+    // Se baja mientras siga bajando; el primer valor que sube cierra el mínimo
+    if (normalized[tau] < normalized[found]) found = tau;
+    else break;
   }
-
-  // 3. Primer mínimo por debajo del umbral (el primero es el periodo; los siguientes, sus múltiplos)
-  let tau = minLag;
-  while (tau <= maxLag && normalized[tau] >= YIN_THRESHOLD) tau++;
-  if (tau > maxLag) return null;
-  while (tau + 1 <= maxLag && normalized[tau + 1] < normalized[tau]) tau++;
+  if (found === -1) {
+    if (computed >= minLag && normalized[computed] < YIN_THRESHOLD) found = computed;
+    else return null;
+  }
+  const tau = found;
 
   // 4. Interpolación parabólica entre los vecinos: precisión por debajo de una muestra
   // (sin ella, a 110 Hz el error llega a ~0.1 Hz, unos 2 cents)
   let period = tau;
-  if (tau > 1 && tau < maxLag) {
+  if (tau > 1 && tau < computed) {
     const previous = normalized[tau - 1];
     const current = normalized[tau];
     const next = normalized[tau + 1];

@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { View, Text, TouchableOpacity, ActivityIndicator, TextInput, Pressable } from "react-native";
 import FadeScrollView from "../components/FadeScrollView";
-import { Mail, UserRound, Lock, Speech } from "lucide-react-native";
+import { Mail, UserRound, Speech } from "lucide-react-native";
 import { useNavigation } from "@react-navigation/native";
 
 import AppLayout from "../components/AppLayout";
@@ -103,7 +103,6 @@ export default function RegisterScreen() {
 
           <RegisterInput
               placeholder="Contraseña"
-              icon={<Lock size={22} color={COLORS.secondary} />}
               secureTextEntry={!showPassword}
               autoCapitalize="none"
               autoCorrect={false}
@@ -122,7 +121,6 @@ export default function RegisterScreen() {
 
           <RegisterInput
               placeholder="Repetir contraseña"
-              icon={<Lock size={22} color={COLORS.secondary} />}
               secureTextEntry={!showConfirmPassword}
               autoCapitalize="none"
               autoCorrect={false}

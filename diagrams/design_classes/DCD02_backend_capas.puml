@@ -94,7 +94,6 @@ package "service" {
         - songRepository : SongRepository
         - genreRepository : GenreRepository
         - instrumentRepository : InstrumentRepository
-        - chordRepository : ChordRepository
         - userRepository : UserRepository
         - itemListRepository : ItemListRepository
         - dtoMapper : DtoMapper

@@ -47,3 +47,12 @@ export const getRecommendedByUser = async (userId: string): Promise<AnyItemDTO[]
     const response = await apiClient.get(API_ENDPOINTS.ITEMS.RECOMMENDED_BY_USER(userId));
     return response.data;
 };
+
+/**
+ * DTOs completos de los items recomendados a un usuario a partir de su Spotify (Home "Desde tu Spotify").
+ * Cada uno es del DTO de su subtipo y trae `type`. Requiere la cuenta de Spotify vinculada.
+ */
+export const getRecommendedFromSpotify = async (userId: string): Promise<AnyItemDTO[]> => {
+    const response = await apiClient.get(API_ENDPOINTS.ITEMS.SPOTIFY_BY_USER(userId));
+    return response.data;
+};

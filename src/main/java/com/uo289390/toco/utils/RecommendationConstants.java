@@ -5,53 +5,72 @@ import com.uo289390.toco.model.Preferences;
 /**
  * Parameters of the item list recommendation algorithms.
  *
+ * Naming convention (N = number of):
+ * - {@code N_[CONTEXT_]RECOMMENDED_<ITEMS>}: how many items a recommendation returns.
+ * - {@code N_<ITEMS>_USED_IN_[CONTEXT_]<TARGET>_RECOMMENDATION}: how many items an algorithm uses to recommend.
+ * - {@code DEFAULT_N_...} / {@code MAX_N_...}: default and maximum values of a request parameter.
+ *
+ * Without context the recommendation is for an item list (or the generic one of its type).
+ *
  * @author Adrián Mahía
  * @version 1.0
  * @since 2026-09-29
  */
 public final class RecommendationConstants {
 
-    public static final int RECOMMENDED_SONGS_COUNT = 10;
-    public static final int RECOMMENDED_LESSONS_COUNT = 6;
-    public static final int RECOMMENDED_GENRES_COUNT = 1;
-    public static final int RECOMMENDED_INSTRUMENT_GENRES_COUNT = 3;
+    // Item list recommendations
+    public static final int N_RECOMMENDED_SONGS = 10;
+    public static final int N_RECOMMENDED_LESSONS = 6;
+    public static final int N_RECOMMENDED_GENRES = 1;
+    public static final int N_RECOMMENDED_INSTRUMENT_GENRES = 3;
 
-    public static final int NUMBER_OF_MATCHING_INSTRUMENTS_IN_SONG_RECOMMENDATION = 3;
+    public static final int N_MATCHING_INSTRUMENTS_USED_IN_SONG_RECOMMENDATION = 3;
 
-    public static final int NUMBER_OF_GENRES_USED_IN_GENRE_RECOMMENDATION = RECOMMENDED_GENRES_COUNT;
-    public static final int NUMBER_OF_FAVOURITE_GENRES_USED_IN_GENRE_RECOMMENDATION = Preferences.MIN_NUMBER_OF_FAVOURITE_GENRES;
+    public static final int N_GENRES_USED_IN_GENRE_RECOMMENDATION = N_RECOMMENDED_GENRES;
+    public static final int N_FAVOURITE_GENRES_USED_IN_GENRE_RECOMMENDATION = Preferences.MIN_N_FAVOURITE_GENRES;
 
-    public static final int NUMBER_OF_MAX_TOP_INSTRUMENTS_AND_GENRES_USED_IN_INSTRUMENT_GENRE_RECOMMENDATION = 3;
-    public static final int NUMBER_OF_TOP_ARTISTS_TO_FETCH_FROM_SPOTIFY = 5;
+    public static final int N_MAX_TOP_INSTRUMENTS_AND_GENRES_USED_IN_INSTRUMENT_GENRE_RECOMMENDATION = 3;
 
-    public static final int BY_GENRE_RECOMMENDED_LESSONS_COUNT = 8;
-    public static final int BY_USER_RECOMMENDED_SONGS_COUNT = 12;
-    public static final int NUMBER_OF_GENRES_USED_IN_BY_USER_SONG_RECOMMENDATION = 4;
-    public static final int NUMBER_OF_INSTRUMENTS_USED_IN_BY_USER_SONG_RECOMMENDATION = 4;
+    // By genre and by user recommendations
+    public static final int N_BY_GENRE_RECOMMENDED_LESSONS = 8;
+    public static final int N_BY_USER_RECOMMENDED_SONGS = 12;
+    public static final int N_GENRES_USED_IN_BY_USER_SONG_RECOMMENDATION = 4;
+    public static final int N_INSTRUMENTS_USED_IN_BY_USER_SONG_RECOMMENDATION = 4;
 
-    public static final int NUMBER_OF_FAVOURITE_GENRES_USED_IN_BY_USER_INSTRUMENT_GENRE_RECOMMENDATION = 2;
-    public static final int NUMBER_OF_ITEM_LISTS_GENRES_USED_IN_BY_USER_INSTRUMENT_GENRE_RECOMMENDATION = 2;
-    public static final int NUMBER_OF_FAVOURITE_INSTRUMENTS_USED_IN_BY_USER_INSTRUMENT_GENRE_RECOMMENDATION = 2;
-    public static final int NUMBER_OF_ITEM_LISTS_INSTRUMENTS_USED_IN_BY_USER_INSTRUMENT_GENRE_RECOMMENDATION = 2;
+    public static final int N_FAVOURITE_GENRES_USED_IN_BY_USER_INSTRUMENT_GENRE_RECOMMENDATION = 2;
+    public static final int N_ITEM_LISTS_GENRES_USED_IN_BY_USER_INSTRUMENT_GENRE_RECOMMENDATION = 2;
+    public static final int N_FAVOURITE_INSTRUMENTS_USED_IN_BY_USER_INSTRUMENT_GENRE_RECOMMENDATION = 2;
+    public static final int N_ITEM_LISTS_INSTRUMENTS_USED_IN_BY_USER_INSTRUMENT_GENRE_RECOMMENDATION = 2;
 
-    public static final int NUMBER_OF_ITEM_LISTS_GENRES_USED_IN_BY_USER_LESSON_RECOMMENDATION = 2;
-    public static final int NUMBER_OF_ITEM_LISTS_INSTRUMENTS_USED_IN_BY_USER_LESSON_RECOMMENDATION = 2;
+    public static final int N_ITEM_LISTS_GENRES_USED_IN_BY_USER_LESSON_RECOMMENDATION = 2;
+    public static final int N_ITEM_LISTS_INSTRUMENTS_USED_IN_BY_USER_LESSON_RECOMMENDATION = 2;
 
-    public static final int HOME_RECOMMENDED_SONGS_COUNT = 6;
-
-    // Favourite artists (the most repeated artists of the songs in the user's lists) and their songs
-    public static final int DEFAULT_TOP_ARTISTS_COUNT = 5;
-    public static final int MAX_TOP_ARTISTS_COUNT = 10;
-    public static final int MAX_ARTISTS_IN_SONGS_BY_ARTISTS = 10;
-    public static final int DEFAULT_SONGS_BY_ARTISTS_COUNT = 10;
-    public static final int MAX_SONGS_BY_ARTISTS_COUNT = 50;
-    public static final int HOME_RECOMMENDED_LESSONS_COUNT = 3;
-    public static final int HOME_RECOMMENDED_INSTRUMENT_GENRES_COUNT = 2;
+    // Home recommendations
+    public static final int N_HOME_RECOMMENDED_SONGS = 6;
+    public static final int N_HOME_RECOMMENDED_LESSONS = 3;
+    public static final int N_HOME_RECOMMENDED_INSTRUMENT_GENRES = 2;
+    public static final int N_HOME_RECOMMENDED_GENRES = 1;
 
     /** Candidates for the Home "Prueba esta combinación" card (the app shows the first one not already on the Home). */
-    public static final int FAVOURITE_INSTRUMENT_GENRE_COMBINATIONS_COUNT = 5;
+    public static final int N_FAVOURITE_INSTRUMENT_GENRE_COMBINATIONS = 5;
 
     /** Candidates for the Home "Explora este género" card (the app shows the first one not already on the Home). */
-    public static final int MOST_USED_GENRES_IN_ITEM_LISTS_COUNT = 5;
-    public static final int HOME_RECOMMENDED_GENRES_COUNT = 1;
+    public static final int N_MOST_USED_GENRES_IN_ITEM_LISTS = 5;
+
+    // Favourite artists (the most repeated artists of the songs in the user's lists) and their songs
+    public static final int DEFAULT_N_TOP_ARTISTS = 5;
+    public static final int MAX_N_TOP_ARTISTS = 10;
+    public static final int MAX_N_ARTISTS_IN_SONGS_BY_ARTISTS = 10;
+    public static final int DEFAULT_N_SONGS_BY_ARTISTS = 10;
+    public static final int MAX_N_SONGS_BY_ARTISTS = 50;
+
+    // Spotify recommendations (the user's top songs and artists in Spotify)
+    public static final int N_SPOTIFY_RECOMMENDED_SONGS = 6;
+    public static final int N_SPOTIFY_RECOMMENDED_LESSONS = 3;
+    public static final int N_SPOTIFY_RECOMMENDED_INSTRUMENT_GENRES = 2;
+    public static final int N_SPOTIFY_RECOMMENDED_GENRES = 1;
+
+    public static final int N_TOP_ARTISTS_USED_IN_SPOTIFY_SONG_RECOMMENDATION = 5;
+    public static final int N_TOP_GENRES_USED_IN_SPOTIFY_INSTRUMENT_GENRE_RECOMMENDATION = 5;
+    public static final int N_TOP_INSTRUMENTS_USED_IN_SPOTIFY_INSTRUMENT_GENRE_RECOMMENDATION = 5;
 }

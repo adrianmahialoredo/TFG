@@ -2,13 +2,13 @@ import json
 import requests
 from pathlib import Path
 
-from api_auth import admin_session
+from api_auth import admin_session, api_url
 from console_utils import configure_console
 
 configure_console()
 
 # Configuration
-API_URL = 'http://localhost:8080/api/instruments'
+API_URL = api_url('/api/instruments')
 DATA_FILE = Path(__file__).parent.parent / 'data' / 'instruments.json'
 
 def load_data(file_path):

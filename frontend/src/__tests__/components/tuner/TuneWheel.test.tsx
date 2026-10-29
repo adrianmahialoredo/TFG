@@ -1,6 +1,6 @@
 import { StyleSheet } from 'react-native';
-import { render, screen, fireEvent } from '@testing-library/react-native';
-import TuneWheel, { WHEEL_ITEM_HEIGHT } from '@/components/tuner/TuneWheel';
+import { render, screen, fireEvent, act } from '@testing-library/react-native';
+import TuneWheel, { SETTLE_MS, WHEEL_ITEM_HEIGHT } from '@/components/tuner/TuneWheel';
 
 jest.setTimeout(30000);
 
@@ -72,6 +72,37 @@ describe('TuneWheel', () => {
     await fireEvent.press(screen.getByText('Bajo (Estándar)'));
     expect(onSelect).toHaveBeenCalledWith(0);
     expect(opacity('Bajo (Estándar)')).toBe(1);
+  });
+
+  describe('si no llega el evento de fin de deslizamiento', () => {
+    beforeEach(() => jest.useFakeTimers());
+    afterEach(() => jest.useRealTimers());
+
+    it('elige la fila del centro cuando la rueda lleva un rato quieta', async () => {
+      const onSelect = jest.fn();
+      await render(<TuneWheel options={OPTIONS} selectedIndex={1} onSelect={onSelect} />);
+      await fireEvent.scroll(screen.getByTestId('tune-wheel'), scrollEvent(0));
+      expect(onSelect).not.toHaveBeenCalled();
+      await act(async () => { jest.advanceTimersByTime(SETTLE_MS); });
+      expect(onSelect).toHaveBeenCalledWith(0);
+    });
+
+    it('no elige mientras el dedo sigue encima, y no repite lo ya elegido', async () => {
+      const onSelect = jest.fn();
+      await render(<TuneWheel options={OPTIONS} selectedIndex={1} onSelect={onSelect} />);
+      const wheel = screen.getByTestId('tune-wheel');
+      await fireEvent(wheel, 'scrollBeginDrag', scrollEvent(1));
+      await fireEvent.scroll(wheel, scrollEvent(2));
+      await act(async () => { jest.advanceTimersByTime(SETTLE_MS * 3); });
+      expect(onSelect).not.toHaveBeenCalled();
+
+      await fireEvent(wheel, 'scrollEndDrag', scrollEvent(2));
+      expect(onSelect).toHaveBeenCalledWith(2);
+      await fireEvent.scroll(wheel, scrollEvent(2));
+      await fireEvent(wheel, 'momentumScrollEnd', scrollEvent(2));
+      await act(async () => { jest.advanceTimersByTime(SETTLE_MS); });
+      expect(onSelect).toHaveBeenCalledTimes(1);
+    });
   });
 
   it('sigue a la selección que llega de fuera', async () => {

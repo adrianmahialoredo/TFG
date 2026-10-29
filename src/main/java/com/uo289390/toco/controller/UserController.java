@@ -15,7 +15,7 @@ import org.springframework.validation.annotation.Validated;
 
 import java.util.List;
 
-import static com.uo289390.toco.utils.RecommendationConstants.DEFAULT_TOP_ARTISTS_COUNT;
+import static com.uo289390.toco.utils.RecommendationConstants.DEFAULT_N_TOP_ARTISTS;
 
 /**
  * REST controller for users.
@@ -122,7 +122,7 @@ public class UserController {
      * @param id      the ID of the user
      * @param genreId the ID of the genre to remove
      * @return 200 OK with the updated user, 400 Bad Request if the user would be left with fewer than
-     *         {@link Preferences#MIN_NUMBER_OF_FAVOURITE_GENRES} favourite genres,
+     *         {@link Preferences#MIN_N_FAVOURITE_GENRES} favourite genres,
      *         or 404 Not Found if the user does not exist
      */
     @DeleteMapping("/{id}/favorite-genres/{genreId}")
@@ -155,7 +155,7 @@ public class UserController {
     @PreAuthorize("hasRole('ADMIN') or @ownership.isSelf(#id, authentication)")
     public ResponseEntity<List<String>> getTopArtistsForUser(
             @PathVariable Long id,
-            @RequestParam(name = "total_artists", defaultValue = "" + DEFAULT_TOP_ARTISTS_COUNT) int totalArtists) {
+            @RequestParam(name = "total_artists", defaultValue = "" + DEFAULT_N_TOP_ARTISTS) int totalArtists) {
         return ResponseEntity.of(userService.findTopArtistsForUser(id, totalArtists));
     }
 
@@ -178,7 +178,7 @@ public class UserController {
      * @param id           the ID of the user
      * @param instrumentId the ID of the instrument to remove
      * @return 200 OK with the updated user, 400 Bad Request if the user would be left with fewer than
-     *         {@link Preferences#MIN_NUMBER_OF_FAVOURITE_INSTRUMENTS} favourite instruments,
+     *         {@link Preferences#MIN_N_FAVOURITE_INSTRUMENTS} favourite instruments,
      *         or 404 Not Found if the user does not exist
      */
     @DeleteMapping("/{id}/favorite-instruments/{instrumentId}")

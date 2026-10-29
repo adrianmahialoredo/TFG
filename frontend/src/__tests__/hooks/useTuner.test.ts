@@ -55,11 +55,39 @@ const emit = async (frequency: number) => {
 const flat = (frequency: number, cents: number) => frequency * Math.pow(2, cents / 1200);
 
 describe('useTuner', () => {
+  // Reloj parado: el análisis "no tarda nada" y no se descarta ningún bloque por ir lento
+  // (salvo en el test del descarte, que mueve el reloj a mano)
+  let nowSpy: jest.SpyInstance<number, []>;
+
   beforeEach(() => {
     jest.clearAllMocks();
     mockRecording = false;
     mockSimulated = false;
     mockAudioManager.requestRecordingPermissions.mockResolvedValue('Granted');
+    nowSpy = jest.spyOn(Date, 'now').mockReturnValue(1000);
+  });
+
+  afterEach(() => nowSpy.mockRestore());
+
+  it('si el análisis va lento descarta los bloques que llegan mientras tanto', async () => {
+    const { result } = await renderHook(() => useTuner(STANDARD));
+    await act(() => result.current.start());
+
+    // 1.er bloque: empieza en 1000 y tarda 50 ms -> se descarta hasta 1100
+    nowSpy.mockReturnValueOnce(1000).mockReturnValueOnce(1050);
+    await emit(110);
+    const first = result.current.reading!.frequency;
+    expect(first).toBeCloseTo(110, 0);
+
+    // Llega en 1080: se descarta sin analizarlo (la lectura no cambia)
+    nowSpy.mockReturnValueOnce(1080);
+    await emit(82.41);
+    expect(result.current.reading!.frequency).toBe(first);
+
+    // En 1100 ya se analiza (la lectura se mueve hacia el Mi, suavizada con la anterior)
+    nowSpy.mockReturnValueOnce(1100).mockReturnValueOnce(1110);
+    await emit(82.41);
+    expect(result.current.reading!.frequency).toBeLessThan(first);
   });
 
   it('empieza parado', async () => {

@@ -104,6 +104,9 @@ def main() -> int:
     finally:
         conn.close()
 
+    if not args.dry_run:
+        print("The users table was emptied too: restart the backend so AdminBootstrap "
+              "creates the admin again before running load_all_data.py.")
     return 0
 
 

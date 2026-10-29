@@ -2,7 +2,7 @@ package com.uo289390.toco.controller;
 
 import com.uo289390.toco.dto.ItemDTO;
 import com.uo289390.toco.dto.SongDTO;
-import com.uo289390.toco.service.SpotifyRecommendationService;
+import com.uo289390.toco.service.recommendation.SpotifyRecommendationService;
 import com.uo289390.toco.exception.GlobalExceptionHandler;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -17,11 +17,14 @@ import java.util.List;
  * Base path: {@code /api/spotify}
  *
  * Endpoints:
- * - GET    /api/spotify/recommendations/{spotifyUserId} Retrieve song recommendations for a Spotify user
+ * - GET    /api/spotify/recommendations/items/{userId}           Retrieve items of every type recommended from the user's Spotify
+ * - GET    /api/spotify/recommendations/songs/{userId}?limit={n} Retrieve the songs recommended from the user's Spotify
  *
+ * {@code userId} is the application user ID, who must have a linked Spotify account.
  * The Spotify login flow lives in {@link SpotifyAuthController}.
  *
- * Responses: 200 OK. Errors are translated by {@link GlobalExceptionHandler}.
+ * Responses: 200 OK (an empty list if none of the user's Spotify songs is in the database),
+ * 403 Forbidden for another user. Errors are translated by {@link GlobalExceptionHandler}.
  *
  * @author Adrián Mahía
  * @version 1.0

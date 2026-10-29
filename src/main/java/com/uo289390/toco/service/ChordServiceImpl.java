@@ -13,6 +13,7 @@ import lombok.RequiredArgsConstructor;
 
 import static com.uo289390.toco.utils.EntityResolver.findChord;
 import static com.uo289390.toco.utils.EntityResolver.findSongLesson;
+import static com.uo289390.toco.utils.EntityResolver.resolveInstrument;
 
 /**
  * Default implementation of {@link ChordService}.
@@ -48,7 +49,7 @@ public class ChordServiceImpl implements ChordService {
     @Override
     @Transactional
     public ChordDto create(ChordDto dto) {
-        Chord chord = entityMapper.chordDtoToChord(dto);
+        Chord chord = entityMapper.chordDtoToChord(dto, resolveInstrument(dto.getInstrumentId()));
         return dtoMapper.chordToChordDto(chordRepository.save(chord));
     }
 
@@ -104,6 +105,10 @@ public class ChordServiceImpl implements ChordService {
         chord.setSeventh(dto.isSeventh());
         chord.setCapo(dto.isCapo());
         chord.setCapoFret(dto.getCapoFret());
+
+        if (chord.getInstrument() == null || !chord.getInstrument().getId().equals(dto.getInstrumentId())) {
+            chord.setInstrument(resolveInstrument(dto.getInstrumentId()));
+        }
     }
 
 }

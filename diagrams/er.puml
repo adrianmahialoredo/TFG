@@ -186,8 +186,9 @@ entity "tab_sections" as tab_sections {
 entity "chords" as chords {
     * id : bigint <<PK>>
     --
-    * name : varchar <<NN, UQ>>
+    * name : varchar <<NN, UQ(name, instrument_id)>>
     * image_url : varchar <<NN>>
+    * instrument_id : bigint <<FK, NN, UQ(name, instrument_id)>>
     * open : boolean
     * barre : boolean
     * power_chord : boolean
@@ -262,6 +263,7 @@ song_lessons ||--o{ song_chords
 song_chords }o--|| chords
 song_lessons |o--o{ tab_sections : song_lesson_id
 chords ||--o{ chord_notes
+instruments ||--o{ chords : instrument_id
 
 ' Afinador
 instruments ||--o{ tunes : instrument_id

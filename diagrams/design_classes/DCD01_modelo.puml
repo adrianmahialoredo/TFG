@@ -131,7 +131,7 @@ enum "SongLesson.DifficultyLevel" as DifficultyLevel <<enum>> {
 
 class Chord <<entity>> {
     - id : Long {PK, asignado}
-    - name : String {unique}
+    - name : String {unique (name, instrument)}
     - notes : List<String>
     - imageUrl : String
     - open : boolean
@@ -211,8 +211,8 @@ enum Role <<enum>> {
 }
 
 class Preferences <<entity>> {
-    + {static} MIN_NUMBER_OF_FAVOURITE_GENRES : int = 2
-    + {static} MIN_NUMBER_OF_FAVOURITE_INSTRUMENTS : int = 2
+    + {static} MIN_N_FAVOURITE_GENRES : int = 2
+    + {static} MIN_N_FAVOURITE_INSTRUMENTS : int = 2
     - id : Long {PK = FK user_id, @MapsId}
     - difficultyLevel : int
 }
@@ -291,6 +291,12 @@ Song "1" *-- "*" SongLesson : lessons\n{Set, @OrderBy id}
 SongLesson "*" --> "*" Chord : chords\n{Set, @OrderBy id}
 SongLesson "1" *-- "*" TabSection : tabSections\n{List}
 SongLesson "*" --> "0..1" Instrument : instrument
+Chord "*" --> "1" Instrument : instrument
+note bottom of Chord
+  Los chords de una SongLesson deben ser de su
+  instrument (EntityResolver.resolveChords(ids, instrument),
+  400 si no).
+end note
 
 Lesson "*" -- "0..1" Genre : genre / lessons
 Lesson "*" -- "0..1" InstrumentGenre : instrumentGenre / lessons\n{@OrderBy indexInInstrumentGenre}

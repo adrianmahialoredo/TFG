@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { View, Text, Image, TouchableOpacity } from 'react-native';
 import { ChevronRight } from 'lucide-react-native';
-import { COLORS } from '../constants/Theme';
+import { COLORS, GOLD_CARD_STYLE } from '../constants/Theme';
 import InstrumentIcon from './InstrumentIcon';
 
 type SuggestionCardProps = {
@@ -28,10 +28,10 @@ export default function SuggestionCard({ label, title, imageUrl, onPress }: Sugg
 
   return (
     <TouchableOpacity onPress={onPress} activeOpacity={0.7} accessibilityRole="button">
-      <View className="bg-primary/10 border border-primary/40 rounded-xl p-4">
+      <View className="p-4" style={GOLD_CARD_STYLE}>
         <Text className="text-primary text-base font-semibold mb-3">{label}</Text>
         <View className="flex-row items-center">
-          <View className="w-16 h-16 rounded-lg bg-primary/20 items-center justify-center overflow-hidden">
+          <View className="w-16 h-16 rounded-lg bg-primary/30 items-center justify-center overflow-hidden">
             {showImage ? (
               <Image
                 source={{ uri: imageUrl }}

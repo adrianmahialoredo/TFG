@@ -419,11 +419,19 @@ class DtoValidationTest {
             dto = new ChordDto();
             dto.setName("Am");
             dto.setImageUrl("https://example.com/am.png");
+            dto.setInstrumentId(1L);
         }
 
         @Test
         void validDto_hasNoViolations() {
             assertTrue(invalidFields(dto, OnCreate.class).isEmpty());
+        }
+
+        @Test
+        void missingInstrumentId_isRejected() {
+            dto.setInstrumentId(null);
+
+            assertEquals(Set.of("instrumentId"), invalidFields(dto));
         }
 
         @ParameterizedTest

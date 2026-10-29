@@ -44,7 +44,7 @@ public class SongRecommendationServiceImpl implements SongRecommendationService 
 
         //Nivel 1 - canciones del que pertenezcan al genero y tengan top 3 instrumentos de la playlist
         Optional<Genre> mainGenre = itemList.getOnlyGenre().or(itemList::getMainGenreFromSongs);
-        List<Instrument> topInstruments = itemList.getTopInstrumentsFromSongs(RecommendationConstants.NUMBER_OF_MATCHING_INSTRUMENTS_IN_SONG_RECOMMENDATION);
+        List<Instrument> topInstruments = itemList.getTopInstrumentsFromSongs(RecommendationConstants.N_MATCHING_INSTRUMENTS_USED_IN_SONG_RECOMMENDATION);
 
         if (!topInstruments.isEmpty()) {
             mainGenre.ifPresent(genre -> songs.addAll(songRepository.findDistinctByGenresIdAndInstrumentsInAndIdNotIn(
@@ -115,11 +115,11 @@ public class SongRecommendationServiceImpl implements SongRecommendationService 
         int halfLimit = limit / 2;
 
         // Nivel 1 - mitad del limite repartida entre los generos mas usados en las playlists, completados con los favoritos (minimo 1 favorito)
-        List<Genre> genres = new ArrayList<>(user.getTopGenresFromItemLists(RecommendationConstants.NUMBER_OF_GENRES_USED_IN_BY_USER_SONG_RECOMMENDATION - 1));
+        List<Genre> genres = new ArrayList<>(user.getTopGenresFromItemLists(RecommendationConstants.N_GENRES_USED_IN_BY_USER_SONG_RECOMMENDATION - 1));
         for (Genre genre : user.getPreferences().getFavoriteGenres()) {
             if (!genres.contains(genre)) {
                 genres.add(genre);
-                if (genres.size() == RecommendationConstants.NUMBER_OF_GENRES_USED_IN_BY_USER_SONG_RECOMMENDATION) {
+                if (genres.size() == RecommendationConstants.N_GENRES_USED_IN_BY_USER_SONG_RECOMMENDATION) {
                     break;
                 }
             }
@@ -147,11 +147,11 @@ public class SongRecommendationServiceImpl implements SongRecommendationService 
         }
 
         // Nivel 2 - la otra mitad repartida entre los instrumentos mas usados en las playlists, completados con los favoritos (minimo 1 favorito)
-        List<Instrument> instruments = new ArrayList<>(user.getTopInstrumentsFromItemLists(RecommendationConstants.NUMBER_OF_INSTRUMENTS_USED_IN_BY_USER_SONG_RECOMMENDATION - 1));
+        List<Instrument> instruments = new ArrayList<>(user.getTopInstrumentsFromItemLists(RecommendationConstants.N_INSTRUMENTS_USED_IN_BY_USER_SONG_RECOMMENDATION - 1));
         for (Instrument instrument : user.getPreferences().getFavoriteInstruments()) {
             if (!instruments.contains(instrument)) {
                 instruments.add(instrument);
-                if (instruments.size() == RecommendationConstants.NUMBER_OF_INSTRUMENTS_USED_IN_BY_USER_SONG_RECOMMENDATION) {
+                if (instruments.size() == RecommendationConstants.N_INSTRUMENTS_USED_IN_BY_USER_SONG_RECOMMENDATION) {
                     break;
                 }
             }
@@ -257,8 +257,8 @@ public class SongRecommendationServiceImpl implements SongRecommendationService 
 
         if (!favouriteGenresCopy.isEmpty() && !favouriteInstrumentsCopy.isEmpty()) {
             songs.addAll(songRepository.findDistinctByGenresInAndInstrumentsInAndIdNotIn(
-                    favouriteGenresCopy.stream().limit(Preferences.MIN_NUMBER_OF_FAVOURITE_GENRES).collect(Collectors.toSet()),
-                    favouriteInstrumentsCopy.stream().limit(Preferences.MIN_NUMBER_OF_FAVOURITE_INSTRUMENTS).collect(Collectors.toSet()),
+                    favouriteGenresCopy.stream().limit(Preferences.MIN_N_FAVOURITE_GENRES).collect(Collectors.toSet()),
+                    favouriteInstrumentsCopy.stream().limit(Preferences.MIN_N_FAVOURITE_INSTRUMENTS).collect(Collectors.toSet()),
                     idsToExclude(excluding),
                     resolvePageable(missing)
             ));

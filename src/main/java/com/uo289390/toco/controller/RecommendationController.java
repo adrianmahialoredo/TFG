@@ -75,13 +75,13 @@ public class RecommendationController {
     @GetMapping("/lessons/by-user/{id}")
     @PreAuthorize("hasRole('ADMIN') or @ownership.isSelf(#id, authentication)")
     public ResponseEntity<List<LessonDTO>> getLessonsForUser(@PathVariable Long id) {
-        return ResponseEntity.ok(lessonRecommendationService.findForUser(id, RecommendationConstants.RECOMMENDED_LESSONS_COUNT)
+        return ResponseEntity.ok(lessonRecommendationService.findForUser(id, RecommendationConstants.N_RECOMMENDED_LESSONS)
                 .stream().map(dtoMapper::lessonToLessonDto).toList());
     }
 
     @GetMapping("/lessons/by-genre/{id}")
     public ResponseEntity<List<LessonDTO>> getForGenre(@PathVariable Long id) {
-        return ResponseEntity.ok(lessonRecommendationService.findForGenre(id, RecommendationConstants.BY_GENRE_RECOMMENDED_LESSONS_COUNT));
+        return ResponseEntity.ok(lessonRecommendationService.findForGenre(id, RecommendationConstants.N_BY_GENRE_RECOMMENDED_LESSONS));
     }
 
     @GetMapping("/songs/by-user/{id}")
@@ -103,7 +103,7 @@ public class RecommendationController {
     @PreAuthorize("hasRole('ADMIN') or @ownership.isSelf(#id, authentication)")
     public ResponseEntity<List<Long>> getFavouriteInstrumentGenreCombinationIds(@PathVariable Long id) {
         return ResponseEntity.ok(instrumentGenreRecommendationService
-                .findFavouriteCombinationsForUser(id, RecommendationConstants.FAVOURITE_INSTRUMENT_GENRE_COMBINATIONS_COUNT)
+                .findFavouriteCombinationsForUser(id, RecommendationConstants.N_FAVOURITE_INSTRUMENT_GENRE_COMBINATIONS)
                 .stream().map(InstrumentGenre::getId).toList());
     }
 
@@ -119,7 +119,7 @@ public class RecommendationController {
     @PreAuthorize("hasRole('ADMIN') or @ownership.isSelf(#id, authentication)")
     public ResponseEntity<List<Long>> getMostUsedGenreInItemListsIds(@PathVariable Long id) {
         return ResponseEntity.ok(genreRecommendationService
-                .findMostUsedInItemListsForUser(id, RecommendationConstants.MOST_USED_GENRES_IN_ITEM_LISTS_COUNT)
+                .findMostUsedInItemListsForUser(id, RecommendationConstants.N_MOST_USED_GENRES_IN_ITEM_LISTS)
                 .stream().map(Genre::getId).toList());
     }
 }

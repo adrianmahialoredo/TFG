@@ -13,7 +13,17 @@
  * - Filtros por relación: `/by-<relación>/{id}`.
  */
 
-const BASE_URL = 'http://192.168.0.22:8080';
+import { Platform } from 'react-native';
+
+/**
+ * URL del backend. Se lee de EXPO_PUBLIC_API_URL (frontend/.env, ver .env.example);
+ * Expo la incrusta en el bundle al compilar, así que tras cambiarla hay que reiniciar Metro.
+ * Sin ella se usa el backend del propio PC visto desde un emulador: el emulador de Android
+ * llega al host por 10.0.2.2 y el simulador de iOS comparte su red (localhost).
+ */
+const DEFAULT_BASE_URL = Platform.OS === 'android' ? 'http://10.0.2.2:8080' : 'http://localhost:8080';
+
+export const BASE_URL = (process.env.EXPO_PUBLIC_API_URL || DEFAULT_BASE_URL).replace(/\/+$/, '');
 const API_URL = `${BASE_URL}/api`;
 
 export const API_ENDPOINTS = {
@@ -164,6 +174,8 @@ export const API_ENDPOINTS = {
     // Feeds mixtos con DTO completo de cada subtipo (decisión de negocio)
     RECOMMENDED_BY_ITEM_LIST: (id: string) => `${API_URL}/recommendations/items/by-item-list/${id}`,
     RECOMMENDED_BY_USER: (userId: string) => `${API_URL}/recommendations/items/by-user/${userId}`,
+    // Items recomendados a partir de los gustos del usuario en Spotify (requiere la cuenta vinculada)
+    SPOTIFY_BY_USER: (userId: string) => `${API_URL}/spotify/recommendations/items/${userId}`,
   },
 };
 

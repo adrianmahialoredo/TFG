@@ -75,12 +75,17 @@ package "Controles" {
         eliminarItem(listId, itemId)
     }
     class MotorRecomendacion <<control>> {
-        [User, ItemList, Item]
+        [User, ItemList, Item, Song, SpotifyUser]
         --
         pedirRecomendaciones(origenId)
         calcularTopGenerosEInstrumentos()
         ejecutarAlgoritmoNiveles()
         filtrarExclusiones(idsPrevios)
+        pedirCancionesDeArtistasFavoritos(userId)
+        obtenerArtistasFavoritos(userId, n)
+        intercalarPorTurnos(artistas)
+        pedirRecomendacionesDeSpotify(userId)
+        obtenerTopsDeSpotify(userId)
     }
     class GestorCanciones <<control>> {
         [Song, SongLesson, Chord, TabSection]
@@ -134,6 +139,7 @@ package "Fronteras con sistemas externos" {
     class ServidorCorreoGateway <<boundary>>
     class NavegadorExterno <<boundary>>
     class SpotifyOAuthGateway <<boundary>>
+    class SpotifyWebApiGateway <<boundary>>
     class Microfono <<boundary>>
 }
 
@@ -164,6 +170,8 @@ MetronomoScreen --> MotorRitmo
 GestorAutenticacion --> ServidorCorreoGateway : envía el código
 GestorSpotifyAuth --> NavegadorExterno : abre la autorización
 GestorSpotifyAuth --> SpotifyOAuthGateway : tokens OAuth2
+MotorRecomendacion --> SpotifyWebApiGateway : canciones y artistas top
+MotorRecomendacion --> GestorSpotifyAuth : token válido (lo renueva si caduca)
 ProcesadorAudio --> Microfono : permiso y bloques de audio
 
 note top of CatalogoView

@@ -702,14 +702,14 @@ class UserServiceTest {
 
     @Test
     void testRemoveFavoriteGenre_AtMinimumThrows() {
-        // Arrange: exactly MIN_NUMBER_OF_FAVOURITE_GENRES favourites
-        assertEquals(Preferences.MIN_NUMBER_OF_FAVOURITE_GENRES, user.getPreferences().getFavoriteGenres().size());
+        // Arrange: exactly MIN_N_FAVOURITE_GENRES favourites
+        assertEquals(Preferences.MIN_N_FAVOURITE_GENRES, user.getPreferences().getFavoriteGenres().size());
         when(userRepository.findById(100L)).thenReturn(Optional.of(user));
 
         // Act & Assert
         IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
                 () -> userService.removeFavoriteGenre(100L, 1L));
-        assertTrue(ex.getMessage().contains(String.valueOf(Preferences.MIN_NUMBER_OF_FAVOURITE_GENRES)));
+        assertTrue(ex.getMessage().contains(String.valueOf(Preferences.MIN_N_FAVOURITE_GENRES)));
         assertEquals(2, user.getPreferences().getFavoriteGenres().size());
         verify(userRepository, never()).save(any());
     }
@@ -812,7 +812,7 @@ class UserServiceTest {
         // Act & Assert
         IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
                 () -> userService.removeFavoriteInstrument(100L, 10L));
-        assertTrue(ex.getMessage().contains(String.valueOf(Preferences.MIN_NUMBER_OF_FAVOURITE_INSTRUMENTS)));
+        assertTrue(ex.getMessage().contains(String.valueOf(Preferences.MIN_N_FAVOURITE_INSTRUMENTS)));
         verify(userRepository, never()).save(any());
     }
 
@@ -1009,7 +1009,7 @@ class UserServiceTest {
 
         // Act & Assert
         IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> userService.update(100L, dto));
-        assertEquals("A user must have at least " + Preferences.MIN_NUMBER_OF_FAVOURITE_GENRES + " favourite genres",
+        assertEquals("A user must have at least " + Preferences.MIN_N_FAVOURITE_GENRES + " favourite genres",
                 ex.getMessage());
         assertEquals(Set.of(rock, jazz), user.getPreferences().getFavoriteGenres());
         verify(userRepository, never()).save(any());
@@ -1026,7 +1026,7 @@ class UserServiceTest {
 
         // Act & Assert
         IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> userService.update(100L, dto));
-        assertEquals("A user must have at least " + Preferences.MIN_NUMBER_OF_FAVOURITE_INSTRUMENTS + " favourite instruments",
+        assertEquals("A user must have at least " + Preferences.MIN_N_FAVOURITE_INSTRUMENTS + " favourite instruments",
                 ex.getMessage());
         verify(userRepository, never()).save(any());
     }

@@ -74,8 +74,11 @@ export const createEntityCache = <T extends Identified>(config: EntityCacheConfi
     };
 
     /** RAM -> Disco -> API. Devuelve en el orden de `ids` pedido. */
-    const getAllById = async (ids: string[]): Promise<T[]> => {
-        if (!ids || ids.length === 0) return [];
+    const getAllById = async (requestedIds: string[]): Promise<T[]> => {
+        if (!requestedIds || requestedIds.length === 0) return [];
+        // Los DTOs del backend traen los IDs como números aunque el tipo diga string:
+        // sin normalizar, el Map de abajo (claves string) no encontraría nada.
+        const ids = requestedIds.map(String);
 
         const { found, missing } = await getCached(ids);
 

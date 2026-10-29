@@ -2,13 +2,13 @@ import json
 import requests
 from pathlib import Path
 
-from api_auth import admin_session
+from api_auth import admin_session, api_url
 from console_utils import configure_console
 
 configure_console()
 
 # Configuration
-API_URL = 'http://localhost:8080/api/lessons'
+API_URL = api_url('/api/lessons')
 DATA_FILE = Path(__file__).parent.parent / 'data' / 'lessons.json'
 
 def load_data(file_path):
@@ -23,10 +23,17 @@ def load_data(file_path):
         print(f"Error: Invalid JSON in '{file_path}'.")
         return []
 
+# Fields that link a lesson to its instrument-genre. They are not sent: the
+# instrument-genres do not exist yet when the lessons are loaded, and the link is
+# made afterwards by insert_instrument_genres.py from each "lessonIds" array
+# (which also sets belongsToInstrumentGenre and the index of each lesson).
+INSTRUMENT_GENRE_FIELDS = ('instrumentGenreId', 'indexInInstrumentGenre')
+
 def insert_lesson(lesson):
     """Insert a single lesson via API."""
+    payload = {k: v for k, v in lesson.items() if k not in INSTRUMENT_GENRE_FIELDS}
     try:
-        response = admin_session().post(API_URL, json=lesson, timeout=5)
+        response = admin_session().post(API_URL, json=payload, timeout=5)
 
         if response.status_code in [200, 201]:
             print(f"✓ Lesson '{lesson.get('title')}' added successfully.")

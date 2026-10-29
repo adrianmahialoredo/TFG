@@ -15,7 +15,7 @@ import java.util.Set;
 @Component
 public class EntityMapper {
 
-    public Chord chordDtoToChord(ChordDto dto) {
+    public Chord chordDtoToChord(ChordDto dto, Instrument instrument) {
         Chord chord = new Chord();
         chord.setId(dto.getId());
         chord.setName(dto.getName());
@@ -29,6 +29,7 @@ public class EntityMapper {
         chord.setSeventh(dto.isSeventh());
         chord.setCapo(dto.isCapo());
         chord.setCapoFret(dto.getCapoFret());
+        chord.setInstrument(instrument);
         return chord;
     }
 
@@ -106,6 +107,15 @@ public class EntityMapper {
         song.setGenres(genres);
         song.setInstruments(instruments);
         song.setLessons(lessons);
+        song.setDecade(dto.getDecade());
+        song.setPopular(dto.isPopular());
+        song.setNewSong(dto.isNewSong());
+        song.setGenreClassic(dto.isGenreClassic());
+        song.setGenrePopular(dto.isGenrePopular());
+        song.setGenreNew(dto.isGenreNew());
+        song.setArtistClassic(dto.isArtistClassic());
+        song.setArtistPopular(dto.isArtistPopular());
+        song.setArtistNew(dto.isArtistNew());
         return song;
     }
 

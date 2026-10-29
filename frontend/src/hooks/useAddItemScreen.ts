@@ -53,6 +53,8 @@ export const useAddItemScreen = (itemListId: string) => {
   // Añadidos que ya han mostrado el tic y se quitan de la pantalla
   const [dismissedIds, setDismissedIds] = useState<string[]>([]);
   const dismissTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+  // true en cuanto se añade algo en esta pantalla (ver onFresh)
+  const hasAddedRef = useRef(false);
 
   useEffect(() => {
     const timers = dismissTimers.current;
@@ -62,9 +64,11 @@ export const useAddItemScreen = (itemListId: string) => {
   // 1. Cargar recomendaciones al montar
   useEffect(() => {
     let cancelled = false;
-    // Si se sirvió la caché, la red avisa después con los IDs frescos.
+    // Si se sirvió la caché, la red avisa después con los IDs frescos. Si el usuario ya ha empezado
+    // a añadir, se ignoran: cambiar la cola de golpe hacía salir y entrar todas las filas a la vez
+    // en mitad de la animación del añadido. La próxima vez que abra la pantalla ya verá las frescas.
     const onFresh = (fresh: string[]) => {
-      if (!cancelled) setRecommendedIds(fresh);
+      if (!cancelled && !hasAddedRef.current) setRecommendedIds(fresh);
     };
 
     const fetchRecommended = async () => {
@@ -165,6 +169,7 @@ export const useAddItemScreen = (itemListId: string) => {
   const addItem = useCallback(
     async (itemId: string) => {
       if (addedSet.has(itemId)) return;
+      hasAddedRef.current = true;
       // Feedback optimista
       setAddedIds((prev) => (prev.includes(itemId) ? prev : [...prev, itemId]));
       dismissTimers.current[itemId] = setTimeout(() => {

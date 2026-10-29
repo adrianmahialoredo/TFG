@@ -37,8 +37,8 @@ import java.util.Set;
 @AllArgsConstructor
 public class Preferences {
 
-    public static final int MIN_NUMBER_OF_FAVOURITE_GENRES = 2;
-    public static final int MIN_NUMBER_OF_FAVOURITE_INSTRUMENTS = 2;
+    public static final int MIN_N_FAVOURITE_GENRES = 2;
+    public static final int MIN_N_FAVOURITE_INSTRUMENTS = 2;
 
     /**
      * Unique identifier for the preferences, shared with the owning

@@ -13,6 +13,12 @@ control "MotorRecomendacion" as motor
 entity "ItemList" as lista
 entity "Usuario" as usuario
 entity "Item" as item
+entity "Song" as cancion
+entity "SpotifyUser" as spotifyUser
+participant "SpotifyAPI
+<<sistema externo>>" as spotify
+
+== Recomendaciones adaptativas ==
 
 musico -> vista : abrirRecomendaciones()
 note right of musico : "Recomendaciones" en Inicio\no "Para ti" dentro de una lista
@@ -48,5 +54,76 @@ motor -> motor : unificar(SequencedSet)
 motor --> vista : retornarItemsPolimorficos()
 note right of vista : SongDTO, LessonDTO, GenreDTO,\nInstrumentGenreDTO...
 vista --> musico : mostrarTarjetasCarrusel()
+
+== Artistas favoritos (solo en Inicio) ==
+
+vista -> motor : pedirCancionesDeArtistasFavoritos(userId)
+motor -> usuario : obtenerArtistasFavoritos(userId, 5)
+note right of usuario : Los artistas que más se repiten\nen las canciones de sus listas
+usuario --> motor : artistas
+
+alt 9a. Sus listas no tienen canciones
+    motor --> vista : sin artistas
+    vista --> musico : mostrarAvisoListasVacias()
+    note right of vista : Sin tarjetas; los dos carruseles muestran\n"Añade canciones a tus listas para..."
+else Hay artistas
+    par Novedades y populares
+        motor -> cancion : buscarNuevas(artistas, 12)
+        cancion --> motor : canciones nuevas
+    else
+        motor -> cancion : buscarPopulares(artistas, 12)
+        cancion --> motor : canciones populares
+    end
+    motor -> motor : intercalarPorTurnos(artistas)
+    note right of motor : Una canción de cada artista por turno,\nen orden de importancia del artista
+    motor --> vista : canciones nuevas y populares
+    vista --> musico : mostrarTarjetasYCarruseles()
+    note right of vista
+        Tarjeta "Lo nuevo de <artista>" + carrusel "Novedades de tus artistas"
+        Tarjeta "Lo más popular de <artista>" + carrusel "Populares de tus artistas"
+    end note
+end
+
+== Desde tu Spotify (solo en Inicio) ==
+
+alt 13a. El usuario no tiene Spotify vinculado
+    vista --> musico : mostrarBotonConectarSpotify()
+    note right of vista : Título "Desde tu Spotify" + botón
+"Conectar con Spotify" (CU-10)
+else Spotify vinculado
+    vista -> motor : pedirRecomendacionesDeSpotify(userId)
+    note right of motor : GET /api/spotify/recommendations/items/{id}
+    motor -> spotifyUser : obtenerTokenValido(userId)
+    note right of spotifyUser : Se renueva con el refresh token si caduca
+    spotifyUser --> motor : token
+    motor -> spotify : obtenerTopsDeSpotify(token)
+    spotify --> motor : canciones top (medium, long, short_term)
+    motor -> cancion : buscarPorTituloYArtista(canciones top)
+    cancion --> motor : canciones que existen en la app
+    opt Faltan canciones
+        motor -> spotify : obtenerArtistasTop(token, 5)
+        spotify --> motor : artistas top
+        motor -> cancion : buscarPopularesClasicasYNuevas(artistas)
+        cancion --> motor : canciones de sus artistas
+    end
+    alt 15a. Ninguna canción de Spotify está en la app
+        motor --> vista : sin ítems
+        vista --> musico : mostrarAvisoSinRecomendaciones()
+        note right of vista : "Escucha música en Spotify para que te
+recomendemos canciones, lecciones y géneros"
+    else Hay canciones
+        motor -> motor : calcularTopGenerosEInstrumentos(canciones)
+        motor -> item : buscarLecciones(géneros, filtrarExclusiones(idsEnListas))
+        item --> motor : lecciones
+        motor -> item : buscarInstrumentGenres(topGéneros, topInstrumentos, filtrarExclusiones(idsEnListas))
+        item --> motor : instrument-genres
+        motor -> usuario : obtenerGenerosDeSusListas()
+        usuario --> motor : géneros ya incluidos
+        motor -> motor : elegirGeneroMasRepetidoNoIncluido()
+        motor -> motor : unificarYBarajar()
+        motor --> vista : retornarItemsPolimorficos()
+        vista --> musico : mostrarCarrusel("Desde tu Spotify")
+    end
+end
 
 @enduml

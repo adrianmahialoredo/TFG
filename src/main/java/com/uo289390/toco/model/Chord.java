@@ -30,7 +30,7 @@ import com.uo289390.toco.utils.Identifiable;
  * @since 2025-06-06
  */
 @Entity
-@Table(name = "chords")
+@Table(name = "chords", uniqueConstraints = @UniqueConstraint(columnNames = {"name", "instrument_id"}))
 @Getter
 @Setter
 @NoArgsConstructor
@@ -46,9 +46,10 @@ public class Chord implements Identifiable<Long> {
     
     /**
      * Name of the chord.
-     * This field is required and must be unique.
+     * This field is required and must be unique for each instrument
+     * (e.g. "Cm" can exist once for guitar and once for piano).
      */
-    @Column(nullable = false, unique = true)
+    @Column(nullable = false)
     @NotBlank(message = "Chord name cannot be blank")
     private String name;
     
@@ -118,6 +119,16 @@ public class Chord implements Identifiable<Long> {
      * This field is used to indicate where the capo is placed on the guitar neck.
      */
     private int capoFret;
+
+    /**
+     * Relation with Instrument
+     * This is a many-to-one relationship: the same chord name can be defined
+     * for several instruments, each one with its own fingering and diagram.
+     */
+    @NotNull(message = "Instrument cannot be null")
+    @ManyToOne
+    @JoinColumn(name = "instrument_id", nullable = false)
+    private Instrument instrument;
 
     /**
      * Two Chords are equal when they have the same id, so collections (e.g. {@link java.util.Set})
