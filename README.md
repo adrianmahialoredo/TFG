@@ -171,7 +171,7 @@ Las tablas las crea Hibernate al arrancar (`ddl-auto=update`).
 | `ADMIN_EMAIL`, `ADMIN_PASSWORD` | el administrador inicial (lo usan los scripts de carga) |
 | `MAIL_HOST`, `MAIL_PORT`, `MAIL_USERNAME`, `MAIL_PASSWORD`, `MAIL_FROM` | el SMTP del código de verificación |
 
-- **Correo:** los servicios gratuitos de Render pueden bloquear los puertos SMTP habituales (25, 465 y 587). Si no llegan los códigos, usar un proveedor con otro puerto, por ejemplo Brevo (`smtp-relay.brevo.com`, puerto `2525`).
+- **Correo:** el plan gratuito de Render bloquea los puertos SMTP habituales (25, 465 y 587), así que Gmail no funciona (`Couldn't connect to host, port: smtp.gmail.com, 587`). Hay que usar un proveedor con otro puerto, por ejemplo Brevo (`smtp-relay.brevo.com`, puerto `2525`). El correo no forma parte de `/actuator/health` (`management.health.mail.enabled=false`): si el SMTP falla, el backend sigue en `UP` y el error sale al enviar el código.
 - **Arranque en frío:** el plan gratuito se duerme tras 15 minutos sin peticiones y la primera tarda en torno a un minuto. Antes de una demo, abrir `/actuator/health` para despertarlo.
 
 ### 3. Datos iniciales
