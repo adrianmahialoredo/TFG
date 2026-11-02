@@ -21,6 +21,9 @@ services:
         generateValue: true
       - key: SHOW_SQL
         value: "false"
+      # Arranque más rápido con la poca CPU del plan gratuito (ver application.properties)
+      - key: LAZY_INIT
+        value: "true"
       - key: SPOTIFY_CLIENT_ID
         sync: false
       - key: SPOTIFY_CLIENT_SECRET
