@@ -192,6 +192,18 @@ describe('HomeScreen', () => {
     expect(screen.queryByText(/Lo más popular de/)).toBeNull();
   });
 
+  it('con solo una canción popular de sus artistas muestra su tarjeta sin carruseles vacíos ni avisos', async () => {
+    mockHomeState = {
+      ...baseState(),
+      popularFavouriteArtistSong: { id: 'p1', title: 'Basket Case', imageUrl: '', type: ItemType.SONG, artist: 'Green Day' },
+    };
+    await render(<HomeScreen />);
+    expect(screen.getByText('Lo más popular de Green Day: Basket Case')).toBeTruthy();
+    expect(screen.queryByText('Carrusel Novedades de tus artistas')).toBeNull();
+    expect(screen.queryByText('Carrusel Populares de tus artistas')).toBeNull();
+    expect(screen.queryByText(/Añade canciones a tus listas/)).toBeNull();
+  });
+
   it('muestra las tarjetas y carruseles de los artistas favoritos y navega desde ellos', async () => {
     const newSong = { id: 'n1', title: 'Under Pressure', imageUrl: '', type: ItemType.SONG, artist: 'Queen' };
     const popularSong = { id: 'p1', title: 'Heroes', imageUrl: '', type: ItemType.SONG, artist: 'Bowie' };

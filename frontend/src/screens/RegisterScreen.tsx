@@ -69,7 +69,7 @@ export default function RegisterScreen() {
 
   return (
       <AppLayout backgroundColor="bg-primary">
-        <View className="flex-row items-center mt-8 mb-8 gap-2">
+        <View className="flex-row items-center mt-4 mb-8 gap-2">
           <BackButton onPress={() => navigation.goBack()} size={30} color={COLORS.secondary} />
           <Text className="text-3xl font-bold text-secondary">Registrarse</Text>
         </View>

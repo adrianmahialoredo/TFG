@@ -225,7 +225,7 @@ export default function ListScreen() {
                     </Touchable>
                 ) : (
                     <Touchable
-                      className="w-40 h-40 bg-secondary rounded-3xl mb-4 items-center justify-center"
+                      className="w-28 h-28 bg-secondary rounded-3xl mb-4 items-center justify-center"
                       onPress={() => setEditingPhoto(true)}
                     >
                       <Text className="text-primary text-4xl font-bold">
@@ -237,7 +237,7 @@ export default function ListScreen() {
                   <Text className="text-secondary text-xl font-bold text-center">
                     {list.name}
                   </Text>
-                  <EditButton onPress={handleOpenRename} size={12} color={COLORS.secondary} strokeWidth={2} accessibilityLabel="Renombrar lista" />
+                  <EditButton onPress={handleOpenRename} size={14} color={COLORS.secondary} strokeWidth={2} accessibilityLabel="Renombrar lista" />
                 </View>
                 {list.description && (
                     <Text className="text-secondary opacity-60 text-sm text-center mt-1">

@@ -103,7 +103,7 @@ final class RecommendationFixtures {
     }
 
     /**
-     * Mutable set of ids, as returned by {@code User.getIdsFromItemListsOfType} (the services add to it).
+     * Mutable set of ids, as returned by {@code User.getIdsExcludedFromRecommendationsOfType} (the services add to it).
      */
     static Set<Long> ids(Long... ids) {
         return new java.util.HashSet<>(Arrays.asList(ids));

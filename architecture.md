@@ -288,7 +288,7 @@ Cada método lleva Javadoc con `@param` y `@return` indicando los códigos de re
 - Un servicio por tipo de item (`Song`, `Genre`, `InstrumentGenre`, `Lesson`) con `findForItemList(itemListId, limit)`, y `ItemRecommendationService` que los combina.
 - Algoritmos por **niveles**: cada nivel completa lo que falta del anterior; se para en cuanto se alcanza el límite.
 - Resultado `SequencedSet` (`LinkedHashSet`): sin duplicados y en orden de prioridad.
-- Se excluye lo que ya está en la playlist y lo ya recomendado.
+- Se excluye lo que ya está en la playlist y lo ya recomendado. En las recomendaciones de usuario (Inicio, Spotify y tarjetas) solo se excluye lo que está en `N_ITEM_LISTS_TO_EXCLUDE_FROM_RECOMMENDATIONS` (3) o más de sus listas (`User.getIdsExcludedFromRecommendationsOfType`).
 - Las exclusiones se acumulan como `Set<Long>` de IDs (lo que reciben las consultas `...IdNotIn`), no como entidades: se inicializan con los IDs de lo que ya tiene la playlist/usuario y cada nivel añade los IDs de lo que recomienda. Así no se vuelve a mapear el conjunto entero en cada consulta.
 - Guardas: nunca `getFirst()` sobre listas posiblemente vacías, nunca índices fuera de rango (for-each sobre los rankings), nunca `resolvePageable(0)`, ni consultas con colecciones vacías cuando se pueden evitar.
 - La aleatoriedad (`Collections.shuffle` sobre las preferencias del usuario) forma parte del algoritmo y se conserva.

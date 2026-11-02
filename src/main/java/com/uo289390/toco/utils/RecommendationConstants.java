@@ -18,6 +18,8 @@ import com.uo289390.toco.model.Preferences;
  */
 public final class RecommendationConstants {
 
+    public static final int N_ITEM_LISTS_TO_EXCLUDE_FROM_RECOMMENDATIONS = 3;
+
     // Item list recommendations
     public static final int N_RECOMMENDED_SONGS = 10;
     public static final int N_RECOMMENDED_LESSONS = 6;

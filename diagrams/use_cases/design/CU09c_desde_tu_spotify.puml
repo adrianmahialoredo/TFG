@@ -94,7 +94,7 @@ else spotifyConnected === true
                 spotifyService -> igRepository : findByGenreIdInAndInstrumentIdInAndIdNotIn(\n5 géneros top, 5 instrumentos top, idsToExclude(sus instrument-genres), Pageable(2))
                 igRepository --> spotifyService : instrument-genres
             end
-            spotifyService -> spotifyService : el género más repetido que no esté en sus listas\n(ya cargado: sin consulta)
+            spotifyService -> spotifyService : el género más repetido que no esté en 3 o más de sus listas\n(ya cargado: sin consulta)
         end
         spotifyService -> spotifyService : unificar en LinkedHashSet y Collections.shuffle
         spotifyService -> spotifyService : dtoMapper.itemsToItemDTOs(...)

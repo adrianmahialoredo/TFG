@@ -88,7 +88,7 @@ export const getByInstrumentId = (instrumentId: string, onFresh?: OnFresh): Prom
 // --- RECOMENDACIONES (el backend devuelve IDs; las tarjetas se pintan con el catálogo de items) ---
 
 /**
- * Combinaciones de los géneros e instrumentos favoritos del usuario que no están en sus listas
+ * Combinaciones de los géneros e instrumentos favoritos del usuario que no están en 3 o más de sus listas
  * (tarjeta "Prueba esta combinación" del Home). Personalizado: el índice se borra en el logout
  * con el resto de índices de items.
  */

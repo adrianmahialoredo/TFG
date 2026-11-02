@@ -93,7 +93,7 @@ public class RecommendationController {
 
     /**
      * Retrieves the instrument-genres that combine one of the user's favourite genres with one of the
-     * user's favourite instruments and are not in the user's lists (the Home "Prueba esta combinación" card).
+     * user's favourite instruments and are not in too many of the user's lists (the Home "Prueba esta combinación" card).
      * Returns only IDs: the cards are drawn with the item catalog.
      *
      * @param id the ID of the user
@@ -109,7 +109,7 @@ public class RecommendationController {
 
     /**
      * Retrieves the genres most used across the user's lists (by the genres of their songs, instrument-genres
-     * and lessons), completed with the user's favourite genres, that are not themselves in any of the user's
+     * and lessons), completed with the user's favourite genres, that are not themselves in too many of the user's
      * lists (the Home "Explora este género" card). Returns only IDs: the cards are drawn with the item catalog.
      *
      * @param id the ID of the user

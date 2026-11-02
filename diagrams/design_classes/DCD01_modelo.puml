@@ -199,7 +199,7 @@ class User <<entity>> {
     + getAuthorities() : Collection<GrantedAuthority>
     + hasItemInLists(item : Item) : boolean
     + getAllFromItemListsOfType(type : Class<T>) : Set<T>
-    + getIdsFromItemListsOfType(type : Class<T>) : Set<Long>
+    + getIdsExcludedFromRecommendationsOfType(type : Class<T>) : Set<Long>
     + getTopGenresFromItemLists(topN : int) : List<Genre>
     + getTopInstrumentsFromItemLists(topN : int) : List<Instrument>
     + getTopArtistsFromItemLists(topN : int) : List<String>

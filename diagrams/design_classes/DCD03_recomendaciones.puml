@@ -115,7 +115,7 @@ package "model" {
     class User <<entity>> {
         + getTopGenresFromItemLists(topN : int) : List<Genre>
         + getTopInstrumentsFromItemLists(topN : int) : List<Instrument>
-        + getIdsFromItemListsOfType(type : Class<T>) : Set<Long>
+        + getIdsExcludedFromRecommendationsOfType(type : Class<T>) : Set<Long>
         {method} ...
     }
 }

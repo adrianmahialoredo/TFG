@@ -11,7 +11,7 @@ public interface InstrumentGenreRecommendationService {
 
     /**
      * Instrument-genres that combine one of the user's favourite genres with one of the user's favourite
-     * instruments and are not in the user's lists (the Home "Prueba esta combinación" card).
+     * instruments and are not in too many of the user's lists (the Home "Prueba esta combinación" card).
      * Those up to the user's level come first.
      *
      * @param id the ID of the user

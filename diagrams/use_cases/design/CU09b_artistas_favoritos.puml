@@ -95,6 +95,7 @@ else Hay artistas
     hook -> hook : pickSuggestion(popularSongs) sin la de la tarjeta anterior
     hook -> hook : carruseles = resto de canciones de cada lista
     hook --> screen : tarjetas y carruseles
+    note right of screen : Con alguna tarjeta, un carrusel vacío no se pinta\n(ni su aviso de "Añade canciones"); sin ninguna,\nlos dos carruseles se ven con su aviso
     screen --> actor : tarjeta "Lo nuevo de <artista>" + carrusel "Novedades de tus artistas"\ntarjeta "Lo más popular de <artista>" + carrusel "Populares de tus artistas"
 end
 

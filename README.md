@@ -22,7 +22,7 @@ La aplicación utiliza:
 
 ### Instalación
 
-> ⚠️ **Windows: clona el repositorio en una ruta corta**, por ejemplo `C:\TFG`. Al compilar la app nativa de Android (`frontend/`), CMake repite la ruta del proyecto dentro de sus carpetas y supera el límite de 260 caracteres de Windows: con una ruta de unos 35 caracteres como `D:\Universidad\UO\Nueva carpeta\TFG` la compilación ya falla. No afecta al backend ni a Expo Go. Ver [Problemas en Windows](#problemas-en-windows).
+> ⚠️ **Windows: compilar la app nativa de Android (`frontend/`) necesita rutas largas.** CMake repite la ruta del proyecto dentro de sus carpetas y supera el límite de 260 caracteres de Windows, incluso desde una ruta corta como `E:\frontend`. Hay que activar las rutas largas de Windows y usar Ninja 1.12 o posterior, o compilar en la nube con EAS Build. No afecta al backend ni a Expo Go. Ver [Problemas en Windows](#problemas-en-windows).
 
 ```bash
 # Clonar el repositorio
@@ -95,7 +95,7 @@ Si el móvil no conecta con Metro (redes de universidad o con aislamiento de cli
 
 ### B. Development build
 
-> ⚠️ **Windows:** el repositorio tiene que estar en una ruta corta (por ejemplo `C:\TFG`); si no, la compilación falla en `react-native-audio-api:buildCMake…` con `ninja: error: mkdir(...)`. Ver [Problemas en Windows](#problemas-en-windows).
+> ⚠️ **Windows:** sin rutas largas activadas y Ninja 1.12 o posterior, la compilación falla en un `buildCMake…` con `ninja: error: mkdir(...)`. Ver [Problemas en Windows](#problemas-en-windows). Alternativa sin compilar en local: `eas build -p android --profile development` (ver [Despliegue](#-despliegue-render--neon--apk)).
 
 #### Requisitos
 
@@ -136,7 +136,91 @@ Las carpetas `android/` e `ios/` se generan desde `app.json` y no se versionan. 
 | `SDK location not found` | La terminal no ve `ANDROID_HOME` | Crear la variable y abrir una terminal nueva (cerrar también VS Code). |
 | `WARNING: A restricted method in java.lang.System has been called` en `configureCMake…` | Gradle usa un JDK 24 o superior (el que trae Android Studio, por ejemplo) | Instalar un JDK 17–23 y añadir a `%USERPROFILE%\.gradle\gradle.properties` la línea `org.gradle.java.home=C:/Program Files/Java/jdk-17` (con la ruta de ese JDK). Después, `cd android && gradlew --stop`. |
 | `mkdir: command not found` / `rm: command not found` en `react-native-audio-api:downloadPrebuiltBinaries` | El script que descarga los binarios del afinador se ejecuta con el Bash de Git y necesita sus comandos | Compilar desde **Git Bash**, o añadir `C:\Program Files\Git\usr\bin` **al final** del `PATH` (en cmd, solo para esa ventana: `set "PATH=%PATH%;C:\Program Files\Git\usr\bin"`). |
-| `ninja: error: mkdir(...): No such file or directory` en `react-native-audio-api:buildCMake…` | La ruta del proyecto es demasiado larga: CMake la repite dentro de sus carpetas y supera el límite de 260 caracteres de Windows | Clonar el repositorio en una **ruta corta**, por ejemplo `C:\TFG` (una ruta de unos 35 caracteres como `D:\Universidad\UO\Nueva carpeta\TFG` ya falla). Una unidad `subst` no sirve: Gradle resuelve la ruta real. Tras moverlo, `npx expo prebuild --clean --platform android`. |
+| `ninja: error: mkdir(...): No such file or directory` en un `buildCMake…` (`react-native-audio-api`, `react-native-gesture-handler`…) | Las rutas de los objetos de CMake superan los 260 caracteres de Windows, incluso con el proyecto en una ruta corta (`E:\frontend`), y el Ninja 1.10.2 del SDK (`cmake\3.22.1`) no admite rutas largas | 1) Activar las rutas largas, en un PowerShell **como administrador**: `New-ItemProperty -Path HKLM:\SYSTEM\CurrentControlSet\Control\FileSystem -Name LongPathsEnabled -Value 1 -PropertyType DWORD -Force`. 2) Sustituir `ninja.exe` de `%ANDROID_HOME%\cmake\3.22.1\bin` por el de [Ninja 1.12.1](https://github.com/ninja-build/ninja/releases/tag/v1.12.1) (`ninja-win.zip`), guardando el original. 3) Reiniciar el PC, `cd android && gradlew --stop && gradlew clean` y volver a compilar. Una ruta corta sigue ayudando; una unidad `subst` no sirve, porque Gradle resuelve la ruta real. |
+
+---
+
+## 🌐 Despliegue (Render + Neon + APK)
+
+El backend se publica en **Render** (con Docker: Render no tiene runtime de Java) y la base de datos en **Neon** (PostgreSQL). La app se distribuye como **APK** generado con **EAS Build**, que compila en la nube y evita los problemas de compilar en Windows.
+
+### 1. Base de datos (Neon)
+
+1. Crear un proyecto en [neon.tech](https://neon.tech) (región de Europa, la misma zona que Render).
+2. En *Connection Details* copiar el host, la base, el usuario y la contraseña. Neon da una URL `postgresql://usuario:contraseña@host/base?sslmode=require`; Spring necesita el formato JDBC con el usuario y la contraseña aparte:
+
+| Variable | Valor |
+|---|---|
+| `DB_URL` | `jdbc:postgresql://<host>.neon.tech/<base>?sslmode=require` |
+| `DB_USERNAME` | el usuario de Neon |
+| `DB_PASSWORD` | la contraseña de Neon |
+
+Las tablas las crea Hibernate al arrancar (`ddl-auto=update`).
+
+### 2. Backend (Render)
+
+1. En Render: *New → Blueprint* y elegir el repositorio. `render.yaml` crea el servicio `toco-backend` (Docker, plan gratuito, *health check* en `/actuator/health`).
+2. Rellenar las variables que pide (las de `sync: false`). `JWT_SECRET_KEY` la genera Render y `SHOW_SQL` va a `false`.
+3. Al terminar, el backend queda en `https://<servicio>.onrender.com` (comprobarlo en `/actuator/health`).
+
+| Variable | Valor |
+|---|---|
+| `DB_URL`, `DB_USERNAME`, `DB_PASSWORD` | los de Neon |
+| `SPOTIFY_CLIENT_ID`, `SPOTIFY_CLIENT_SECRET` | los de la app de Spotify |
+| `SPOTIFY_REDIRECT_URI` | `https://<servicio>.onrender.com/api/spotify/callback` |
+| `ADMIN_EMAIL`, `ADMIN_PASSWORD` | el administrador inicial (lo usan los scripts de carga) |
+| `MAIL_HOST`, `MAIL_PORT`, `MAIL_USERNAME`, `MAIL_PASSWORD`, `MAIL_FROM` | el SMTP del código de verificación |
+
+- **Correo:** los servicios gratuitos de Render pueden bloquear los puertos SMTP habituales (25, 465 y 587). Si no llegan los códigos, usar un proveedor con otro puerto, por ejemplo Brevo (`smtp-relay.brevo.com`, puerto `2525`).
+- **Arranque en frío:** el plan gratuito se duerme tras 15 minutos sin peticiones y la primera tarda en torno a un minuto. Antes de una demo, abrir `/actuator/health` para despertarlo.
+
+### 3. Datos iniciales
+
+Con el backend ya publicado, cargar el catálogo desde local apuntando los scripts a Render (en el `.env` de la raíz):
+
+```bash
+# .env: API_BASE_URL=https://<servicio>.onrender.com y ADMIN_EMAIL/ADMIN_PASSWORD los de Render
+python scripts/load_all_data.py
+```
+
+### 4. Spotify
+
+En el [dashboard de Spotify](https://developer.spotify.com/dashboard), en *Redirect URIs*, añadir `https://<servicio>.onrender.com/api/spotify/callback` (exactamente igual que `SPOTIFY_REDIRECT_URI`). La vuelta del login pasa por el backend, no por la app, así que no hace falta nada más en la app.
+
+Mientras la app de Spotify esté en **modo desarrollo**, solo pueden conectar las cuentas añadidas en *User Management* (con un número máximo de usuarios). Al resto, "Conectar con Spotify" les da error.
+
+### 5. APK (EAS Build)
+
+Una sola vez, desde `frontend/`:
+
+```bash
+npm install -g eas-cli
+eas login                 # cuenta gratuita de expo.dev
+eas init                  # crea el proyecto en Expo y añade su projectId a app.json
+```
+
+Las variables `EXPO_PUBLIC_*` se incrustan al compilar. El `.env` no se sube a EAS (está en `.gitignore`), así que se configuran en EAS para el entorno `preview`:
+
+```bash
+eas env:create --environment preview --name EXPO_PUBLIC_API_URL --value https://<servicio>.onrender.com --visibility plaintext
+eas env:create --environment preview --name EXPO_PUBLIC_CLOUDINARY_CLOUD_NAME --value <cloud name> --visibility plaintext
+eas env:create --environment preview --name EXPO_PUBLIC_CLOUDINARY_UPLOAD_PRESET --value <preset> --visibility plaintext
+```
+
+Generar el APK:
+
+```bash
+eas build -p android --profile preview
+```
+
+Al terminar, EAS da un enlace (y un QR) para descargar el `.apk` e instalarlo en cualquier Android (hay que permitir instalar apps de origen desconocido). EAS crea y guarda la clave de firma la primera vez: todos los APK se firman con la misma, así que las versiones nuevas se instalan encima sin desinstalar. En cada versión nueva, subir `android.versionCode` (y `version`) en `app.json`.
+
+Los perfiles de `eas.json`:
+
+| Perfil | Qué genera |
+|---|---|
+| `preview` | APK para distribuir: el JavaScript va dentro, sin Metro |
+| `development` | APK de la *development build* (con `expo-dev-client`), para desarrollar sin compilar en local |
 
 ---
 
@@ -469,7 +553,7 @@ Devuelven `ItemSummaryDTO` (`id`, `title`, `imageUrl`, `type`, `level`, `artist`
 | `GET` | `/api/spotify/login` | Iniciar sesión con Spotify |
 | `GET` | `/api/spotify/callback?code={code}` | Callback de autenticación Spotify |
 | `GET` | `/api/spotify/recommendations/songs/{userId}?limit={n}` | Canciones recomendadas a partir de su Spotify (DTO completo): sus canciones top que están en la app, completadas con las de sus 5 artistas top |
-| `GET` | `/api/spotify/recommendations/items/{userId}` | Elementos recomendados a partir de su Spotify, DTO completo de cada subtipo (carrusel "Desde tu Spotify" del Inicio): 6 canciones como las anteriores, 3 lecciones de sus géneros, 2 instrument-genres de sus géneros e instrumentos más repetidos y el género más repetido. Barajados y sin nada de lo que ya está en sus listas; vacío si ninguna canción de Spotify está en la app |
+| `GET` | `/api/spotify/recommendations/items/{userId}` | Elementos recomendados a partir de su Spotify, DTO completo de cada subtipo (carrusel "Desde tu Spotify" del Inicio): 6 canciones como las anteriores, 3 lecciones de sus géneros, 2 instrument-genres de sus géneros e instrumentos más repetidos y el género más repetido. Barajados y sin nada de lo que ya está en 3 o más de sus listas; vacío si ninguna canción de Spotify está en la app |
 
 `{userId}` es el ID del usuario de la app, que debe tener Spotify vinculado. Si no lo tiene, el Inicio muestra el botón "Conectar con Spotify" en lugar del carrusel.
 
@@ -551,17 +635,21 @@ No contiene secretos: las contraseñas y credenciales se leen de variables con `
 ```properties
 # Server
 server.address=0.0.0.0
-server.port=8080
+server.port=${PORT:8080}
 
 # Variables locales desde .env (si existe)
 spring.config.import=optional:file:.env[.properties]
 
 # PostgreSQL
-spring.datasource.url=jdbc:postgresql://localhost:5432/demo
-spring.datasource.username=postgres
+spring.datasource.url=${DB_URL:jdbc:postgresql://localhost:5432/demo}
+spring.datasource.username=${DB_USERNAME:postgres}
 spring.datasource.password=${DB_PASSWORD}
 spring.jpa.database-platform=org.hibernate.dialect.PostgreSQLDialect
 spring.jpa.hibernate.ddl-auto=update
+spring.jpa.show-sql=${SHOW_SQL:true}
+
+# JWT (vacía: clave por defecto insegura, solo para local)
+jwt.secret-key=${JWT_SECRET_KEY:}
 
 # Spotify
 spotify.client-id=${SPOTIFY_CLIENT_ID}

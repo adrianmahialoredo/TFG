@@ -106,7 +106,7 @@ public class InstrumentGenreRecommendationServiceImpl implements InstrumentGenre
 
     /**
      * Instrument-genres that combine any of the given genres with any of the given instruments and are not
-     * in the user's lists: first those up to the user's level, then completed with the rest.
+     * in too many of the user's lists: first those up to the user's level, then completed with the rest.
      */
     private SequencedSet<InstrumentGenre> findCombinations(User user, Set<Long> genreIds, Set<Long> instrumentIds, int limit) {
         SequencedSet<InstrumentGenre> instrumentGenres = new LinkedHashSet<>();
@@ -116,8 +116,8 @@ public class InstrumentGenreRecommendationServiceImpl implements InstrumentGenre
             return instrumentGenres;
         }
 
-        // Se excluyen los que ya estan en las listas del usuario y los ya recomendados
-        Set<Long> excluding = user.getIdsFromItemListsOfType(InstrumentGenre.class);
+        // Se excluyen los que ya estan en demasiadas listas del usuario y los ya recomendados
+        Set<Long> excluding = user.getIdsExcludedFromRecommendationsOfType(InstrumentGenre.class);
 
         // Nivel 1: todas las combinaciones de esos generos e instrumentos hasta el nivel del usuario
         List<InstrumentGenre> byLevel = instrumentGenreRepository.findByGenreIdInAndInstrumentIdInAndLevelLessThanEqualAndIdNotIn(

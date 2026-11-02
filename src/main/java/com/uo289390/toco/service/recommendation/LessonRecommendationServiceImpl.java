@@ -95,8 +95,8 @@ public class LessonRecommendationServiceImpl implements LessonRecommendationServ
             return lessons;
         }
 
-        // Ninguna leccion que el usuario ya tenga en sus listas
-        Set<Long> excluding = user.getIdsFromItemListsOfType(Lesson.class);
+        // Ninguna leccion que el usuario ya tenga en demasiadas listas
+        Set<Long> excluding = user.getIdsExcludedFromRecommendationsOfType(Lesson.class);
         int level = user.getDifficultyLevel();
 
         // Candidatos: el genero/instrumento favorito principal y los mas usados en las listas del usuario

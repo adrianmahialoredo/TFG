@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Set;
 
 import com.uo289390.toco.model.*;
+import com.uo289390.toco.utils.RecommendationConstants;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.security.core.GrantedAuthority;
@@ -154,12 +155,26 @@ class UserTest {
     }
 
     @Test
-    void getIdsFromItemListsOfType_returnsIds() {
-        addList(song(1L, Set.of(), Set.of()), rock);
-        addList(song(2L, Set.of(), Set.of()));
+    void getIdsExcludedFromRecommendationsOfType_onlyReturnsItemsInEnoughLists() {
+        assertEquals(3, RecommendationConstants.N_ITEM_LISTS_TO_EXCLUDE_FROM_RECOMMENDATIONS);
+        Song inThree = song(1L, Set.of(), Set.of());
+        Song inTwo = song(2L, Set.of(), Set.of());
+        addList(inThree, inTwo, rock);
+        addList(inThree, inTwo, rock);
+        addList(inThree, rock);
 
-        assertEquals(Set.of(1L, 2L), user.getIdsFromItemListsOfType(Song.class));
-        assertEquals(Set.of(100L), user.getIdsFromItemListsOfType(Genre.class));
+        assertEquals(Set.of(1L), user.getIdsExcludedFromRecommendationsOfType(Song.class));
+        assertEquals(Set.of(100L), user.getIdsExcludedFromRecommendationsOfType(Genre.class));
+        assertTrue(user.getIdsExcludedFromRecommendationsOfType(Lesson.class).isEmpty());
+    }
+
+    @Test
+    void getIdsExcludedFromRecommendationsOfType_withItemsInFewerListsIsEmpty() {
+        addList(song(1L, Set.of(), Set.of()), rock);
+        addList(song(1L, Set.of(), Set.of()));
+
+        assertTrue(user.getIdsExcludedFromRecommendationsOfType(Song.class).isEmpty());
+        assertTrue(user.getIdsExcludedFromRecommendationsOfType(Genre.class).isEmpty());
     }
 
     @Test

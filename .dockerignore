@@ -1,0 +1,15 @@
+# Solo hace falta el backend: src/, pom.xml, el Maven Wrapper y lombok.config
+.env
+.git
+.idea
+.vscode
+.venv
+.claude
+.expo
+target
+frontend
+data
+scripts
+diagrams
+emails
+*.md

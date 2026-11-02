@@ -80,7 +80,7 @@ class GenreRecommendationServiceImplTest {
         when(userRepository.findById(USER_ID)).thenReturn(Optional.of(user));
         when(itemList.getUser()).thenReturn(user);
         when(user.getPreferences()).thenReturn(preferences(List.of(), List.of()));
-        when(user.getIdsFromItemListsOfType(Genre.class)).thenReturn(ids());
+        when(user.getIdsExcludedFromRecommendationsOfType(Genre.class)).thenReturn(ids());
         when(genreRepository.findByIdNotIn(any(), any())).thenReturn(List.of());
     }
 
@@ -339,7 +339,7 @@ class GenreRecommendationServiceImplTest {
         @Test
         void testFindForUser_ExcludesGenresAlreadyInUserLists() {
             // Arrange
-            when(user.getIdsFromItemListsOfType(Genre.class)).thenReturn(ids(1L, 10L));
+            when(user.getIdsExcludedFromRecommendationsOfType(Genre.class)).thenReturn(ids(1L, 10L));
             when(user.getPreferences()).thenReturn(preferences(List.of(genre(1), genre(2)), List.of()));
             when(user.getTopGenresFromItemLists(anyInt())).thenReturn(List.of(genre(10), genre(11)));
 
@@ -392,7 +392,7 @@ class GenreRecommendationServiceImplTest {
         @Test
         void testFindForUser_NotEnoughCandidates_CompletesWithRandomExcludingListsAndRecommended() {
             // Arrange
-            when(user.getIdsFromItemListsOfType(Genre.class)).thenReturn(ids(50L));
+            when(user.getIdsExcludedFromRecommendationsOfType(Genre.class)).thenReturn(ids(50L));
             when(user.getPreferences()).thenReturn(preferences(List.of(genre(1)), List.of()));
             when(genreRepository.findByIdNotIn(any(), any())).thenReturn(List.of(genre(40), genre(41)));
 
@@ -449,7 +449,7 @@ class GenreRecommendationServiceImplTest {
         @Test
         void testFindMostUsed_KeepsUsageOrderAndExcludesGenresInItemLists() {
             // Arrange
-            when(user.getIdsFromItemListsOfType(Genre.class)).thenReturn(ids(11L));
+            when(user.getIdsExcludedFromRecommendationsOfType(Genre.class)).thenReturn(ids(11L));
             when(user.getTopGenresFromItemLists(anyInt())).thenReturn(List.of(genre(10), genre(11), genre(12)));
 
             // Act
@@ -476,7 +476,7 @@ class GenreRecommendationServiceImplTest {
         void testFindMostUsed_NoLists_FallsBackToFavouritesNotInItemLists() {
             // Arrange
             when(user.getTopGenresFromItemLists(anyInt())).thenReturn(List.of());
-            when(user.getIdsFromItemListsOfType(Genre.class)).thenReturn(ids(2L));
+            when(user.getIdsExcludedFromRecommendationsOfType(Genre.class)).thenReturn(ids(2L));
             when(user.getPreferences()).thenReturn(preferences(List.of(genre(1), genre(2), genre(3)), List.of()));
 
             // Act

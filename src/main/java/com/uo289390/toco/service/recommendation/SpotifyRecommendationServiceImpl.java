@@ -76,7 +76,7 @@ public class SpotifyRecommendationServiceImpl implements SpotifyRecommendationSe
      * 3. Instrument-genres: combinaciones de los géneros e instrumentos más repetidos en esas canciones.
      * 4. Géneros: los más repetidos en esas canciones.
      *
-     * Nunca se recomienda nada que el usuario ya tenga en sus listas. El resultado se baraja,
+     * Nunca se recomienda nada que el usuario ya tenga en N_ITEM_LISTS_TO_EXCLUDE_FROM_RECOMMENDATIONS listas o más. El resultado se baraja,
      * ya que la app solo muestra los primeros y en orden de prioridad siempre serían canciones.
      *
      * TODO: Este algoritmo trabaja sobre las canciones que existen en base de datos, pero Spotify devuelve los géneros
@@ -111,7 +111,7 @@ public class SpotifyRecommendationServiceImpl implements SpotifyRecommendationSe
             // 2. Lecciones de los géneros (no de instrument-genre)
             items.addAll(lessonRepository.findByGenreIdInAndBelongsToGenreTrueAndIdNotIn(
                     idsOf(topGenres),
-                    idsToExclude(user.getIdsFromItemListsOfType(Lesson.class)),
+                    idsToExclude(user.getIdsExcludedFromRecommendationsOfType(Lesson.class)),
                     resolvePageable(N_SPOTIFY_RECOMMENDED_LESSONS)
             ));
 
@@ -121,13 +121,13 @@ public class SpotifyRecommendationServiceImpl implements SpotifyRecommendationSe
                 items.addAll(instrumentGenreRepository.findByGenreIdInAndInstrumentIdInAndIdNotIn(
                         idsOf(topGenres.stream().limit(N_TOP_GENRES_USED_IN_SPOTIFY_INSTRUMENT_GENRE_RECOMMENDATION).toList()),
                         idsOf(topInstruments),
-                        idsToExclude(user.getIdsFromItemListsOfType(InstrumentGenre.class)),
+                        idsToExclude(user.getIdsExcludedFromRecommendationsOfType(InstrumentGenre.class)),
                         resolvePageable(N_SPOTIFY_RECOMMENDED_INSTRUMENT_GENRES)
                 ));
             }
 
-            // 4. Géneros más presentes que el usuario no tenga ya (ya están cargados, no hace falta consultar)
-            Set<Long> genresInLists = user.getIdsFromItemListsOfType(Genre.class);
+            // 4. Géneros más presentes que el usuario no tenga ya en demasiadas listas (ya están cargados, no hace falta consultar)
+            Set<Long> genresInLists = user.getIdsExcludedFromRecommendationsOfType(Genre.class);
             topGenres.stream()
                     .filter(genre -> !genresInLists.contains(genre.getId()))
                     .limit(N_SPOTIFY_RECOMMENDED_GENRES)
@@ -149,7 +149,7 @@ public class SpotifyRecommendationServiceImpl implements SpotifyRecommendationSe
 
     /**
      * Canciones top del usuario en Spotify que están en la base de datos, completadas con las
-     * de sus artistas favoritos si no llegan al límite. Nunca incluye canciones de sus listas.
+     * de sus artistas favoritos si no llegan al límite. Nunca incluye canciones que estén en demasiadas de sus listas.
      *
      * @param userId el ID del usuario de la aplicación
      * @param limit  número máximo de canciones; si no es positivo no se llama a Spotify
@@ -162,8 +162,8 @@ public class SpotifyRecommendationServiceImpl implements SpotifyRecommendationSe
 
         HttpEntity<Void> request = authorizedRequest(userId);
 
-        // Nunca se recomiendan canciones que el usuario ya tiene en sus listas
-        Set<Long> excludedIds = resolveUser(userId).getIdsFromItemListsOfType(Song.class);
+        // Nunca se recomiendan canciones que el usuario ya tiene en demasiadas listas
+        Set<Long> excludedIds = resolveUser(userId).getIdsExcludedFromRecommendationsOfType(Song.class);
 
         // Pedir el doble de canciones por si algunas no están disponibles en la base de datos, limitando a un máximo de 50
         int requested = Math.min(limit * 2, SPOTIFY_MAX_SONGS_LIMIT);

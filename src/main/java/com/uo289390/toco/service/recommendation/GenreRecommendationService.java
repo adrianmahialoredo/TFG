@@ -11,7 +11,7 @@ public interface GenreRecommendationService {
 
     /**
      * The genres most used across the user's lists (counting the genres of their songs, instrument-genres
-     * and lessons), completed with the user's favourite genres, that are not themselves in any of the
+     * and lessons), completed with the user's favourite genres, that are not themselves in too many of the
      * user's lists (the Home "Explora este género" card).
      *
      * @param id the ID of the user

@@ -98,7 +98,7 @@ class SongRecommendationServiceImplTest {
         when(itemList.getSongs()).thenReturn(Set.of());
         when(user.getPreferences()).thenReturn(preferences(List.of(), List.of()));
         when(user.getDifficultyLevel()).thenReturn(USER_LEVEL);
-        when(user.getIdsFromItemListsOfType(Song.class)).thenReturn(ids());
+        when(user.getIdsExcludedFromRecommendationsOfType(Song.class)).thenReturn(ids());
 
         when(songRepository.findDistinctByGenresIdAndInstrumentsInAndIdNotIn(anyLong(), any(), any(), any())).thenReturn(List.of());
         when(songRepository.findByGenresIdAndIdNotIn(anyLong(), any(), any())).thenReturn(List.of());
@@ -381,7 +381,7 @@ class SongRecommendationServiceImplTest {
         @Test
         void testFindForUser_EvenLimit_HalfByGenreHalfByInstrument() {
             // Arrange
-            when(user.getIdsFromItemListsOfType(Song.class)).thenReturn(ids(99L));
+            when(user.getIdsExcludedFromRecommendationsOfType(Song.class)).thenReturn(ids(99L));
             when(user.getPreferences()).thenReturn(preferences(List.of(genre(1)), List.of(instrument(11))));
             when(songRepository.findByGenresIdAndLevelLessThanEqualAndIdNotIn(eq(1L), anyInt(), any(), any())).thenReturn(songs(1, 2));
             when(songRepository.findByInstrumentsIdAndLevelLessThanEqualAndIdNotIn(eq(11L), anyInt(), any(), any())).thenReturn(songs(3, 4));

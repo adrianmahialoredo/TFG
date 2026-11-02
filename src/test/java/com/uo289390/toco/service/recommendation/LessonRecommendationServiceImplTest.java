@@ -95,7 +95,7 @@ class LessonRecommendationServiceImplTest {
         when(itemList.getItemsOfType(Lesson.class)).thenReturn(Set.of());
         when(user.getPreferences()).thenReturn(preferences(List.of(), List.of()));
         when(user.getDifficultyLevel()).thenReturn(USER_LEVEL);
-        when(user.getIdsFromItemListsOfType(Lesson.class)).thenReturn(ids());
+        when(user.getIdsExcludedFromRecommendationsOfType(Lesson.class)).thenReturn(ids());
 
         when(lessonRepository.findByGenreIdAndIdNotIn(anyLong(), any(), any())).thenReturn(List.of());
         when(lessonRepository.findByIdNotIn(any(), any())).thenReturn(List.of());
@@ -282,7 +282,7 @@ class LessonRecommendationServiceImplTest {
         @Test
         void testFindForUser_SplitsLimitBetweenGenresInstrumentsAndGeneric() {
             // Arrange
-            when(user.getIdsFromItemListsOfType(Lesson.class)).thenReturn(ids(90L));
+            when(user.getIdsExcludedFromRecommendationsOfType(Lesson.class)).thenReturn(ids(90L));
             when(user.getPreferences()).thenReturn(preferences(List.of(genre(1), genre(2)), List.of(instrument(11), instrument(12))));
             when(user.getTopGenresFromItemLists(RecommendationConstants.N_ITEM_LISTS_GENRES_USED_IN_BY_USER_LESSON_RECOMMENDATION))
                     .thenReturn(List.of(genre(5), genre(1)));

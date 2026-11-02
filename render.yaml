@@ -1,0 +1,44 @@
+# Blueprint de Render: crea el servicio web del backend (New > Blueprint en el panel de Render).
+# La base de datos es de Neon, fuera de Render. Las variables con sync: false se rellenan en el
+# panel al crear el servicio (no se suben a git). Ver la sección "Despliegue" del README.
+services:
+  - type: web
+    name: toco-backend
+    runtime: docker
+    plan: free
+    region: frankfurt
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /actuator/health
+    envVars:
+      # Neon: jdbc:postgresql://<host>/<base>?sslmode=require (usuario y contraseña aparte)
+      - key: DB_URL
+        sync: false
+      - key: DB_USERNAME
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+      - key: JWT_SECRET_KEY
+        generateValue: true
+      - key: SHOW_SQL
+        value: "false"
+      - key: SPOTIFY_CLIENT_ID
+        sync: false
+      - key: SPOTIFY_CLIENT_SECRET
+        sync: false
+      # https://<servicio>.onrender.com/api/spotify/callback (también en el dashboard de Spotify)
+      - key: SPOTIFY_REDIRECT_URI
+        sync: false
+      - key: ADMIN_EMAIL
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false
+      - key: MAIL_HOST
+        sync: false
+      - key: MAIL_PORT
+        sync: false
+      - key: MAIL_USERNAME
+        sync: false
+      - key: MAIL_PASSWORD
+        sync: false
+      - key: MAIL_FROM
+        sync: false

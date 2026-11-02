@@ -122,7 +122,7 @@ class SpotifyRecommendationServiceImplTest {
 
         when(spotifyAuthService.getValidAccessToken(USER_ID)).thenReturn(ACCESS_TOKEN);
         when(userRepository.findById(USER_ID)).thenReturn(Optional.of(user));
-        when(user.getIdsFromItemListsOfType(Song.class)).thenReturn(new HashSet<>());
+        when(user.getIdsExcludedFromRecommendationsOfType(Song.class)).thenReturn(new HashSet<>());
         when(songRepository.findByTitleAndArtistIn(any())).thenReturn(List.of());
         when(songRepository.findByArtistIgnoreCaseAndArtistPopularTrueAndIdNotIn(anyString(), any(), any())).thenReturn(List.of());
         when(songRepository.findByArtistIgnoreCaseAndArtistClassicTrueAndIdNotIn(anyString(), any(), any())).thenReturn(List.of());
@@ -320,7 +320,7 @@ class SpotifyRecommendationServiceImplTest {
         @Test
         void testFindSongsForUser_ExcludesSongsInUserListsAndLimitsResult() {
             // Arrange
-            when(user.getIdsFromItemListsOfType(Song.class)).thenReturn(new HashSet<>(Set.of(1L)));
+            when(user.getIdsExcludedFromRecommendationsOfType(Song.class)).thenReturn(new HashSet<>(Set.of(1L)));
             expectTopTracks(2, "medium_term", items(track("Song 1", "Artist 1"), track("Song 2", "Artist 2")));
             expectTopTracks(1, "long_term", items(track("Song 3", "Artist 3")));
             expectTopTracks(1, "short_term", items(track("Song 4", "Artist 4")));
@@ -337,7 +337,7 @@ class SpotifyRecommendationServiceImplTest {
         @Test
         void testFindSongsForUser_MissingSongs_CompletedFromTopArtistsInFilterOrder() {
             // Arrange (limit 2, 2 artists -> 1 song each)
-            when(user.getIdsFromItemListsOfType(Song.class)).thenReturn(new HashSet<>(Set.of(50L)));
+            when(user.getIdsExcludedFromRecommendationsOfType(Song.class)).thenReturn(new HashSet<>(Set.of(50L)));
             expectTopTracks(2, "medium_term", EMPTY_ITEMS);
             expectTopTracks(1, "long_term", EMPTY_ITEMS);
             expectTopTracks(1, "short_term", EMPTY_ITEMS);
@@ -513,7 +513,7 @@ class SpotifyRecommendationServiceImplTest {
 
         @BeforeEach
         void setUpItems() {
-            when(user.getIdsFromItemListsOfType(any())).thenReturn(new HashSet<>());
+            when(user.getIdsExcludedFromRecommendationsOfType(any())).thenReturn(new HashSet<>());
             when(dtoMapper.itemsToItemDTOs(any())).thenReturn(List.of());
         }
 
@@ -569,8 +569,8 @@ class SpotifyRecommendationServiceImplTest {
         @Test
         void testFindItemsForUser_ExcludesItemsInUserLists() {
             // Arrange
-            when(user.getIdsFromItemListsOfType(Lesson.class)).thenReturn(new HashSet<>(Set.of(100L)));
-            when(user.getIdsFromItemListsOfType(InstrumentGenre.class)).thenReturn(new HashSet<>(Set.of(200L)));
+            when(user.getIdsExcludedFromRecommendationsOfType(Lesson.class)).thenReturn(new HashSet<>(Set.of(100L)));
+            when(user.getIdsExcludedFromRecommendationsOfType(InstrumentGenre.class)).thenReturn(new HashSet<>(Set.of(200L)));
             expectTopSongs(songWith(1, List.of(genre(30)), List.of(instrument(10))));
 
             // Act
@@ -584,7 +584,7 @@ class SpotifyRecommendationServiceImplTest {
         @Test
         void testFindItemsForUser_GenreAlreadyInLists_RecommendsTheNextMostRepeated() {
             // Arrange
-            when(user.getIdsFromItemListsOfType(Genre.class)).thenReturn(new HashSet<>(Set.of(30L)));
+            when(user.getIdsExcludedFromRecommendationsOfType(Genre.class)).thenReturn(new HashSet<>(Set.of(30L)));
             Song first = songWith(1, List.of(genre(30), genre(31)), List.of());
             Song second = songWith(2, List.of(genre(30)), List.of());
             expectTopSongs(first, second);

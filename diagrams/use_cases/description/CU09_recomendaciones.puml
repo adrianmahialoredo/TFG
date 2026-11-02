@@ -81,6 +81,8 @@ else Hay artistas
     note right of vista
         Tarjeta "Lo nuevo de <artista>" + carrusel "Novedades de tus artistas"
         Tarjeta "Lo más popular de <artista>" + carrusel "Populares de tus artistas"
+        Un carrusel sin canciones no se muestra si hay alguna tarjeta
+        (sin ninguna, los dos muestran "Añade canciones a tus listas para...")
     end note
 end
 

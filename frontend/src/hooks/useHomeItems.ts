@@ -72,12 +72,13 @@ const pickSuggestion = (
  *  - "Desde tu Spotify": items recomendados a partir de sus canciones y artistas top en Spotify
  *    (`/spotify/recommendations/items`); solo con la cuenta de Spotify vinculada.
  *  - "Prueba esta combinación": un género-instrumento que combina un género y un instrumento
- *    favoritos del usuario y no está en sus listas; el primero que no salga ya en los carruseles.
+ *    favoritos del usuario y no está en 3 o más de sus listas; el primero que no salga ya en los carruseles.
  *  - "Explora este género": uno de los géneros más usados en las listas del usuario (o, si no hay,
- *    uno de sus favoritos) que no está guardado en ellas; el primero que no salga ya en los carruseles.
+ *    uno de sus favoritos) que no está guardado en 3 o más de ellas; el primero que no salga ya en los carruseles.
  *  - Artistas favoritos (los más repetidos en las canciones de sus listas): una tarjeta y un carrusel
  *    con sus canciones nuevas, y otra tarjeta y otro carrusel con las populares. La tarjeta destaca la
  *    primera canción que no salga ya en Recientes o Recomendaciones, y su carrusel muestra el resto.
+ *    La pantalla no pinta un carrusel vacío si hay alguna tarjeta (su aviso de "Añade canciones" sería falso).
  *
  * Todo lo personalizado se vuelve a pedir cuando cambian las listas, los favoritos o el nivel
  * del usuario (`useUserTasteKey`), aunque el cambio se haga en otra pantalla.
@@ -163,7 +164,7 @@ export const useHomeItems = () => {
 
   // --- Desde tu Spotify ---
   // Va aparte: solo se pide con la cuenta vinculada y se vuelve a pedir en cuanto el usuario la
-  // vincula (cambia `spotifyConnected`) o cambian sus listas (se excluye lo que ya está en ellas).
+  // vincula (cambia `spotifyConnected`) o cambian sus listas (se excluye lo que ya está en 3 o más).
   // Si falla (p. ej. token revocado) solo se queda vacío este carrusel, no el Home entero.
   const [spotifyIds, setSpotifyIds] = useState<string[]>([]);
 
@@ -194,7 +195,7 @@ export const useHomeItems = () => {
 
   // --- Tarjetas de sugerencia ---
   // Se vuelven a pedir si cambian los favoritos, el nivel o el contenido de las listas del usuario
-  // (las sugerencias excluyen lo que ya está en las listas)
+  // (las sugerencias excluyen lo que ya está en 3 o más listas)
   const combinationIds = useSuggestionIds(
     currentUserId, instrumentGenreRepository.getFavouriteCombinations,
     tasteKey, 'la combinación de favoritos');

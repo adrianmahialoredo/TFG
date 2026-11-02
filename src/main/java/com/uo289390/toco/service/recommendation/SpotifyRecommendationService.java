@@ -9,7 +9,7 @@ import java.util.List;
  * Service contract for managing Spotify music recommendations.
  *
  * Provides methods to fetch personalized music recommendations from the Spotify
- * API based on the user's top songs and artists. Nothing already in the user's lists is recommended.
+ * API based on the user's top songs and artists. Nothing already in too many of the user's lists is recommended.
  *
  * @author Adrián Mahía
  * @version 1.0

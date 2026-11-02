@@ -60,6 +60,12 @@ export default function HomeScreen() {
     error,
   } = useHomeItems();
 
+  // Con alguna canción de sus artistas favoritos, los carruseles vacíos no se pintan (su aviso de
+  // "Añade canciones" sería falso); sin ninguna, los dos se ven con su aviso
+  const hasFavouriteArtistSongs = !!newFavouriteArtistSong || !!popularFavouriteArtistSong;
+  const showNewFavouriteArtistSongs = !hasFavouriteArtistSongs || newFavouriteArtistSongs.length > 0;
+  const showPopularFavouriteArtistSongs = !hasFavouriteArtistSongs || popularFavouriteArtistSongs.length > 0;
+
   // Resuelve el item completo (con su type) y navega a la pantalla de detalle adecuada
   const handleItemPress = useCallback(
     (itemId: string) => {
@@ -193,12 +199,14 @@ export default function HomeScreen() {
           )}
 
           {/* Carrusel: el resto de canciones nuevas de los artistas favoritos */}
-          <HorizontalItemsCarousel
-            title="Novedades de tus artistas"
-            data={newFavouriteArtistSongs}
-            onItemPress={handleItemPress}
-            emptyMessage={loading ? undefined : 'Añade canciones a tus listas para descubrir las novedades de tus artistas favoritos'}
-          />
+          {showNewFavouriteArtistSongs && (
+            <HorizontalItemsCarousel
+              title="Novedades de tus artistas"
+              data={newFavouriteArtistSongs}
+              onItemPress={handleItemPress}
+              emptyMessage={loading ? undefined : 'Añade canciones a tus listas para descubrir las novedades de tus artistas favoritos'}
+            />
+          )}
 
           {/* Card: una canción popular de uno de los artistas favoritos */}
           {popularFavouriteArtistSong && (
@@ -213,12 +221,14 @@ export default function HomeScreen() {
           )}
 
           {/* Carrusel: el resto de canciones populares de los artistas favoritos */}
-          <HorizontalItemsCarousel
-            title="Populares de tus artistas"
-            data={popularFavouriteArtistSongs}
-            onItemPress={handleItemPress}
-            emptyMessage={loading ? undefined : 'Añade canciones a tus listas para ver los éxitos de tus artistas favoritos'}
-          />
+          {showPopularFavouriteArtistSongs && (
+            <HorizontalItemsCarousel
+              title="Populares de tus artistas"
+              data={popularFavouriteArtistSongs}
+              onItemPress={handleItemPress}
+              emptyMessage={loading ? undefined : 'Añade canciones a tus listas para ver los éxitos de tus artistas favoritos'}
+            />
+          )}
         </View>
       </FadeScrollView>
     </AppLayout>

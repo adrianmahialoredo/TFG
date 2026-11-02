@@ -105,7 +105,7 @@ public class SongRecommendationServiceImpl implements SongRecommendationService 
     @Override
     public SequencedSet<Song> findForUser(Long id, int limit) {
         User user = resolveUser(id);
-        Set<Long> excluding = user.getIdsFromItemListsOfType(Song.class);
+        Set<Long> excluding = user.getIdsExcludedFromRecommendationsOfType(Song.class);
         SequencedSet<Song> songs = new LinkedHashSet<>();
 
         if (limit <= 0) {

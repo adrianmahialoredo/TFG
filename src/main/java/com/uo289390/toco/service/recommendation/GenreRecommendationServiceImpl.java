@@ -78,8 +78,8 @@ public class GenreRecommendationServiceImpl implements GenreRecommendationServic
             return genres;
         }
 
-        // Se excluyen los generos que el usuario ya tiene en sus listas
-        Set<Long> excluding = user.getIdsFromItemListsOfType(Genre.class);
+        // Se excluyen los generos que el usuario ya tiene en demasiadas listas (N_ITEM_LISTS_TO_EXCLUDE_FROM_RECOMMENDATIONS)
+        Set<Long> excluding = user.getIdsExcludedFromRecommendationsOfType(Genre.class);
 
         // Candidatos de las dos fuentes, sin los excluidos y en orden de prioridad
         List<Genre> favourites = user.getPreferences().getFavoriteGenres().stream()
@@ -120,8 +120,8 @@ public class GenreRecommendationServiceImpl implements GenreRecommendationServic
             return genres;
         }
 
-        // Se excluyen los generos que el usuario ya tiene guardados en sus listas
-        Set<Long> excluding = user.getIdsFromItemListsOfType(Genre.class);
+        // Se excluyen los generos que el usuario ya tiene guardados en demasiadas listas
+        Set<Long> excluding = user.getIdsExcludedFromRecommendationsOfType(Genre.class);
 
         // Nivel 1: los generos mas usados en las listas
         List<Genre> fromItemLists = user.getTopGenresFromItemLists(Integer.MAX_VALUE).stream()

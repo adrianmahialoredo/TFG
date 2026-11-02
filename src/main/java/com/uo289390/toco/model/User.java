@@ -20,12 +20,14 @@ import lombok.*;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Optional;
 
+import com.uo289390.toco.utils.RecommendationConstants;
 import static com.uo289390.toco.utils.Utils.getTopNMostRepeated;
 
 /**
@@ -157,20 +159,30 @@ public class User implements UserDetails {
     }
 
     /**
-     * Returns the IDs of the items of the given type contained in any of the user's lists.
+     * Returns the IDs of the items of the given type that the by-user recommendations must not recommend:
+     * the ones that are in {@link RecommendationConstants#N_ITEM_LISTS_TO_EXCLUDE_FROM_RECOMMENDATIONS}
+     * or more of the user's lists. An item that is only in fewer lists can still be recommended.
      *
-     * The by-user recommendations start their exclusions with these IDs, so that nothing the user
-     * already has in a list is recommended. The exclusion is done in the query ({@code ...IdNotIn})
-     * and not filtering afterwards, so that the excluded items do not take up room in the limit.
+     * The by-user recommendations start their exclusions with these IDs. The exclusion is done in the
+     * query ({@code ...IdNotIn}) and not filtering afterwards, so that the excluded items do not take up
+     * room in the limit.
      *
      * @param type the item subclass to filter by (e.g. {@code Song.class})
      * @return a new mutable set with the IDs, so the caller can keep adding the ones it recommends
      */
-    public <T extends Item> Set<Long> getIdsFromItemListsOfType(Class<T> type) {
-        Set<Long> ids = new HashSet<>();
-        for (T item : getAllFromItemListsOfType(type)) {
-            ids.add(item.getId());
+    public <T extends Item> Set<Long> getIdsExcludedFromRecommendationsOfType(Class<T> type) {
+        Map<Long, Integer> listsByItemId = new HashMap<>();
+        for (ItemList itemList : itemLists) {
+            for (T item : itemList.getItemsOfType(type)) {
+                listsByItemId.merge(item.getId(), 1, Integer::sum);
+            }
         }
+        Set<Long> ids = new HashSet<>();
+        listsByItemId.forEach((id, lists) -> {
+            if (lists >= RecommendationConstants.N_ITEM_LISTS_TO_EXCLUDE_FROM_RECOMMENDATIONS) {
+                ids.add(id);
+            }
+        });
         return ids;
     }
 

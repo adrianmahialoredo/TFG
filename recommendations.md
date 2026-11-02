@@ -68,8 +68,9 @@ Como mucho devuelve 20 items.
 - **Top N del usuario** (`User.getTopGenresFromItemLists` / `getTopInstrumentsFromItemLists`): lo mismo
   sumando todas sus listas. Un item que está en varias listas cuenta una vez por lista.
 - **Exclusiones**: se acumulan como `Set<Long>` de IDs. En las recomendaciones para una lista se parte de lo
-  que ya tiene la lista; en las de usuario, de `User.getIdsFromItemListsOfType(Tipo.class)`, es decir, lo que
-  tiene en **cualquiera** de sus listas. Cada nivel añade lo que recomienda, así que nunca se repite nada.
+  que ya tiene la lista; en las de usuario, de `User.getIdsExcludedFromRecommendationsOfType(Tipo.class)`, es
+  decir, lo que está en `N_ITEM_LISTS_TO_EXCLUDE_FROM_RECOMMENDATIONS` (3) o más de sus listas (lo que solo está
+  en una o dos se puede seguir recomendando). Cada nivel añade lo que recomienda, así que nunca se repite nada.
   La exclusión se hace en la consulta (`...IdNotIn`) para que lo excluido no ocupe sitio en el límite.
 - **Nivel del usuario**: `User.difficultyLevel` (0–5), comparado con `Item.level` (1–5) mediante `LevelLessThanEqual`.
 
@@ -125,7 +126,7 @@ para esa combinación no se añade nada en su lugar: el resultado puede quedarse
 
 ## 5. Recomendaciones para un usuario (`findForUser`)
 
-Se excluye siempre lo que el usuario tiene en **cualquiera** de sus listas y lo ya recomendado.
+Se excluye siempre lo que el usuario tiene en **3 o más** de sus listas (`N_ITEM_LISTS_TO_EXCLUDE_FROM_RECOMMENDATIONS`) y lo ya recomendado.
 
 ### 5.1 Canciones — `SongRecommendationServiceImpl.findForUser`
 
@@ -146,7 +147,7 @@ completan los niveles 3 y 4 con lo que sí tenga.
 
 ### 5.2 Géneros — `GenreRecommendationServiceImpl.findForUser`
 
-Candidatos (sin los géneros que ya tiene en sus listas):
+Candidatos (sin los géneros que ya tiene en 3 o más de sus listas):
 - **Favoritos** del usuario.
 - **De sus listas**: todos los géneros de sus listas, de más a menos usado.
 
@@ -200,10 +201,10 @@ Requiere la cuenta de Spotify vinculada. El token se renueva solo si ha caducado
 |---|---|
 | 1 | Pide a Spotify el doble del límite (máximo 50) de **canciones top** del usuario, repartidas así: mitad `medium_term`, y la otra mitad a partes iguales entre `long_term` y `short_term`. De cada una se queda con título y artista principal. |
 | 2 | Las busca todas en la base de datos con una sola consulta (`SongRepository.findByTitleAndArtistIn`, pareja título/artista sin distinguir mayúsculas). |
-| 3 | Se queda con las encontradas en el orden de Spotify, sin repetidas y sin las que el usuario ya tiene en sus listas, hasta el límite. |
+| 3 | Se queda con las encontradas en el orden de Spotify, sin repetidas y sin las que el usuario ya tiene en 3 o más de sus listas, hasta el límite. |
 | 4 | Si faltan: pide sus `NUMBER_OF_TOP_ARTISTS_TO_FETCH_FROM_SPOTIFY` (5) **artistas top** (`medium_term`) y saca canciones de cada uno: primero sus populares, luego sus clásicas y luego sus nuevas (`artistPopular` / `artistClassic` / `artistNew`). Cada artista aporta `faltan / nº artistas` y el primero se queda además con el resto. |
 
-Las exclusiones del paso 4 parten de las canciones de las listas del usuario más las del paso 3.
+Las exclusiones del paso 4 parten de las canciones que están en 3 o más listas del usuario más las del paso 3.
 
 `findItemsForUser` (`/recommendations/items/{userId}`) está a medias: pide el artista top y sus top tracks
 a Spotify, pero devuelve `null`.

@@ -91,7 +91,7 @@ class InstrumentGenreRecommendationServiceImplTest {
         when(userRepository.findById(USER_ID)).thenReturn(Optional.of(user));
         when(user.getPreferences()).thenReturn(preferences(List.of(), List.of()));
         when(user.getDifficultyLevel()).thenReturn(USER_LEVEL);
-        when(user.getIdsFromItemListsOfType(InstrumentGenre.class)).thenReturn(ids());
+        when(user.getIdsExcludedFromRecommendationsOfType(InstrumentGenre.class)).thenReturn(ids());
         when(instrumentGenreRepository.findByGenreIdAndInstrumentId(anyLong(), anyLong())).thenReturn(Optional.empty());
         when(instrumentGenreRepository.findByGenreIdInAndInstrumentIdInAndLevelLessThanEqualAndIdNotIn(any(), any(), anyInt(), any(), any()))
                 .thenReturn(List.of());
@@ -353,7 +353,7 @@ class InstrumentGenreRecommendationServiceImplTest {
         @Test
         void testFindForUser_Level1Short_Level2CompletesWithoutLevelFilter() {
             // Arrange
-            when(user.getIdsFromItemListsOfType(InstrumentGenre.class)).thenReturn(ids(77L));
+            when(user.getIdsExcludedFromRecommendationsOfType(InstrumentGenre.class)).thenReturn(ids(77L));
             when(user.getPreferences()).thenReturn(preferences(List.of(genre(1)), List.of(instrument(11))));
             InstrumentGenre byLevel = instrumentGenre(100, genre(1), instrument(11));
             InstrumentGenre anyLevel = instrumentGenre(101, genre(1), instrument(11));
@@ -433,7 +433,7 @@ class InstrumentGenreRecommendationServiceImplTest {
             // Arrange
             when(user.getTopGenresFromItemLists(anyInt())).thenReturn(List.of(genre(5)));
             when(user.getTopInstrumentsFromItemLists(anyInt())).thenReturn(List.of(instrument(15)));
-            when(user.getIdsFromItemListsOfType(InstrumentGenre.class)).thenReturn(ids(77L));
+            when(user.getIdsExcludedFromRecommendationsOfType(InstrumentGenre.class)).thenReturn(ids(77L));
             when(user.getPreferences()).thenReturn(preferences(
                     List.of(genre(1), genre(2), genre(3)),
                     List.of(instrument(11), instrument(12), instrument(13))));
