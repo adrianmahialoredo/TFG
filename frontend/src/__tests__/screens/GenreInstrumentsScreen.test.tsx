@@ -1,4 +1,5 @@
 import React from 'react';
+import { Text } from 'react-native';
 import { render, screen, fireEvent } from '@testing-library/react-native';
 import GenreInstrumentsScreen from '../../screens/GenreInstrumentsScreen';
 
@@ -79,5 +80,10 @@ describe('GenreInstrumentsScreen', () => {
     mockState.selectedInstrumentGenre = { id: 'ig3', title: null };
     await render(<GenreInstrumentsScreen genreId="g1" />);
     expect(screen.getByText('Lecciones ig3 Instrumento')).toBeTruthy();
+  });
+
+  it('pinta la cabecera dentro del scroll, encima de los instrumentos', async () => {
+    await render(<GenreInstrumentsScreen genreId="g1" header={<Text>Rock</Text>} />);
+    expect(screen.getByText('Rock')).toBeTruthy();
   });
 });

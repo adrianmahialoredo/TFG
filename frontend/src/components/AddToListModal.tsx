@@ -45,6 +45,7 @@ export default function AddToListModal({ item, onClose }: AddToListModalProps) {
       onSelect={handleSelect}
       onClose={onClose}
       getAccessibilityLabel={(name) => `Añadir a ${name}`}
+      borderColor={COLORS.primary}
       isDisabled={(listId) => contains(listId) || !!addingListId}
       renderTrailing={(listId) =>
         addingListId === listId ? (

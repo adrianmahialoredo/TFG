@@ -1,5 +1,6 @@
 import React, {useState, useEffect, useMemo} from "react";
-import { View, Image, TouchableOpacity, Modal, Pressable, Text } from "react-native";
+import { View, Image, Modal, Pressable, Text } from "react-native";
+import Touchable from "../components/Touchable";
 import FadeScrollView from "../components/FadeScrollView";
 import { useNavigation, NavigationProp } from '@react-navigation/native';
 import * as Clipboard from 'expo-clipboard';
@@ -181,17 +182,17 @@ export default function ProfileScreen() {
 
           {/* CABECERA: FOTO Y USERNAME */}
           <View className="items-center mt-2">
-            <TouchableOpacity onPress={() => setProfileModalVisible(true)}>
+            <Touchable onPress={() => setProfileModalVisible(true)}>
               <UserAvatar user={user} size={128} className="mb-4 border-2 border-secondary" />
-            </TouchableOpacity>
+            </Touchable>
 
-            <Text className="text-2xl font-bold text-primary mb-2">@{user.username}</Text>
+            <Text className="text-2xl font-medium text-primary mb-2">@{user.username}</Text>
 
             <View className="flex-row items-center gap-2">
-              <Text className="text-xl text-secondary font-bold">id: #{user.id}</Text>
-              <TouchableOpacity onPress={() => Clipboard.setStringAsync(user.id.toString())}>
+              <Text className="text-xl text-secondary font-medium">id: #{user.id}</Text>
+              <Touchable onPress={() => Clipboard.setStringAsync(user.id.toString())}>
                 <Copy size={16} color="white" />
-              </TouchableOpacity>
+              </Touchable>
             </View>
           </View>
 
@@ -254,8 +255,8 @@ export default function ProfileScreen() {
           <View className="h-[5px] bg-primary my-1 mx-4" />
 
           {/* BOTONES DE ACCIÓN */}
-          <View className="px-10 mt-8 gap-y-3">
-            <TouchableOpacity
+          <View className="px-10 mt-8 gap-y-2">
+            <Touchable
                 className={`px-7 py-4 rounded-full ${isLoading ? 'bg-gray-600' : 'bg-secondary'} self-center`}
                 onPress={handleSaveProfile}
                 disabled={isLoading}
@@ -263,13 +264,13 @@ export default function ProfileScreen() {
               <Text className="text-primary text-center font-bold text-lg self-center">
                 {isLoading ? 'Guardando...' : 'Guardar ajustes'}
               </Text>
-            </TouchableOpacity>
+            </Touchable>
 
             <SpotifyButton />
 
-            <TouchableOpacity className="rounded-full px-7 py-4 bg-red-600 self-center" onPress={handleLogout}>
+            <Touchable className="rounded-full px-7 py-4 bg-red-600 self-center" onPress={handleLogout}>
               <Text className="text-white text-center font-semibold text-lg">Cerrar sesión</Text>
-            </TouchableOpacity>
+            </Touchable>
           </View>
 
         </FadeScrollView>
@@ -318,12 +319,12 @@ export default function ProfileScreen() {
             onClose={() => setAllListsVisible(false)}
             getAccessibilityLabel={(name) => `Abrir ${name}`}
             footer={
-              <TouchableOpacity
+              <Touchable
                   onPress={handleCreateListPress}
                   style={{ paddingHorizontal: 16, paddingVertical: 8, borderRadius: 9999, backgroundColor: COLORS.primary }}
               >
                 <Text style={{ color: COLORS.background, fontWeight: '600' }}>Añadir lista</Text>
-              </TouchableOpacity>
+              </Touchable>
             }
         />
 

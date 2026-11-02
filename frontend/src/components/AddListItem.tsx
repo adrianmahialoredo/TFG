@@ -1,5 +1,6 @@
 import React from "react";
-import { TouchableOpacity, View, Text, Image } from "react-native";
+import { View, Text, Image } from "react-native";
+import Touchable from "./Touchable";
 import { COLORS } from "../constants/Theme";
 import AddButton from "./iconbuttons/AddButton";
 
@@ -14,6 +15,8 @@ type ItemProps = {
   onPress: () => void;
   added?: boolean;
   inverted?: boolean;
+  /** Factor de tamaño de la fila y todo su contenido (como en ListItem). */
+  scale?: number;
 };
 
 /**
@@ -25,35 +28,35 @@ type ItemProps = {
  * con colores mezclados. Tampoco lleva sombra: en Android la `elevation` se pinta como un
  * recuadro negro mientras la fila se desvanece.
  */
-export default function AddListItem({ item, onPress, added = false, inverted = false }: ItemProps ) {
+export default function AddListItem({ item, onPress, added = false, inverted = false, scale = 1 }: ItemProps ) {
   const textColor = inverted ? COLORS.secondary : COLORS.primary;
+  const size = (value: number) => Math.round(value * scale);
 
   return (
     <View
       style={{
         flexDirection: 'row',
         flex: 1,
-        borderRadius: 16,
+        borderRadius: size(16),
         overflow: 'hidden',
         backgroundColor: inverted ? COLORS.primary : COLORS.secondary,
-        borderWidth: 1,
-        borderColor: COLORS.secondary,
+        borderWidth: 0,
       }}
     >
         <Image
           source={{ uri: item.imageUrl }}
-          style={{ width: 96, height: 96 }}
+          style={{ width: size(96), height: size(96) }}
         />
-        <View style={{ flex: 1, alignSelf: 'center', alignItems: 'center' }}>
-          <Text style={{ fontSize: 16, lineHeight: 24, color: textColor, textAlign: 'center' }}>{item.info}</Text>
+        <View style={{ flex: 1, alignSelf: 'center', alignItems: 'center', paddingHorizontal: size(16) }}>
+          <Text style={{ fontSize: size(14), lineHeight: size(24), color: textColor, textAlign: 'center', fontWeight: '400' }}>{item.info}</Text>
         </View>
-        <TouchableOpacity
+        <Touchable
           onPress={onPress}
           disabled={added}
-          style={{ padding: 16, alignItems: 'center', justifyContent: 'center' }}
+          style={{ padding: size(16), alignItems: 'center', justifyContent: 'center' }}
         >
-          <AddButton size={36} color={textColor} checked={added} />
-        </TouchableOpacity>
+          <AddButton size={size(36)} color={textColor} checked={added} />
+        </Touchable>
     </View>
   );
 }

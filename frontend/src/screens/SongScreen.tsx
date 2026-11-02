@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, Image, ActivityIndicator, TouchableOpacity } from 'react-native';
+import { View, Text, Image, ActivityIndicator } from 'react-native';
+import Touchable from '../components/Touchable';
 import FadeScrollView from '../components/FadeScrollView';
 import { useRoute, RouteProp } from '@react-navigation/native';
 import GradientBackground from '../components/GradientBackground';
@@ -8,6 +9,7 @@ import AppLayout from '../components/AppLayout';
 import ProfileHeader from '../components/ProfileHeader';
 import DifficultyStars from '../components/DifficultyStars';
 import OptionSelector from '../components/OptionSelector';
+import InstrumentCarousel from '../components/InstrumentCarousel';
 import YoutubeVideo from '../components/YoutubeVideo';
 import ChordModal from '../components/ChordModal';
 import {ChordDTO, RootStackParamList, TabSectionDTO} from '../types';
@@ -108,9 +110,9 @@ export default function SongScreen() {
 
             {/* Selector de instrumento (solo si hay lecciones para más de uno) */}
             {availableInstruments.length > 1 && (
-              <OptionSelector
-                options={availableInstruments.map((instrument) => ({ value: instrument.id, label: instrument.name }))}
-                selected={selectedInstrumentId}
+              <InstrumentCarousel
+                options={availableInstruments}
+                selectedId={selectedInstrumentId}
                 onSelect={changeInstrument}
               />
             )}
@@ -130,12 +132,10 @@ export default function SongScreen() {
                 <Text className="text-primary text-lg font-bold mb-3 text-center">Acordes</Text>
                 <View className="flex-row flex-wrap gap-1 justify-center">
                   {chords.map((chord: ChordDTO) => (
-                    // Al pulsar un acorde se abre su detalle. Estilos en línea: con className
-                    // NativeWind pisa la opacidad animada del TouchableOpacity
-                    <TouchableOpacity
+                    // Al pulsar un acorde se abre su detalle
+                    <Touchable
                       key={chord.id}
                       onPress={() => setSelectedChord(chord)}
-                      activeOpacity={0.7}
                       accessibilityRole="button"
                       accessibilityLabel={`Ver acorde ${chord.name}`}
                       style={{ alignItems: 'center', marginBottom: 12 }}
@@ -150,7 +150,7 @@ export default function SongScreen() {
                         />
                       </View>
                       <Text className="text-secondary text-base mt-1">{chord.name}</Text>
-                    </TouchableOpacity>
+                    </Touchable>
                   ))}
                 </View>
               </View>

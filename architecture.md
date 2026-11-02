@@ -317,13 +317,13 @@ Cada método lleva Javadoc con `@param` y `@return` indicando los códigos de re
 
 ### Verificación del email en el registro
 
-1. La app valida el formulario y llama a `POST /api/auth/verification-code` con el email. `EmailVerificationServiceImpl` rechaza un email ya registrado (400), genera un código de 6 dígitos (`SecureRandom`) y lo envía con `EmailService`.
+1. La app valida el formulario y llama a `POST /api/auth/verification-code` con el email. `EmailVerificationServiceImpl` rechaza un email ya registrado (400), genera un código de 6 dígitos (`SecureRandom`), lo guarda y responde 204 al momento: el email se envía en segundo plano con `EmailService` (en el `applicationTaskExecutor` de Spring), porque el SMTP tarda varios segundos.
 2. El usuario escribe el código en la app y esta llama a `POST /api/auth/register` con los datos y `verificationCode` (campo `WRITE_ONLY` de `UserDto`, nunca se devuelve).
 3. `AuthController` comprueba el código (`checkCode`) antes de registrar y lo descarta (`consume`) solo cuando el usuario se ha guardado: si el registro falla por otro motivo (p. ej. usuario ocupado), se puede corregir y reintentar con el mismo código.
 
 Reglas: el código caduca a los 10 minutos, se descarta tras 5 intentos fallidos y no se puede pedir otro para el mismo email hasta pasados 60 s (`ResponseStatusException` 429). Los emails se comparan sin mayúsculas ni espacios. Los códigos pendientes viven en memoria (una sola instancia, igual que los `state` de Spotify): un reinicio obliga a pedir uno nuevo.
 
-Envío (`EmailServiceImpl`): SMTP configurado con `MAIL_*` en `.env`. Lee la plantilla HTML y la de texto plano de `templates/email` (generadas desde `emails/` con React Email) y sustituye sus marcadores `{{...}}`. Si no hay `JavaMailSender`, escribe el código en el log. Un fallo de SMTP se traduce en `IllegalStateException` (500) y el código no se guarda, para poder pedirlo otra vez al momento.
+Envío (`EmailServiceImpl`): SMTP configurado con `MAIL_*` en `.env`. Lee la plantilla HTML y la de texto plano de `templates/email` (generadas desde `emails/` con React Email) y sustituye sus marcadores `{{...}}`. Si no hay `JavaMailSender`, escribe el código en el log. Un fallo de SMTP lanza `IllegalStateException`; como el envío va en segundo plano, la app no se entera (ya tiene su 204), pero `EmailVerificationServiceImpl` descarta ese código para que se pueda pedir otro al momento sin esperar los 60 s. El SMTP tiene timeouts (5 s al conectar, 10 s al leer/escribir) para que un servidor lento no deje el envío colgado.
 
 El email no se puede cambiar después del registro: el perfil de la app lo muestra como solo lectura y `PUT /api/users/{id}` ignora el que llegue en el body (`UserServiceImpl.update` conserva el guardado y solo comprueba que el nombre de usuario esté libre).
 

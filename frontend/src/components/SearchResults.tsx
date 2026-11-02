@@ -1,13 +1,13 @@
 import { useState } from "react";
 import { View, Text } from "react-native";
 import { useNavigation, NavigationProp } from "@react-navigation/native";
-import ListItem from "./ListItem";
+import ListItem, { LIST_ITEM_SCALE } from "./ListItem";
 import AddToListModal from "./AddToListModal";
 import { ItemSummaryDTO, RootStackParamList } from "../types";
 import { SearchSection } from "../hooks/useCatalogSearch";
 import { SearchField } from "../utils/search.utils";
 import { navigateToItem } from "../utils/navigation.utils";
-import { itemToListItem } from "../utils/mappers.utils";
+import { useItemToListItem } from "../hooks/useItemToListItem";
 
 const SECTION_TITLES: Record<SearchField, string> = {
   title: 'Por título',
@@ -32,6 +32,7 @@ export default function SearchResults({ sections, emptyText }: SearchResultsProp
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
   // Item que se está añadiendo a una lista (null = modal cerrado)
   const [itemToAdd, setItemToAdd] = useState<ItemSummaryDTO | null>(null);
+  const toListItem = useItemToListItem();
 
   if (sections.length === 0) {
     return (
@@ -50,8 +51,9 @@ export default function SearchResults({ sections, emptyText }: SearchResultsProp
             {section.items.map((item, index) => (
               <ListItem
                 key={item.id}
-                item={itemToListItem(item)}
+                item={toListItem(item)}
                 inverted={index % 2 !== 0}
+                scale={LIST_ITEM_SCALE}
                 onPress={() => navigateToItem(navigation, item)}
                 onAdd={() => setItemToAdd(item)}
               />

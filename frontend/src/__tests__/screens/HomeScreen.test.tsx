@@ -80,7 +80,7 @@ describe('HomeScreen', () => {
 
   it('saluda al usuario y muestra los carruseles vacíos con su mensaje', async () => {
     await render(<HomeScreen />);
-    expect(screen.getByText('Bienvenido, Ana')).toBeTruthy();
+    expect(screen.getByText('¡Bienvenido Ana!')).toBeTruthy();
     expect(screen.getByText('Carrusel Recientes')).toBeTruthy();
     expect(screen.getByText('Carrusel Recomendaciones')).toBeTruthy();
     expect(screen.getByText(/se muestren tus recientes/)).toBeTruthy();
@@ -89,22 +89,22 @@ describe('HomeScreen', () => {
 
   it('mientras no se sabe si hay Spotify vinculado no muestra ni carrusel ni botón', async () => {
     await render(<HomeScreen />);
-    expect(screen.queryByText('Carrusel Desde tu Spotify')).toBeNull();
+    expect(screen.queryByText('Carrusel Según tus gustos de Spotify')).toBeNull();
     expect(screen.queryByText('Botón Spotify')).toBeNull();
   });
 
   it('sin Spotify vinculado ofrece conectarlo en vez del carrusel', async () => {
     mockHomeState.spotifyConnected = false;
     await render(<HomeScreen />);
-    expect(screen.queryByText('Carrusel Desde tu Spotify')).toBeNull();
-    expect(screen.getByText('Desde tu Spotify')).toBeTruthy();
+    expect(screen.queryByText('Carrusel Según tus gustos de Spotify')).toBeNull();
+    expect(screen.getByText('Según tus gustos de Spotify')).toBeTruthy();
     expect(screen.getByText('Botón Spotify')).toBeTruthy();
   });
 
   it('con Spotify vinculado muestra su carrusel (con mensaje si está vacío)', async () => {
     mockHomeState.spotifyConnected = true;
     await render(<HomeScreen />);
-    expect(screen.getByText('Carrusel Desde tu Spotify')).toBeTruthy();
+    expect(screen.getByText('Carrusel Según tus gustos de Spotify')).toBeTruthy();
     expect(screen.getByText(/Escucha música en Spotify/)).toBeTruthy();
   });
 
@@ -172,7 +172,8 @@ describe('HomeScreen', () => {
     await fireEvent.press(screen.getByText('Metrónomo'));
     expect(mockNavigation.navigate).toHaveBeenCalledWith('MetronomeScreen');
     expect(screen.getByText('Afinador')).toBeTruthy();
-    expect(screen.getByText('Identificador')).toBeTruthy();
+    // El Identificador aún no hace nada: está oculto
+    expect(screen.queryByText('Identificador')).toBeNull();
   });
 
   it('navega al afinador desde su botón de herramienta', async () => {

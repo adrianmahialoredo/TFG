@@ -1,6 +1,7 @@
 import ProfileHeader from "../components/ProfileHeader";
 import AppLayout from "../components/AppLayout";
-import {ActivityIndicator, Linking, Text, TouchableOpacity, View} from "react-native";
+import {ActivityIndicator, Linking, Text, View} from "react-native";
+import Touchable from "../components/Touchable";
 import FadeScrollView from "../components/FadeScrollView";
 import {COLORS} from "../constants/Theme";
 import React, {useCallback, useState} from "react";
@@ -137,13 +138,12 @@ export default function TunerScreen() {
                                     <Text style={{color: COLORS.secondary, textAlign: 'center', marginBottom: 12}}>
                                         El afinador necesita el micrófono para escuchar tu instrumento.
                                     </Text>
-                                    <TouchableOpacity
+                                    <Touchable
                                         onPress={() => Linking.openSettings()}
-                                        activeOpacity={0.7}
                                         style={{paddingVertical: 10, paddingHorizontal: 20, borderRadius: 6, backgroundColor: COLORS.primary}}
                                     >
                                         <Text style={{color: COLORS.secondary, fontWeight: '600'}}>Abrir ajustes</Text>
-                                    </TouchableOpacity>
+                                    </Touchable>
                                 </View>
                             )}
 

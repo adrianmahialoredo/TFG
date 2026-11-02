@@ -61,4 +61,11 @@ describe('ListItem', () => {
     await fireEvent.press(screen.getByText('Rock\nGénero'));
     expect(onPress).toHaveBeenCalledTimes(1);
   });
+
+  it('con scale reduce la imagen y el texto en la misma proporción', async () => {
+    await render(<ListItem item={item} onPress={jest.fn()} scale={0.5} />);
+    const image = screen.container.queryAll((n) => n.type === 'Image')[0];
+    expect(image.props.style).toEqual(expect.objectContaining({ width: 48, height: 48 }));
+    expect(screen.getByText('Rock\nGénero').props.style).toEqual(expect.objectContaining({ fontSize: 8, lineHeight: 14 }));
+  });
 });

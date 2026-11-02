@@ -1,4 +1,5 @@
 import React from 'react';
+import { Text } from 'react-native';
 import { render, screen } from '@testing-library/react-native';
 import GenreSongsScreen from '../../screens/GenreSongsScreen';
 
@@ -55,5 +56,10 @@ describe('GenreSongsScreen', () => {
     mockState.error = 'No se pudieron cargar';
     await render(<GenreSongsScreen genreId="g1" />);
     expect(screen.getByText('No se pudieron cargar')).toBeTruthy();
+  });
+
+  it('pinta la cabecera dentro del scroll, encima de las categorías', async () => {
+    await render(<GenreSongsScreen genreId="g1" header={<Text>Rock</Text>} />);
+    expect(screen.getByText('Rock')).toBeTruthy();
   });
 });

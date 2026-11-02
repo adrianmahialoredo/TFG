@@ -33,7 +33,7 @@ describe('LoginScreen', () => {
 
   it('muestra el formulario de inicio de sesión', async () => {
     await render(<LoginScreen />);
-    expect(screen.getByText('Bienvenido')).toBeTruthy();
+    expect(screen.getByText('Bienvenido a Toco')).toBeTruthy();
     expect(screen.getByPlaceholderText('Email o Usuario')).toBeTruthy();
     expect(screen.getByPlaceholderText('Contraseña')).toBeTruthy();
     expect(screen.getByText('Iniciar Sesión')).toBeTruthy();

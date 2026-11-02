@@ -1,13 +1,14 @@
 // src/screens/HomeScreen.tsx
 
-import { View, Text, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, Text, ActivityIndicator, LayoutChangeEvent } from 'react-native';
+import Touchable from '../components/Touchable';
 import FadeScrollView from '../components/FadeScrollView';
 import { useNavigation, NavigationProp } from '@react-navigation/native';
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import { Activity, CircleCheckBig, Headphones } from 'lucide-react-native';
 import HorizontalItemsCarousel from '../components/carousels/HorizontalItemsCarousel';
 import AppLayout from '../components/AppLayout';
-import { ToolButton } from '../components/buttons/ToolButton';
+import { TOOL_BUTTON_MARGIN, TOOL_BUTTON_SIZE, ToolButton } from '../components/buttons/ToolButton';
 import { RootStackParamList } from '../types';
 import { useAuth } from '../context/AuthContext';
 import { useHomeItems } from '../hooks/useHomeItems';
@@ -16,10 +17,28 @@ import UserAvatar from "../components/UserAvatar";
 import SuggestionCard from "../components/SuggestionCard";
 import { SpotifyButton } from "../components/buttons/SpotifyButton";
 
-const SPOTIFY_TITLE = 'Desde tu Spotify';
+const SPOTIFY_TITLE = 'Según tus gustos de Spotify';
+
+/** El Identificador aún no hace nada: se oculta (sin borrarlo) hasta que funcione. */
+const SHOW_IDENTIFIER = false;
+const TOOL_COUNT = SHOW_IDENTIFIER ? 3 : 2;
+
+/**
+ * Ancho de cada herramienta para que ocupen lo mismo que la fila de tres: mismos bordes y misma
+ * separación entre botones, solo que repartida entre los que se ven.
+ */
+const toolButtonWidth = (rowWidth: number) => {
+  // Separación visible entre los botones de la fila de tres (justify-between + margen derecho)
+  const gap = (rowWidth - 3 * (TOOL_BUTTON_SIZE + TOOL_BUTTON_MARGIN)) / 2 + TOOL_BUTTON_MARGIN;
+  const span = 3 * TOOL_BUTTON_SIZE + 2 * gap;
+  return (span - (TOOL_COUNT - 1) * gap) / TOOL_COUNT;
+};
 
 export default function HomeScreen() {
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
+  // Ancho de la fila de herramientas (hasta medirla, el tamaño por defecto)
+  const [toolsWidth, setToolsWidth] = useState(0);
+  const toolWidth = toolsWidth ? toolButtonWidth(toolsWidth) : TOOL_BUTTON_SIZE;
 
   // SSOT: el usuario actual sale de la AuthStore vía useAuth (ya no existe getStoredUser)
   const { user } = useAuth();
@@ -59,14 +78,14 @@ export default function HomeScreen() {
         <View className="flex-1 bg-background">
           {/* Icono de perfil */}
           <View className="flex-row justify-center mt-2 mb-7">
-            <TouchableOpacity onPress={() => navigation.navigate('ProfileScreen')}>
-              <UserAvatar user={user} size={80} className="border" />
-            </TouchableOpacity>
+            <Touchable onPress={() => navigation.navigate('ProfileScreen')}>
+              <UserAvatar user={user} size={70} className="border" />
+            </Touchable>
           </View>
 
           {/* Mensaje de bienvenida */}
-          <Text className="text-3xl font-roboto font-bold text-primary text-center mb-11">
-            Bienvenido, {user?.name}
+          <Text className="text-3xl font-roboto font-bold text-primary text-center mb-14">
+            ¡Bienvenido {user?.name}!
           </Text>
 
           {/* Indicador de carga / error */}
@@ -88,24 +107,35 @@ export default function HomeScreen() {
           />
 
           {/* Botones de herramientas */}
-          <View className="flex-row justify-between mt-12 mb-11">
+          <View
+            className="flex-row justify-between mt-7 mb-7"
+            onLayout={(event: LayoutChangeEvent) => setToolsWidth(event.nativeEvent.layout.width)}
+          >
             <ToolButton
               icon={<Activity size={75} color="white" strokeWidth={1} />}
               label="Metrónomo"
+              width={toolWidth}
               onPress={() => navigation.navigate('MetronomeScreen')}
             />
             <ToolButton
               icon={<CircleCheckBig size={75} color="white" strokeWidth={1} />}
               label="Afinador"
+              width={toolWidth}
               onPress={() => navigation.navigate('TunerScreen')}
             />
-            <ToolButton icon={<Headphones size={75} color="white" strokeWidth={1} />} label="Identificador" />
+            {SHOW_IDENTIFIER && (
+              <ToolButton
+                icon={<Headphones size={75} color="white" strokeWidth={1} />}
+                label="Identificador"
+                width={toolWidth}
+              />
+            )}
           </View>
 
           {/* Card: un género-instrumento que combina favoritos del usuario (solo si existe alguno).
               Sin imagen: las de los géneros-instrumento no existen, se muestra el icono del instrumento */}
           {favouriteCombination && (
-            <View className="mb-6">
+            <View className="mb-7">
               <SuggestionCard
                 label="Prueba esta combinación"
                 title={favouriteCombination.title}
@@ -124,7 +154,7 @@ export default function HomeScreen() {
 
           {/* Card: uno de los géneros más usados en las listas que aún no está en ellas (solo si hay alguno) */}
           {mostUsedGenre && (
-              <View className="mb-10">
+              <View className="mt-7 mb-7">
                 <SuggestionCard
                     label="Explora este género"
                     title={mostUsedGenre.title}
@@ -144,7 +174,7 @@ export default function HomeScreen() {
               emptyMessage={loading ? undefined : 'Escucha música en Spotify para que te recomendemos canciones, lecciones y géneros'}
             />
           ) : spotifyConnected === false && (
-            <View className="my-4">
+            <View className="mb-3">
               <Text className="text-2xl font-semibold text-secondary mb-6">{SPOTIFY_TITLE}</Text>
               <SpotifyButton />
             </View>
@@ -152,7 +182,7 @@ export default function HomeScreen() {
 
           {/* Card: una canción nueva de uno de los artistas favoritos (los más repetidos en sus listas) */}
           {newFavouriteArtistSong && (
-            <View className="mb-6">
+            <View className="mt-7 mb-7">
               <SuggestionCard
                 label={`Lo nuevo de ${newFavouriteArtistSong.artist ?? 'tus artistas favoritos'}`}
                 title={newFavouriteArtistSong.title}
@@ -172,7 +202,7 @@ export default function HomeScreen() {
 
           {/* Card: una canción popular de uno de los artistas favoritos */}
           {popularFavouriteArtistSong && (
-            <View className="mb-6">
+            <View className="mt-7 mb-7">
               <SuggestionCard
                 label={`Lo más popular de ${popularFavouriteArtistSong.artist ?? 'tus artistas favoritos'}`}
                 title={popularFavouriteArtistSong.title}

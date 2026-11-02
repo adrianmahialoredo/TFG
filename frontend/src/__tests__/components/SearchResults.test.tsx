@@ -47,14 +47,14 @@ describe('SearchResults', () => {
     expect(screen.getByText('Por género')).toBeTruthy();
     expect(screen.getByText('Wonderwall\nOasis · Canción')).toBeTruthy();
     expect(screen.getByText('Acordes\nLección')).toBeTruthy();
-    expect(screen.getByText('Rock\nGénero')).toBeTruthy();
+    expect(screen.getByText('Rock · Género')).toBeTruthy();
   });
 
   it('al pulsar un item navega a su pantalla de detalle', async () => {
     await render(<SearchResults sections={sections} emptyText="" />);
     await fireEvent.press(screen.getByText('Wonderwall\nOasis · Canción'));
     expect(mockNavigate).toHaveBeenCalledWith('SongScreen', { songId: 's1' });
-    await fireEvent.press(screen.getByText('Rock\nGénero'));
+    await fireEvent.press(screen.getByText('Rock · Género'));
     expect(mockNavigate).toHaveBeenCalledWith('GenreMainScreen', { genreId: 'g1' });
   });
 

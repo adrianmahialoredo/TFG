@@ -1,16 +1,13 @@
-import {TouchableOpacity, Text} from "react-native";
+import {Text} from "react-native";
+import Touchable from "../Touchable";
 import {COLORS} from "../../constants/Theme";
 
 /**
- * Botón de ajuste fino del tempo (-10, -1, +1, +10).
- *
- * Estilos en línea y sin className a propósito (NativeWind 4.1):
- *  - TouchableOpacity + className pisa la opacidad animada al re-renderizar y se queda "pulsado".
- *  - Pressable con `style={({pressed}) => ...}` pierde el estilo (el interop no soporta la función).
+ * Botón de ajuste fino del tempo (-10, -1, +1, +10). No se atenúa al mantenerlo: se pulsa muy seguido.
  */
 export default function MetronomeTempoButton({ title, onPress }: { title: string, onPress: () => void }) {
     return (
-        <TouchableOpacity
+        <Touchable
             onPress={onPress}
             activeOpacity={1}
             hitSlop={6}
@@ -24,6 +21,6 @@ export default function MetronomeTempoButton({ title, onPress }: { title: string
             }}
         >
             <Text style={{fontSize: 14, textAlign: 'center', color: COLORS.primary}}>{title}</Text>
-        </TouchableOpacity>
+        </Touchable>
     );
 }

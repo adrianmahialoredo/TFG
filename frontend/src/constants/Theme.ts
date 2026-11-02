@@ -7,13 +7,16 @@ export const COLORS = {
     text: "#111827", // Dark Gray
     placeholder: "#e7e7e7", // Medium Gray
 };
+/** Opacidad del fondo de las cards de color (la de GOLD_CARD_STYLE). */
+export const CARD_FILL_OPACITY = 0.4;
+
 /**
  * Card dorada semitransparente (carruseles vacíos y tarjetas de sugerencia del Home):
  * se ve el fondo a través del dorado, con el borde más intenso.
  */
 export const GOLD_CARD_STYLE = {
-    backgroundColor: "rgba(193, 133, 60, 0.24)", // primary al 24 %
+    backgroundColor: "rgba(193, 133, 60, 0.4)", // primary al 40 % (CARD_FILL_OPACITY)
     borderColor: "rgba(193, 133, 60, 0.8)", // primary al 80 %
     borderWidth: 1,
-    borderRadius: 12,
+    borderRadius: 24,
 } as const;

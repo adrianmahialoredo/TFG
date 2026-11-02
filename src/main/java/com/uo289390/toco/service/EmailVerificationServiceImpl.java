@@ -7,7 +7,9 @@ import java.time.Instant;
 import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executor;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
@@ -19,6 +21,10 @@ import lombok.extern.slf4j.Slf4j;
  *
  * Pending codes are kept in memory (single instance), like the Spotify OAuth2 states: they
  * only live a few minutes and losing them on a restart just means asking for a new one.
+ *
+ * The email is sent in the background (SMTP takes seconds, sometimes many more), so the
+ * request answers straight away. If sending fails the code is discarded, so the user can ask
+ * for a new one without waiting for the resend cooldown.
  *
  * @author Adrián Mahía
  * @version 1.0
@@ -44,6 +50,7 @@ public class EmailVerificationServiceImpl implements EmailVerificationService {
 
     private final UserRepository userRepository;
     private final EmailService emailService;
+    private final Executor emailExecutor;
     private final Clock clock;
 
     private static final class PendingCode {
@@ -58,14 +65,17 @@ public class EmailVerificationServiceImpl implements EmailVerificationService {
     }
 
     @Autowired
-    public EmailVerificationServiceImpl(UserRepository userRepository, EmailService emailService) {
-        this(userRepository, emailService, Clock.systemUTC());
+    public EmailVerificationServiceImpl(UserRepository userRepository, EmailService emailService,
+                                        @Qualifier("applicationTaskExecutor") Executor emailExecutor) {
+        this(userRepository, emailService, emailExecutor, Clock.systemUTC());
     }
 
-    /** Constructor with a controllable clock, for tests. */
-    EmailVerificationServiceImpl(UserRepository userRepository, EmailService emailService, Clock clock) {
+    /** Constructor with a controllable executor and clock, for tests. */
+    EmailVerificationServiceImpl(UserRepository userRepository, EmailService emailService,
+                                 Executor emailExecutor, Clock clock) {
         this.userRepository = userRepository;
         this.emailService = emailService;
+        this.emailExecutor = emailExecutor;
         this.clock = clock;
     }
 
@@ -84,9 +94,17 @@ public class EmailVerificationServiceImpl implements EmailVerificationService {
         }
 
         String code = generateCode();
-        emailService.sendVerificationCode(email, code, CODE_TTL.toMinutes());
-        // Stored only once sent: if sending fails the user can ask again straight away
-        pendingCodes.put(key, new PendingCode(code, now));
+        PendingCode pending = new PendingCode(code, now);
+        pendingCodes.put(key, pending);
+        emailExecutor.execute(() -> {
+            try {
+                emailService.sendVerificationCode(email, code, CODE_TTL.toMinutes());
+            } catch (RuntimeException e) {
+                // Already logged by the EmailService. Only this code is discarded, not a newer one
+                // that a later request may have put in its place
+                pendingCodes.remove(key, pending);
+            }
+        });
     }
 
     @Override

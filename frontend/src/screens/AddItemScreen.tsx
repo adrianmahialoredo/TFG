@@ -6,9 +6,10 @@ import Animated, { FadeIn, FadeOut, LinearTransition } from "react-native-reanim
 import { useRoute, RouteProp } from "@react-navigation/native";
 import SearchBar from "../components/SearchBar";
 import AddListItem from "../components/AddListItem";
+import { LIST_ITEM_SCALE } from "../components/ListItem";
 import { RootStackParamList } from "../types";
 import { useAddItemScreen } from "../hooks/useAddItemScreen";
-import { itemToListItem } from "../utils/mappers.utils";
+import { useItemToListItem } from "../hooks/useItemToListItem";
 
 type AddItemScreenRouteProp = RouteProp<RootStackParamList, 'AddItemScreen'>;
 
@@ -19,6 +20,7 @@ export default function AddItemScreen() {
   // Nivel 6: Hook que orquesta recomendaciones, búsqueda y la acción de añadir
   const { items, query, setQuery, loading, searching, error, addItem, isAdded } =
     useAddItemScreen(itemListId);
+  const toListItem = useItemToListItem();
 
   const isSearch = !!query.trim();
   const sectionTitle = isSearch ? 'Resultados' : 'Para ti';
@@ -26,7 +28,7 @@ export default function AddItemScreen() {
 
   return (
     <AppLayout>
-      <View className="bg-background flex-1 pt-2">
+      <View className="bg-background flex-1">
         {/* Icono de perfil y titulo */}
         <ProfileHeader title="Añadir a lista" />
         <FadeScrollView
@@ -34,11 +36,11 @@ export default function AddItemScreen() {
           contentContainerStyle={{ paddingBottom: 120 }}
         >
           {/* Barra de búsqueda */}
-          <View className="bg-background mt-1 mb-10">
+          <View className="bg-background mt-1 mb-2">
             <SearchBar value={query} onChangeText={setQuery} />
           </View>
 
-          <Text className="text-lg font-semibold text-secondary justify-center text-center mb-10">
+          <Text className="text-lg font-semibold text-secondary justify-center text-center mb-9">
             {sectionTitle}
           </Text>
 
@@ -60,15 +62,16 @@ export default function AddItemScreen() {
                 // saliendo y entrando a la vez se montaban unas encima de otras).
                 <Animated.View
                   key={item.id}
-                  style={{ marginBottom: 12 }}
+                  style={{ marginBottom: 10 }}
                   entering={isSearch ? undefined : FadeIn.duration(300).delay(150)}
                   exiting={isAdded(item.id) ? FadeOut.duration(300) : undefined}
                   layout={isSearch ? undefined : LinearTransition.duration(300)}
                 >
                   <AddListItem
-                    item={itemToListItem(item)}
+                    item={toListItem(item)}
                     added={isAdded(item.id)}
                     inverted={index % 2 !== 0}
+                    scale={LIST_ITEM_SCALE}
                     onPress={() => addItem(item.id)}
                   />
                 </Animated.View>

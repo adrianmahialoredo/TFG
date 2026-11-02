@@ -50,7 +50,7 @@ public class AuthController {
      * Sends a verification code to the email of a registration that has not been made yet.
      *
      * @param dto the email to verify
-     * @return 204 No Content once the code has been sent
+     * @return 204 No Content; the email is sent in the background
      */
     @PostMapping("/verification-code")
     public ResponseEntity<Void> sendVerificationCode(@Valid @RequestBody VerificationCodeRequestDto dto) {

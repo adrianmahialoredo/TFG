@@ -39,60 +39,57 @@ export default function SongsScreen() {
 
   return (
     <AppLayout>
-      <View className="bg-background flex-1 pt-2">
+      <View className="bg-background flex-1">
 
         <ProfileHeader title="Canciones" />
 
-        {/* Barra de búsqueda */}
-        <View className="bg-background mt-1 mb-4">
-          <SearchBar value={query} onChangeText={setQuery} placeholder={SEARCH_PLACEHOLDER} />
-        </View>
-    
-        {query.trim() ? (
-          <FadeScrollView
-            showsVerticalScrollIndicator={false}
-            keyboardShouldPersistTaps="handled"
-            contentContainerStyle={{ paddingBottom: 120 }}
-          >
-            <SearchResults sections={searchResults} emptyText="No hay canciones que coincidan con tu búsqueda" />
-          </FadeScrollView>
-        ) : loading ? (
-          <View className="flex-1 justify-center items-center">
-            <ActivityIndicator size="large" color="#ffffff" />
+        {/* Un solo scroll con el buscador dentro: si cambiase al escribir, la barra se desmontaría y perdería el foco */}
+        <FadeScrollView
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          contentContainerStyle={{ paddingBottom: 120 }}
+        >
+          {/* Barra de búsqueda */}
+          <View className="bg-background mt-1 mb-4">
+            <SearchBar value={query} onChangeText={setQuery} placeholder={SEARCH_PLACEHOLDER} />
           </View>
-        ) : error ? (
-          <View className="flex-1 justify-center items-center px-4">
-            <Text className="text-red-500 text-center">{error}</Text>
-          </View>
-        ) : (
-          <FadeScrollView
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={{ paddingBottom: 120 }}
-          >
-            {/* Todas las categorías vacías (ya cargadas): sin esto la pantalla quedaba en blanco */}
-            {!categories.some((category) => category.data.length > 0) && (
-              <View className="justify-center items-center py-20">
-                <Text className="text-secondary text-center">
-                  Todavía no hay canciones disponibles
-                </Text>
-              </View>
-            )}
-            {categories.map((category) => (
-              <View key={category.title} className="mb-6">
-                {category.data.length > 0 ? (
-                  <SongsCarousel title={category.title} data={category.data} />
-                ) : category.title === SPOTIFY_TITLE && spotifyConnected === false && (
-                  // Cuenta de Spotify sin vincular: se ofrece conectarla
-                  <View className="my-4">
-                    <Text className="text-2xl font-semibold text-secondary mb-6">{category.title}</Text>
-                    <SpotifyButton />
-                  </View>
-                )}
-              </View>
-            ))}
 
-          </FadeScrollView>
-        )}
+          {query.trim() ? (
+            <SearchResults sections={searchResults} emptyText="No hay canciones que coincidan con tu búsqueda" />
+          ) : loading ? (
+            <View className="justify-center items-center py-20">
+              <ActivityIndicator size="large" color="#ffffff" />
+            </View>
+          ) : error ? (
+            <View className="justify-center items-center px-4 py-20">
+              <Text className="text-red-500 text-center">{error}</Text>
+            </View>
+          ) : (
+            <>
+              {/* Todas las categorías vacías (ya cargadas): sin esto la pantalla quedaba en blanco */}
+              {!categories.some((category) => category.data.length > 0) && (
+                <View className="justify-center items-center py-20">
+                  <Text className="text-secondary text-center">
+                    Todavía no hay canciones disponibles
+                  </Text>
+                </View>
+              )}
+              {categories.map((category) => (
+                <View key={category.title} className="mb-6">
+                  {category.data.length > 0 ? (
+                    <SongsCarousel title={category.title} data={category.data} />
+                  ) : category.title === SPOTIFY_TITLE && spotifyConnected === false && (
+                    // Cuenta de Spotify sin vincular: se ofrece conectarla
+                    <View className="my-4">
+                      <Text className="text-2xl font-semibold text-secondary mb-6">{category.title}</Text>
+                      <SpotifyButton />
+                    </View>
+                  )}
+                </View>
+              ))}
+            </>
+          )}
+        </FadeScrollView>
       </View>
     </AppLayout>
   );

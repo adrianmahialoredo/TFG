@@ -1,5 +1,6 @@
 import {useEffect} from "react";
-import {TouchableOpacity, View} from "react-native";
+import {View} from "react-native";
+import Touchable from "../Touchable";
 import Animated, {useAnimatedStyle, useSharedValue, withSpring} from "react-native-reanimated";
 import Svg, {Circle, Line, Path, Polygon} from "react-native-svg";
 import {COLORS} from "../../constants/Theme";
@@ -73,9 +74,8 @@ export default function TunerGauge({cents, inTune, onPress, accessibilityLabel}:
     const needleColor = cents !== null && inTune ? IN_TUNE_COLOR : COLORS.primary;
 
     return (
-        <TouchableOpacity
+        <Touchable
             onPress={onPress}
-            activeOpacity={0.85}
             accessibilityRole="button"
             accessibilityLabel={accessibilityLabel}
             style={{alignSelf: 'center', width: WIDTH, height: HEIGHT}}
@@ -124,6 +124,6 @@ export default function TunerGauge({cents, inTune, onPress, accessibilityLabel}:
                     <Circle cx={CENTER_X} cy={CENTER_Y} r={HUB_RADIUS / 2.5} fill={COLORS.background} />
                 </Svg>
             </View>
-        </TouchableOpacity>
+        </Touchable>
     );
 }

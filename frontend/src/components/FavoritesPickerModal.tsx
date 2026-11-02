@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { ScrollView, Text, View } from 'react-native';
+import Touchable from './Touchable';
 import BaseModal from './BaseModal';
 import GenrePicker from './GenrePicker';
 import InstrumentPicker from './InstrumentPicker';
@@ -42,15 +43,15 @@ export default function FavoritesPickerModal({
       )}
 
       <View className="flex-row justify-end gap-3 mt-2">
-        <TouchableOpacity
+        <Touchable
           className="px-4 py-2 rounded-full border border-secondary"
           onPress={onClose}
           disabled={saving}
         >
           <Text className="text-secondary font-semibold">Cancelar</Text>
-        </TouchableOpacity>
+        </Touchable>
 
-        <TouchableOpacity
+        <Touchable
           className={`px-4 py-2 rounded-full ${canSave ? 'bg-primary' : 'bg-gray-600'}`}
           onPress={() => onSave(selectedIds)}
           disabled={!canSave}
@@ -58,7 +59,7 @@ export default function FavoritesPickerModal({
           <Text className="text-background font-semibold">
             {saving ? 'Guardando...' : 'Guardar'}
           </Text>
-        </TouchableOpacity>
+        </Touchable>
       </View>
     </BaseModal>
   );

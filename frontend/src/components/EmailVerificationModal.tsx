@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Platform, Text, TextInputProps, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Platform, Text, TextInputProps, View } from 'react-native';
+import Touchable from './Touchable';
 import { CodeField, Cursor, useBlurOnFulfill, useClearByFocusCell } from 'react-native-confirmation-code-field';
 import BaseModal from './BaseModal';
 import { COLORS } from '../constants/Theme';
@@ -131,11 +132,11 @@ export default function EmailVerificationModal({
       </View>
 
       <View className="flex-row justify-between items-center mt-3">
-        <TouchableOpacity onPress={onClose} disabled={submitting} style={{ paddingVertical: 8 }}>
+        <Touchable onPress={onClose} disabled={submitting} style={{ paddingVertical: 8 }}>
           <Text className="text-secondary font-semibold">Cancelar</Text>
-        </TouchableOpacity>
+        </Touchable>
 
-        <TouchableOpacity
+        <Touchable
           onPress={handleResend}
           disabled={secondsLeft > 0 || resending || submitting}
           style={{ paddingVertical: 8 }}
@@ -145,7 +146,7 @@ export default function EmailVerificationModal({
           >
             {resending ? 'Enviando...' : secondsLeft > 0 ? `Reenviar en ${secondsLeft}s` : 'Reenviar código'}
           </Text>
-        </TouchableOpacity>
+        </Touchable>
       </View>
     </BaseModal>
   );

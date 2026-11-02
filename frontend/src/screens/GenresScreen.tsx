@@ -22,28 +22,29 @@ export default function GenresScreen() {
 
   return (
       <AppLayout>
-        {/* Misma cabecera que Canciones y Aprender: título y buscador fijos, fuera del scroll */}
-        <View className="bg-background flex-1 pt-2">
+        {/* Misma estructura que Canciones y Aprender: título fijo y buscador dentro del scroll */}
+        <View className="bg-background flex-1">
 
           <ProfileHeader title="Géneros" />
 
-          {/* Barra de búsqueda */}
-          <View className="bg-background mt-1 mb-4">
-            <SearchBar value={query} onChangeText={setQuery} />
-          </View>
+          <FadeScrollView
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+              contentContainerStyle={{ paddingBottom: 120 }}
+          >
+            {/* Barra de búsqueda */}
+            <View className="bg-background mt-1 mb-4">
+              <SearchBar value={query} onChangeText={setQuery} />
+            </View>
 
-          {loading ? (
-              <View className="flex-1 justify-center items-center">
-                <ActivityIndicator size="large" color="#ffffff" />
-              </View>
-          ) : (
-              <FadeScrollView
-                  showsVerticalScrollIndicator={false}
-                  contentContainerStyle={{ paddingBottom: 120 }}
-              >
+            {loading ? (
+                <View className="justify-center items-center py-20">
+                  <ActivityIndicator size="large" color="#ffffff" />
+                </View>
+            ) : (
                 <VerticalButtonsCarousel data={formattedData} />
-              </FadeScrollView>
-          )}
+            )}
+          </FadeScrollView>
         </View>
       </AppLayout>
   );

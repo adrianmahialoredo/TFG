@@ -25,7 +25,7 @@ export default function HorizontalItemsCarousel({
       size="large"
       showArtist={false}
       onItemPress={onItemPress}
-      borderSquare={true}
+      borderSquare={false}
       emptyMessage={emptyMessage}
     />
   );

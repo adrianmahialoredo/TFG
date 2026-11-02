@@ -36,7 +36,7 @@ export default function BottomTabs() {
           backgroundColor: 'rgba(0, 0, 0, 0.8)',
           elevation: 0,
           borderTopWidth: 0,
-          height: 70,
+          height: 62,
         },
         tabBarActiveTintColor: '#C1853C',
         // Pequeño "pop" del icono y el texto al pulsar (las pantallas ocultas lo sustituyen por null)

@@ -1,4 +1,5 @@
 import React from 'react';
+import { Text } from 'react-native';
 import { render, screen } from '@testing-library/react-native';
 import GenreDescriptionScreen from '../../screens/GenreDescriptionScreen';
 
@@ -55,5 +56,10 @@ describe('GenreDescriptionScreen', () => {
     await render(<GenreDescriptionScreen genreId="g1" />);
     expect(screen.getByText('La historia de este género se está escribiendo...')).toBeTruthy();
     expect(screen.queryByText(/YouTube/)).toBeNull();
+  });
+
+  it('pinta la cabecera dentro del scroll, encima de la descripción', async () => {
+    await render(<GenreDescriptionScreen genreId="g1" header={<Text>Rock</Text>} />);
+    expect(screen.getByText('Rock')).toBeTruthy();
   });
 });

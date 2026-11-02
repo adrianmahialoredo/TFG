@@ -20,6 +20,14 @@ export default function GenreMainScreen() {
     changeTab,
   } = useGenreMain(genreId);
 
+  const titleHeader = genre && (
+      <View className="mb-6">
+        <Text className="text-[24px] font-semibold text-primary text-center">
+          {genre.title}
+        </Text>
+      </View>
+  );
+
   return (
       <AppLayout>
         {/* 1. ESTADO DE CARGA */}
@@ -53,24 +61,19 @@ export default function GenreMainScreen() {
                 ))}
               </View>
 
-              <View className="mb-6">
-                <Text className="text-[24px] font-semibold text-primary text-center">
-                  {genre.title}
-                </Text>
-              </View>
-
-              {/* Vistas Dinámicas pasándole solo el ID */}
+              {/* Vistas Dinámicas pasándole solo el ID. El título del género va dentro del scroll
+                  de cada pestaña (cada una tiene el suyo), no fijo encima */}
               <View className="flex-1">
                 {selectedTab === 'Instrumentos' && (
-                    <GenreInstrumentsScreen genreId={genreId} />
+                    <GenreInstrumentsScreen genreId={genreId} header={titleHeader} />
                 )}
 
                 {selectedTab === 'Canciones' && (
-                    <GenreSongsScreen genreId={genreId} />
+                    <GenreSongsScreen genreId={genreId} header={titleHeader} />
                 )}
 
                 {selectedTab === 'Género' && (
-                    <GenreDescriptionScreen genreId={genreId} />
+                    <GenreDescriptionScreen genreId={genreId} header={titleHeader} />
                 )}
               </View>
             </View>

@@ -1,8 +1,11 @@
 import { useState } from 'react';
-import { View, Text, Image, TouchableOpacity } from 'react-native';
+import { View, Text, Image } from 'react-native';
+import Touchable from './Touchable';
 import { ChevronRight } from 'lucide-react-native';
-import { COLORS, GOLD_CARD_STYLE } from '../constants/Theme';
+import { CARD_FILL_OPACITY, COLORS, GOLD_CARD_STYLE } from '../constants/Theme';
 import InstrumentIcon from './InstrumentIcon';
+import { useDominantColor } from '../hooks/useDominantColor';
+import { withOpacity } from '../utils/imageColor.utils';
 
 type SuggestionCardProps = {
   /** Texto de la cabecera ("Prueba esta combinación", "Explora este género"…). */
@@ -16,20 +19,27 @@ type SuggestionCardProps = {
 
 /**
  * Card de sugerencia del Home (un género-instrumento, un género…): miniatura cuadrada y nombre
- * del item, al estilo de las sugerencias de Spotify. Mismo estilo dorado transparente que la
- * card de los carruseles vacíos.
+ * del item, al estilo de las sugerencias de Spotify. Los estilos van en la View interior.
  *
- * TouchableOpacity sin className (con className NativeWind pisa la opacidad animada);
- * los estilos van en la View interior.
+ * La card toma el color principal de la imagen (el mismo del degradado de fondo de ListScreen)
+ * con la opacidad del fondo de la card dorada de los carruseles vacíos, también en el borde. Sin imagen (los géneros-instrumento,
+ * que llevan el icono dorado del instrumento) o si no se puede calcular, es dorada. Mientras se
+ * calcula, transparente: así no se ve un color y luego otro.
  */
 export default function SuggestionCard({ label, title, imageUrl, onPress }: SuggestionCardProps) {
   const [imageFailed, setImageFailed] = useState(false);
   const showImage = Boolean(imageUrl) && !imageFailed;
+  const color = useDominantColor(imageUrl, COLORS.primary);
+  const cardStyle = {
+    ...GOLD_CARD_STYLE,
+    backgroundColor: color ? withOpacity(color, CARD_FILL_OPACITY) : 'transparent',
+    borderColor: color ? withOpacity(color, CARD_FILL_OPACITY) : 'transparent',
+  };
 
   return (
-    <TouchableOpacity onPress={onPress} activeOpacity={0.7} accessibilityRole="button">
-      <View className="p-4" style={GOLD_CARD_STYLE}>
-        <Text className="text-primary text-base font-semibold mb-3">{label}</Text>
+    <Touchable onPress={onPress} accessibilityRole="button">
+      <View className="p-4" style={cardStyle}>
+        <Text className="text-secondary text-base font-semibold mb-3">{label}</Text>
         <View className="flex-row items-center">
           <View className="w-16 h-16 rounded-lg bg-primary/30 items-center justify-center overflow-hidden">
             {showImage ? (
@@ -44,9 +54,9 @@ export default function SuggestionCard({ label, title, imageUrl, onPress }: Sugg
             )}
           </View>
           <Text className="text-secondary text-lg font-bold ml-4 flex-1" numberOfLines={2}>{title}</Text>
-          <ChevronRight size={24} color={COLORS.primary} />
+          <ChevronRight size={24} color={COLORS.secondary} />
         </View>
       </View>
-    </TouchableOpacity>
+    </Touchable>
   );
 }

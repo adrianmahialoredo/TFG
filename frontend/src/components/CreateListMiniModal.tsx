@@ -1,6 +1,8 @@
 import React from 'react';
-import { Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Text, TextInput, View } from 'react-native';
+import Touchable from './Touchable';
 import BaseModal from './BaseModal';
+import {COLORS} from "../constants/Theme";
 
 type CreateListMiniModalProps = {
   visible: boolean;
@@ -29,14 +31,14 @@ export default function CreateListMiniModal({
 }: CreateListMiniModalProps) {
   return (
     <BaseModal visible={visible} onClose={onClose}>
-      <Text className="text-secondary text-lg font-bold mb-3">{title}</Text>
+      <Text className="text-white text-lg font-bold mb-3">{title}</Text>
 
           <TextInput
             value={name}
             onChangeText={onChangeName}
             placeholder={placeholder}
-            placeholderTextColor="#A3A3A3"
-            className="border border-secondary rounded-xl px-3 py-2 text-secondary"
+            placeholderTextColor= {COLORS.secondary}
+            className="border border-primary rounded-xl px-3 py-2 text-secondary"
             maxLength={100}
             autoFocus
             underlineColorAndroid="transparent"
@@ -46,23 +48,23 @@ export default function CreateListMiniModal({
           {error ? <Text className="text-red-500 text-sm mt-2">{error}</Text> : null}
 
       <View className="flex-row justify-end gap-3 mt-5">
-        <TouchableOpacity
-          className="px-4 py-2 rounded-full border border-secondary"
+        <Touchable
+          className="px-4 py-2 rounded-full border border-primary"
           onPress={onClose}
           disabled={creating}
         >
           <Text className="text-secondary font-semibold">Cancelar</Text>
-        </TouchableOpacity>
+        </Touchable>
 
-        <TouchableOpacity
+        <Touchable
           className={`px-4 py-2 rounded-full ${creating ? 'bg-gray-600' : 'bg-primary'}`}
           onPress={onSubmit}
           disabled={creating}
         >
-          <Text className="text-background font-semibold">
+          <Text className="text-white font-semibold">
             {creating ? 'Guardando...' : submitLabel}
           </Text>
-        </TouchableOpacity>
+        </Touchable>
       </View>
     </BaseModal>
   );

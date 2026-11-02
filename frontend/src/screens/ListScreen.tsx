@@ -1,17 +1,18 @@
 import React from 'react';
-import { TouchableOpacity, View, Text, Image, ActivityIndicator, Modal, Pressable } from "react-native";
+import { View, Text, Image, ActivityIndicator, Modal, Pressable } from "react-native";
+import Touchable from "../components/Touchable";
 import FadeScrollView from "../components/FadeScrollView";
 import {useRoute, RouteProp, useNavigation, NavigationProp, useFocusEffect} from '@react-navigation/native';
 import * as ImagePicker from 'expo-image-picker';
 import { Trash2 } from 'lucide-react-native';
 import AppLayout from "../components/AppLayout";
 import ProfileHeader from "../components/ProfileHeader";
-import ListItem from "../components/ListItem";
+import ListItem, { LIST_ITEM_SCALE } from "../components/ListItem";
 import { COLORS } from "../constants/Theme";
 import { RootStackParamList, ItemSummaryDTO } from '../types';
 import { useItemListDetail } from '../hooks/useItemListDetail';
 import { navigateToItem } from '../utils/navigation.utils';
-import { itemToListItem } from '../utils/mappers.utils';
+import { useItemToListItem } from '../hooks/useItemToListItem';
 import AddButton from '../components/iconbuttons/AddButton';
 import { PhotoOptionsModal } from '../components/PhotoOptionsModal';
 import EditButton from '../components/iconbuttons/EditButton';
@@ -24,6 +25,7 @@ type ListScreenRouteProp = RouteProp<RootStackParamList, 'ListScreen'>;
 
 export default function ListScreen() {
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
+  const toListItem = useItemToListItem();
   const route = useRoute<ListScreenRouteProp>();
   const { itemListId } = route.params;
 
@@ -201,7 +203,7 @@ export default function ListScreen() {
       <AppLayout>
         <GradientBackground color={gradient.color} height={gradient.height} />
         {/* Sin fondo propio: deja ver el degradado */}
-        <View className="flex-1 pt-2" onLayout={gradient.onContainerLayout}>
+        <View className="flex-1" onLayout={gradient.onContainerLayout}>
           {/* Header con botón de volver atrás */}
           <ProfileHeader title="Listas" />
 
@@ -214,29 +216,28 @@ export default function ListScreen() {
               {/* Cabecera con Info de la Lista */}
               <View className="items-center mt-2 mb-8 px-4">
                 {list.imageUrl ? (
-                    <TouchableOpacity onPress={() => setEditingPhoto(true)} activeOpacity={0.85}>
+                    <Touchable onPress={() => setEditingPhoto(true)}>
                       <Image
                           source={{ uri: list.imageUrl }}
                           className="w-40 h-40 rounded-3xl mb-4 shadow-lg"
                           resizeMode="cover"
                       />
-                    </TouchableOpacity>
+                    </Touchable>
                 ) : (
-                    <TouchableOpacity
+                    <Touchable
                       className="w-40 h-40 bg-secondary rounded-3xl mb-4 items-center justify-center"
                       onPress={() => setEditingPhoto(true)}
-                      activeOpacity={0.85}
                     >
                       <Text className="text-primary text-4xl font-bold">
                         {list.name.charAt(0).toUpperCase()}
                       </Text>
-                    </TouchableOpacity>
+                    </Touchable>
                 )}
                 <View className="flex-row items-center gap-2">
-                  <Text className="text-secondary text-2xl font-bold text-center">
+                  <Text className="text-secondary text-xl font-bold text-center">
                     {list.name}
                   </Text>
-                  <EditButton onPress={handleOpenRename} size={18} color={COLORS.secondary} strokeWidth={2} accessibilityLabel="Renombrar lista" />
+                  <EditButton onPress={handleOpenRename} size={12} color={COLORS.secondary} strokeWidth={2} accessibilityLabel="Renombrar lista" />
                 </View>
                 {list.description && (
                     <Text className="text-secondary opacity-60 text-sm text-center mt-1">
@@ -251,8 +252,9 @@ export default function ListScreen() {
                     items.map((item, index) => (
                         <ListItem
                             key={item.id}
-                            item={itemToListItem(item)}
+                            item={toListItem(item)}
                             inverted={index % 2 !== 0}
+                            scale={LIST_ITEM_SCALE}
                             onPress={() => handlePress(item)}
                             onRemove={() => handleRemoveItem(item)}
                         />
@@ -265,39 +267,47 @@ export default function ListScreen() {
                     </View>
                 )}
 
-                {/* Botón de Acción para añadir contenido */}
-                <TouchableOpacity
-                    className="flex-row h-20 bg-secondary rounded-2xl shadow-sm p-4 items-center justify-center gap-3 mt-4"
-                    activeOpacity={0.8}
-                    onPress={() => navigation.navigate('AddItemScreen', { itemListId })}
-                >
-                  <Text className="text-xl font-semibold text-primary">
-                    Añadir a la lista
-                  </Text>
-                  <AddButton size={26} color={COLORS.primary} />
-                </TouchableOpacity>
+                {/* "Añadir a la lista" y "Eliminar lista": el contenedor toma el ancho del más ancho
+                    y los dos se estiran a él, así miden lo mismo */}
+                <View style={{ alignSelf: 'center', marginTop: 16, gap: 6 }}>
+                  {/* Botón de Acción para añadir contenido */}
+                  <Touchable
+                      onPress={() => navigation.navigate('AddItemScreen', { itemListId })}
+                      accessibilityRole="button"
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: 8,
+                        paddingHorizontal: 28,
+                        paddingVertical: 14,
+                        borderRadius: 9999,
+                        backgroundColor: COLORS.secondary,
+                      }}
+                  >
+                    <AddButton size={20} color={COLORS.primary} />
+                    <Text className="text-primary text-base font-semibold">Añadir a la lista</Text>
+                  </Touchable>
 
-                {/* Eliminar la lista (con confirmación). Estilos en línea: con className NativeWind
-                    pisa la opacidad animada del TouchableOpacity */}
-                <TouchableOpacity
-                    onPress={handleDelete}
-                    activeOpacity={0.8}
-                    accessibilityRole="button"
-                    style={{
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      alignSelf: 'center',
-                      gap: 8,
-                      marginTop: 24,
-                      paddingHorizontal: 28,
-                      paddingVertical: 14,
-                      borderRadius: 9999,
-                      backgroundColor: '#dc2626', // red-600, como "Cerrar sesión"
-                    }}
-                >
-                  <Trash2 size={20} color="white" />
-                  <Text className="text-white text-base font-semibold">Eliminar lista</Text>
-                </TouchableOpacity>
+                  {/* Eliminar la lista (con confirmación) */}
+                  <Touchable
+                      onPress={handleDelete}
+                      accessibilityRole="button"
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: 8,
+                        paddingHorizontal: 28,
+                        paddingVertical: 14,
+                        borderRadius: 9999,
+                        backgroundColor: '#dc2626', // red-600, como "Cerrar sesión"
+                      }}
+                  >
+                    <Trash2 size={20} color="white" />
+                    <Text className="text-white text-base font-semibold">Eliminar lista</Text>
+                  </Touchable>
+                </View>
               </View>
             </FadeScrollView>
           </View>

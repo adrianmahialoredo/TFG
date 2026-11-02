@@ -1,8 +1,11 @@
-import React from 'react';
-import { ActivityIndicator, Image, ScrollView, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
+import React, { useEffect, useMemo, useState } from 'react';
+import { ActivityIndicator, Image, ScrollView, Text, TextInput, View, useWindowDimensions } from 'react-native';
+import Touchable from './Touchable';
+import { Search } from 'lucide-react-native';
 import BaseModal from './BaseModal';
 import { COLORS } from '../constants/Theme';
 import { ItemListDTO } from '../types';
+import { normalizeSearchText } from '../utils/search.utils';
 
 /** Ancho máximo de la caja y lado de la portada de cada lista. */
 const MODAL_MAX_WIDTH = 440;
@@ -28,14 +31,15 @@ type ItemListPickerModalProps = {
   isDisabled?: (listId: string) => boolean;
   /** Botones extra junto a "Cerrar". */
   footer?: React.ReactNode;
+  /** Color de los bordes del buscador y de "Cerrar" (dorado en "Añadir a una lista", como "Nueva lista"). */
+  borderColor?: string;
 };
 
 /**
  * Modal con las listas del usuario (portada o inicial y nombre). Lo usan "Añadir a una lista"
  * y "Mis listas" del perfil; cada uno decide qué pasa al pulsar una lista.
  *
- * Botones con estilos en línea: con className NativeWind pisa la opacidad animada del
- * TouchableOpacity.
+ * Tiene un buscador por nombre (sin distinguir mayúsculas ni tildes) que se vacía al cerrarlo.
  */
 export default function ItemListPickerModal({
   visible,
@@ -51,14 +55,50 @@ export default function ItemListPickerModal({
   renderTrailing,
   isDisabled,
   footer,
+  borderColor = COLORS.secondary,
 }: ItemListPickerModalProps) {
   const { height } = useWindowDimensions();
+  const [query, setQuery] = useState('');
+
+  // Cada apertura empieza sin filtro
+  useEffect(() => {
+    if (!visible) setQuery('');
+  }, [visible]);
+
+  const filteredLists = useMemo(() => {
+    const q = normalizeSearchText(query);
+    return q ? lists.filter((list) => normalizeSearchText(list.name).includes(q)) : lists;
+  }, [lists, query]);
 
   return (
     <BaseModal visible={visible} onClose={onClose} maxWidth={MODAL_MAX_WIDTH} fullWidth>
       <Text className="text-secondary text-xl font-bold">{title}</Text>
       {subtitle ? (
         <Text className="text-artistName text-sm mt-1" numberOfLines={1}>{subtitle}</Text>
+      ) : null}
+
+      {lists.length > 0 ? (
+        <View
+          style={{
+            flexDirection: 'row', alignItems: 'center', marginTop: 16,
+            paddingHorizontal: 12, borderRadius: 10, borderWidth: 1, borderColor,
+          }}
+        >
+          <Search size={18} color={COLORS.secondary} />
+          <TextInput
+            value={query}
+            onChangeText={setQuery}
+            placeholder="Buscar lista"
+            placeholderTextColor={COLORS.secondary}
+            accessibilityLabel="Buscar lista por nombre"
+            autoCorrect={false}
+            autoCapitalize="none"
+            returnKeyType="search"
+            underlineColorAndroid="transparent"
+            selectionColor={COLORS.secondary}
+            style={{ flex: 1, marginLeft: 8, paddingVertical: 8, color: COLORS.secondary, fontSize: 16 }}
+          />
+        </View>
       ) : null}
 
       <View style={{ marginTop: 16 }}>
@@ -68,16 +108,21 @@ export default function ItemListPickerModal({
           </View>
         ) : lists.length === 0 ? (
           <Text className="text-secondary opacity-60 text-center py-8">{emptyText}</Text>
+        ) : filteredLists.length === 0 ? (
+          <Text className="text-secondary opacity-60 text-center py-8">Ninguna lista coincide con la búsqueda.</Text>
         ) : (
-          <ScrollView style={{ maxHeight: height * LIST_MAX_HEIGHT_RATIO }} showsVerticalScrollIndicator={false}>
-            {lists.map((list) => {
+          <ScrollView
+            style={{ maxHeight: height * LIST_MAX_HEIGHT_RATIO }}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+          >
+            {filteredLists.map((list) => {
               const listId = list.id.toString();
               return (
-                <TouchableOpacity
+                <Touchable
                   key={listId}
                   onPress={() => onSelect(listId)}
                   disabled={isDisabled?.(listId)}
-                  activeOpacity={0.7}
                   accessibilityRole="button"
                   accessibilityLabel={getAccessibilityLabel(list.name)}
                   style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 8 }}
@@ -106,7 +151,7 @@ export default function ItemListPickerModal({
                     {list.name}
                   </Text>
                   {renderTrailing?.(listId)}
-                </TouchableOpacity>
+                </Touchable>
               );
             })}
           </ScrollView>
@@ -116,15 +161,15 @@ export default function ItemListPickerModal({
       {error ? <Text className="text-red-500 text-sm mt-2">{error}</Text> : null}
 
       <View style={{ flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center', gap: 12, marginTop: 16 }}>
-        <TouchableOpacity
+        <Touchable
           onPress={onClose}
           style={{
             paddingHorizontal: 16, paddingVertical: 8,
-            borderRadius: 9999, borderWidth: 1, borderColor: COLORS.secondary,
+            borderRadius: 9999, borderWidth: 1, borderColor,
           }}
         >
           <Text style={{ color: COLORS.secondary, fontWeight: '600' }}>Cerrar</Text>
-        </TouchableOpacity>
+        </Touchable>
         {footer}
       </View>
     </BaseModal>

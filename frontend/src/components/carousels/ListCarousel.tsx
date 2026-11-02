@@ -1,4 +1,5 @@
-import { FlatList, Image, Text, TouchableOpacity, View } from 'react-native';
+import { FlatList, Image, Text, View } from 'react-native';
+import Touchable from '../Touchable';
 import { Search } from 'lucide-react-native';
 import { COLORS } from '../../constants/Theme';
 import { CarouselItemDTO } from '../../types';
@@ -39,9 +40,8 @@ export default function ListCarousel({ data, onItemPress, onEmptyPress, onSeeAll
       const seeAll = item.type === 'seeAll';
       return (
         <View className="bg-surface rounded-xl" style={{ width: ITEM_SIZE }}>
-          <TouchableOpacity
+          <Touchable
             onPress={seeAll ? onSeeAllPress : onEmptyPress}
-            activeOpacity={0.8}
             accessibilityRole="button"
             accessibilityLabel={seeAll ? 'Ver todas las listas' : 'Crear lista'}
             style={{ width: ITEM_SIZE, height: ITEM_SIZE, borderRadius: 6, alignItems: 'center', justifyContent: 'center' }}
@@ -58,14 +58,14 @@ export default function ListCarousel({ data, onItemPress, onEmptyPress, onSeeAll
             ) : (
               <AddButton size={ADD_ICON_SIZE} color={COLORS.primary} strokeWidth={1.2} />
             )}
-          </TouchableOpacity>
+          </Touchable>
         </View>
       );
     }
 
     return (
       <View className="bg-surface rounded-xl" style={{ width: ITEM_SIZE }}>
-        <TouchableOpacity onPress={() => onItemPress?.(item.value.id)}>
+        <Touchable onPress={() => onItemPress?.(item.value.id)}>
           {item.value.imgUrl ? (
             <Image
               source={{ uri: item.value.imgUrl }}
@@ -83,7 +83,7 @@ export default function ListCarousel({ data, onItemPress, onEmptyPress, onSeeAll
               </Text>
             </View>
           )}
-        </TouchableOpacity>
+        </Touchable>
         <Text
           className="text-songTitle text-center leading-tight"
           style={{ fontSize: 10 }}

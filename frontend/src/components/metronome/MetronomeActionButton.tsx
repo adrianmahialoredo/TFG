@@ -1,4 +1,5 @@
-import {Text, TouchableOpacity} from "react-native";
+import {Text} from "react-native";
+import Touchable from "../Touchable";
 import {COLORS} from "../../constants/Theme";
 
 type MetronomeActionButtonProps = {
@@ -12,16 +13,11 @@ type MetronomeActionButtonProps = {
 
 /**
  * Botón ancho de la parte inferior del metrónomo (TAP TEMPO, Hi-Hat).
- *
- * TouchableOpacity con estilos en línea y sin className a propósito (ver MetronomeTempoButton):
- * con NativeWind 4.1, TouchableOpacity + className se queda "pulsado" y Pressable con estilo
- * en función pierde el estilo.
  */
 export default function MetronomeActionButton({label, onPress, selected = false, large = false}: MetronomeActionButtonProps) {
     return (
-        <TouchableOpacity
+        <Touchable
             onPress={onPress}
-            activeOpacity={0.7}
             style={{
                 width: 320,
                 alignSelf: 'center',
@@ -38,6 +34,6 @@ export default function MetronomeActionButton({label, onPress, selected = false,
             }}>
                 {label}
             </Text>
-        </TouchableOpacity>
+        </Touchable>
     );
 }

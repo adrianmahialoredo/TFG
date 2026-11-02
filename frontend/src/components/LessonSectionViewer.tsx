@@ -1,5 +1,6 @@
 import React from "react";
-import {View, Text, TouchableOpacity, ActivityIndicator, useWindowDimensions} from "react-native";
+import {View, Text, ActivityIndicator, useWindowDimensions} from "react-native";
+import Touchable from "./Touchable";
 import {ChevronLeft, ChevronRight} from "lucide-react-native";
 import RenderHtml from "react-native-render-html";
 import {LessonSectionDTO} from "../types";
@@ -48,23 +49,23 @@ export default function LessonSectionViewer({
       {/* Navegación entre secciones: ‹ i/n › */}
       {sections.length > 1 && (
         <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginBottom: 12 }}>
-          <TouchableOpacity
+          <Touchable
               onPress={goToPrevious}
               disabled={!hasPrevious}
               style={{ padding: 4, opacity: hasPrevious ? 1 : 0 }}
           >
             <ChevronLeft size={18} color={COLORS.primary} />
-          </TouchableOpacity>
+          </Touchable>
           <Text style={{ color: COLORS.secondary, marginHorizontal: 8 }}>
             {sectionIndex + 1}/{sections.length}
           </Text>
-          <TouchableOpacity
+          <Touchable
               onPress={goToNext}
               disabled={!hasNext}
               style={{ padding: 4, opacity: hasNext ? 1 : 0 }}
           >
             <ChevronRight size={18} color={COLORS.primary} />
-          </TouchableOpacity>
+          </Touchable>
         </View>
       )}
 

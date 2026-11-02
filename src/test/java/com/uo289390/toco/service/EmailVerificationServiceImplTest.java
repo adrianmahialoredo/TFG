@@ -67,7 +67,8 @@ class EmailVerificationServiceImplTest {
     @BeforeEach
     void setUp() {
         clock = new MutableClock();
-        service = new EmailVerificationServiceImpl(userRepository, emailService, clock);
+        // Runs the "background" send in the calling thread, so the tests see it already done
+        service = new EmailVerificationServiceImpl(userRepository, emailService, Runnable::run, clock);
     }
 
     /** Requests a code and returns the one that was "emailed". */
@@ -131,13 +132,34 @@ class EmailVerificationServiceImplTest {
     }
 
     @Test
-    void sendCode_sendingFails_canBeRetriedStraightAway() {
+    void sendCode_sendingFails_doesNotThrowAndCanBeRetriedStraightAway() {
         doThrow(new IllegalStateException("SMTP down"))
                 .doNothing()
                 .when(emailService).sendVerificationCode(anyString(), anyString(), anyLong());
 
-        assertThrows(IllegalStateException.class, () -> service.sendCode(EMAIL));
         assertDoesNotThrow(() -> service.sendCode(EMAIL));
+        assertDoesNotThrow(() -> service.sendCode(EMAIL));
+    }
+
+    @Test
+    void sendCode_sendingFails_discardsTheCode() {
+        doThrow(new IllegalStateException("SMTP down"))
+                .when(emailService).sendVerificationCode(anyString(), anyString(), anyLong());
+
+        String code = sendAndCaptureCode();
+
+        assertThrows(IllegalArgumentException.class, () -> service.checkCode(EMAIL, code));
+    }
+
+    @Test
+    void sendCode_answersBeforeTheEmailIsSent() {
+        java.util.List<Runnable> queued = new java.util.ArrayList<>();
+        service = new EmailVerificationServiceImpl(userRepository, emailService, queued::add, clock);
+
+        service.sendCode(EMAIL);
+
+        verifyNoInteractions(emailService);
+        assertEquals(1, queued.size());
     }
 
     @Test

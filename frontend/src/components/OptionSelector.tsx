@@ -1,7 +1,6 @@
-import { View, Text, TouchableOpacity } from 'react-native';
-
-const SELECTED_COLOR = '#ca8a04'; // yellow-600
-const UNSELECTED_COLOR = '#374151'; // gray-700
+import { View, Text } from 'react-native';
+import Touchable from './Touchable';
+import { COLORS } from '../constants/Theme';
 
 type Option<T extends string> = {
   value: T;
@@ -15,31 +14,47 @@ type OptionSelectorProps<T extends string> = {
 };
 
 /**
- * Fila de opciones de selección única (instrumento, dificultad…) con forma de píldora.
- *
- * Usa TouchableOpacity con estilos en línea y sin className: con className NativeWind
- * pisa la opacidad animada y el botón se queda atenuado tras pulsarlo.
+ * Selector de opción única (p.ej. la dificultad) como una sola píldora dividida en secciones,
+ * con los colores de los TopButton: la elegida en dorado con texto blanco y las demás en negro
+ * con texto dorado.
  */
 export default function OptionSelector<T extends string>({ options, selected, onSelect }: OptionSelectorProps<T>) {
   return (
-    <View className="flex-row justify-center flex-wrap mb-2" style={{ gap: 8 }}>
-      {options.map((option) => (
-        <TouchableOpacity
-          key={option.value}
-          onPress={() => onSelect(option.value)}
-          accessibilityRole="button"
-          accessibilityState={{ selected: option.value === selected }}
-          style={{
-            paddingHorizontal: 16,
-            paddingVertical: 4,
-            borderRadius: 9999,
-            marginBottom: 8,
-            backgroundColor: option.value === selected ? SELECTED_COLOR : UNSELECTED_COLOR,
-          }}
-        >
-          <Text className="text-white font-semibold">{option.label}</Text>
-        </TouchableOpacity>
-      ))}
+    <View
+      style={{
+        flexDirection: 'row',
+        alignSelf: 'center',
+        height: 40,
+        marginBottom: 8,
+        borderWidth: 1,
+        borderColor: COLORS.primary,
+        borderRadius: 9999,
+        overflow: 'hidden',
+      }}
+    >
+      {options.map((option, index) => {
+        const isSelected = option.value === selected;
+        return (
+          <Touchable
+            key={option.value}
+            onPress={() => onSelect(option.value)}
+            accessibilityRole="button"
+            accessibilityState={{ selected: isSelected }}
+            style={{
+              justifyContent: 'center',
+              paddingHorizontal: 18,
+              backgroundColor: isSelected ? COLORS.primary : COLORS.background,
+              // Separador dorado entre secciones
+              borderLeftWidth: index > 0 ? 1 : 0,
+              borderLeftColor: COLORS.primary,
+            }}
+          >
+            <Text style={{ fontSize: 14, fontWeight: '600', color: isSelected ? 'white' : COLORS.primary }}>
+              {option.label}
+            </Text>
+          </Touchable>
+        );
+      })}
     </View>
   );
 }

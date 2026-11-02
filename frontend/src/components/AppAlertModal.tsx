@@ -1,5 +1,6 @@
 import React from 'react';
-import { Text, TouchableOpacity, View } from 'react-native';
+import { Text, View } from 'react-native';
+import Touchable from './Touchable';
 import BaseModal from './BaseModal';
 
 export type AppAlertActionStyle = 'default' | 'cancel' | 'destructive';
@@ -45,13 +46,13 @@ export default function AppAlertModal({
 
       <View className="flex-row justify-end gap-3 mt-5">
         {actions.map((action, index) => (
-          <TouchableOpacity
+          <Touchable
             key={`${action.text}-${index}`}
             className={`px-4 py-2 rounded-full ${getButtonClassName(action.style)}`}
             onPress={() => onActionPress(action)}
           >
             <Text className={`font-semibold ${getButtonTextClassName(action.style)}`}>{action.text}</Text>
-          </TouchableOpacity>
+          </Touchable>
         ))}
       </View>
     </BaseModal>

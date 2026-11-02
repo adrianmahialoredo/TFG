@@ -24,8 +24,16 @@ describe('OptionSelector', () => {
     const guitar = screen.getByRole('button', { name: 'Guitarra' });
     expect(piano).toBeSelected();
     expect(guitar).not.toBeSelected();
-    expect(StyleSheet.flatten(piano.props.style).backgroundColor).toBe('#ca8a04');
-    expect(StyleSheet.flatten(guitar.props.style).backgroundColor).toBe('#374151');
+    // Dorado la elegida, negro las demás (como los TopButton)
+    expect(StyleSheet.flatten(piano.props.style).backgroundColor).toBe('#C1853C');
+    expect(StyleSheet.flatten(guitar.props.style).backgroundColor).toBe('#000000');
+  });
+
+  it('separa las secciones con una línea salvo la primera', async () => {
+    await render(<OptionSelector options={options} selected="piano" onSelect={jest.fn()} />);
+    const [first, second] = screen.getAllByRole('button');
+    expect(StyleSheet.flatten(first.props.style).borderLeftWidth).toBe(0);
+    expect(StyleSheet.flatten(second.props.style).borderLeftWidth).toBe(1);
   });
 
   it('llama a onSelect con el valor de la opción pulsada', async () => {

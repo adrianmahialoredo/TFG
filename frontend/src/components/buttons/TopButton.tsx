@@ -1,4 +1,5 @@
-import { TouchableOpacity, Text, StyleSheet } from 'react-native';
+import { Text, StyleSheet } from 'react-native';
+import Touchable from '../Touchable';
 
 const styles = StyleSheet.create({
   buttonNormal: {
@@ -34,7 +35,7 @@ interface TopButtonProps {
 export default function TopButton({ name, isSelected, onPress }: TopButtonProps) {
 
   return (
-    <TouchableOpacity 
+    <Touchable 
       style={[styles.baseButton, isSelected ? styles.buttonPressed : styles.buttonNormal]}
       onPress={onPress}
       activeOpacity={1}
@@ -45,6 +46,6 @@ export default function TopButton({ name, isSelected, onPress }: TopButtonProps)
       >
         {name}
       </Text>
-    </TouchableOpacity>
+    </Touchable>
   );
 };

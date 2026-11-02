@@ -1,4 +1,5 @@
-import { Image, View, Text, FlatList, TouchableOpacity } from 'react-native';
+import { Image, View, Text, FlatList } from 'react-native';
+import Touchable from '../Touchable';
 import React, { useMemo } from 'react';
 import { useNavigation, NavigationProp } from '@react-navigation/native';
 import { CarouselItemDTO, RootStackParamList } from '../../types';
@@ -82,7 +83,7 @@ export default function GenericCarousel({
       className="bg-surface rounded-xl"
       style={{ width: config.containerWidth }}
     >
-      <TouchableOpacity onPress={() => handleItemPress(item)}>
+      <Touchable onPress={() => handleItemPress(item)}>
         <Image
           source={{ uri: item.imgUrl }}
           className="mb-1"
@@ -93,7 +94,7 @@ export default function GenericCarousel({
           }}
           resizeMode="cover"
         />
-      </TouchableOpacity>
+      </Touchable>
       <Text
         className="text-songTitle text-center leading-tight"
         style={{ fontSize: config.fontSize }}
@@ -128,8 +129,8 @@ export default function GenericCarousel({
   }
 
   return (
-    <View className="my-4">
-      <Text className="text-2xl font-semibold text-secondary mb-6">{title}</Text>
+    <View className="">
+      <Text className="text-2xl font-semibold text-secondary mb-3">{title}</Text>
       <FlatList
         data={data}
         keyExtractor={(item) => item.id}

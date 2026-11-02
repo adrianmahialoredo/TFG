@@ -19,12 +19,12 @@ const data: CarouselItemDTO[] = [
 const images = () => screen.container.queryAll((n) => n.type === 'Image');
 
 describe('HorizontalItemsCarousel', () => {
-  it('usa el tamaño grande, bordes rectos y sin artista', async () => {
+  it('usa el tamaño grande, bordes redondeados y sin artista', async () => {
     await render(<HorizontalItemsCarousel title="Para ti" data={data} />);
     expect(screen.getByText('Para ti')).toBeTruthy();
     expect(screen.queryByText('Artista A')).toBeNull();
     expect(StyleSheet.flatten(images()[0].props.style)).toEqual(
-      expect.objectContaining({ width: 100, height: 100, borderRadius: 0 })
+      expect.objectContaining({ width: 100, height: 100, borderRadius: 6 })
     );
   });
 

@@ -1,5 +1,6 @@
 import {memo} from "react";
-import {Text, TouchableOpacity, View} from "react-native";
+import {Text, View} from "react-native";
+import Touchable from "../Touchable";
 import {COLORS} from "../../constants/Theme";
 
 type TunerStringSelectorProps = {
@@ -15,9 +16,6 @@ type TunerStringSelectorProps = {
 /**
  * Un botón por cuerda de la afinación (E2 A2 D3...). La cuerda que se está afinando va rellena
  * en dorado; pulsar una la fija y pulsarla otra vez vuelve a la detección automática.
- *
- * TouchableOpacity con estilos en línea y sin className a propósito: con NativeWind,
- * TouchableOpacity + className se queda "pulsado" y Pressable con estilo en función pierde el estilo.
  */
 function TunerStringSelector({notes, activeIndex, lockedIndex, onSelect}: TunerStringSelectorProps) {
     return (
@@ -25,10 +23,9 @@ function TunerStringSelector({notes, activeIndex, lockedIndex, onSelect}: TunerS
             {notes.map((note, index) => {
                 const active = index === activeIndex;
                 return (
-                    <TouchableOpacity
+                    <Touchable
                         key={`${index}-${note}`}
                         onPress={() => onSelect(index)}
-                        activeOpacity={0.7}
                         accessibilityRole="button"
                         accessibilityState={{selected: index === lockedIndex}}
                         accessibilityLabel={`Cuerda ${index + 1}: ${note}`}
@@ -46,7 +43,7 @@ function TunerStringSelector({notes, activeIndex, lockedIndex, onSelect}: TunerS
                         <Text style={{fontSize: 20, color: active ? COLORS.secondary : COLORS.primary}}>
                             {note}
                         </Text>
-                    </TouchableOpacity>
+                    </Touchable>
                 );
             })}
         </View>

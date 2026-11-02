@@ -19,12 +19,14 @@ function chunkArray<T>(arr: T[], size: number): T[][] {
 
 interface GenreInstrumentsProps {
   genreId: string;
+  /** Cabecera (el título del género) que va dentro del scroll, encima del contenido. */
+  header?: React.ReactNode;
 }
 
 // Ajustar este valor para controlar el gap horizontal entre los 2 botones por fila.
 const TOOL_BUTTON_GAP = 24;
 
-export default function GenreInstrumentsScreen({ genreId }: GenreInstrumentsProps) {
+export default function GenreInstrumentsScreen({ genreId, header }: GenreInstrumentsProps) {
 
   // Nivel 6: El hook se encarga de la lógica de selección y filtrado
   const {
@@ -37,22 +39,28 @@ export default function GenreInstrumentsScreen({ genreId }: GenreInstrumentsProp
   // SI HAY UNO SELECCIONADO: Mostramos sus lecciones con el panel lateral (EdgePanel)
   if (selectedInstrumentGenre) {
     return (
-        <InstrumentGenreLessonScreen
-            instrumentGenreId={selectedInstrumentGenre.id}
-            instrumentName={selectedInstrumentGenre.title ?? "Instrumento"}
-            onBack={unselectInstrument}
-        />
+        <>
+          {header}
+          <InstrumentGenreLessonScreen
+              instrumentGenreId={selectedInstrumentGenre.id}
+              instrumentName={selectedInstrumentGenre.title ?? "Instrumento"}
+              onBack={unselectInstrument}
+          />
+        </>
     );
   }
 
   // SI NO HAY DATOS
   if (instrumentGenres.length === 0) {
     return (
-        <View className="flex-1 justify-center items-center p-10">
-          <Text className="text-secondary text-center font-roboto">
-            No hay instrumentos configurados para este género.
-          </Text>
-        </View>
+        <>
+          {header}
+          <View className="flex-1 justify-center items-center p-10">
+            <Text className="text-secondary text-center font-roboto">
+              No hay instrumentos configurados para este género.
+            </Text>
+          </View>
+        </>
     );
   }
 
@@ -61,6 +69,8 @@ export default function GenreInstrumentsScreen({ genreId }: GenreInstrumentsProp
           className="bg-background"
           contentContainerStyle={{ paddingBottom: 100, paddingTop: 8 }}
       >
+        {header}
+
         {/* Listado de Instrumentos del Género */}
         <View className="px-4 mb-8">
           {chunkArray(instrumentGenres, 2).map((pair, rowIndex) => (

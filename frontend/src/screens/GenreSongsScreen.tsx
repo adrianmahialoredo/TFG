@@ -6,9 +6,11 @@ import { useGenreSongs } from '../hooks/useGenreSongs';
 
 interface GenreSongsProps {
   genreId: string;
+  /** Cabecera (el título del género) que va dentro del scroll, encima del contenido. */
+  header?: React.ReactNode;
 }
 
-export default function GenreSongsScreen({ genreId }: GenreSongsProps) {
+export default function GenreSongsScreen({ genreId, header }: GenreSongsProps) {
   const { populars, classics, news, loading, error } = useGenreSongs(genreId);
 
   // Filtramos categorías vacías para no ensuciar la UI
@@ -20,17 +22,23 @@ export default function GenreSongsScreen({ genreId }: GenreSongsProps) {
 
   if (loading) {
     return (
-        <View className="flex-1 justify-center items-center py-20">
-          <ActivityIndicator size="large" color="#ffffff" />
-        </View>
+        <>
+          {header}
+          <View className="flex-1 justify-center items-center py-20">
+            <ActivityIndicator size="large" color="#ffffff" />
+          </View>
+        </>
     );
   }
 
   if (error) {
     return (
-        <View className="flex-1 justify-center items-center py-20 px-6">
-          <Text className="text-red-500 text-center font-roboto">{error}</Text>
-        </View>
+        <>
+          {header}
+          <View className="flex-1 justify-center items-center py-20 px-6">
+            <Text className="text-red-500 text-center font-roboto">{error}</Text>
+          </View>
+        </>
     );
   }
 
@@ -40,6 +48,8 @@ export default function GenreSongsScreen({ genreId }: GenreSongsProps) {
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{ paddingBottom: 120 }}
       >
+        {header}
+
         {categories.map((category) => (
             <View key={category.title} className="mb-6">
               <SongsCarousel

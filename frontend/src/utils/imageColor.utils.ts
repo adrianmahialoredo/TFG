@@ -170,6 +170,12 @@ export const hexToRgb = (hex: string): Rgb | null => {
   };
 };
 
+/** `rgba(...)` de un color `#rrggbb` con la opacidad dada; el color tal cual si no es hexadecimal. */
+export const withOpacity = (hex: string, opacity: number): string => {
+  const rgb = hexToRgb(hex);
+  return rgb ? `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${opacity})` : hex;
+};
+
 /** Opacidad del color arriba del todo del degradado de fondo: por debajo de 1 para que no compita con la imagen. */
 export const GRADIENT_TOP_OPACITY = 0.85;
 

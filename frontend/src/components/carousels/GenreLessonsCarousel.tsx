@@ -1,8 +1,16 @@
-import { Image, View, Text, FlatList, TouchableOpacity } from 'react-native';
-import React from 'react';
+import { Image, View, Text, FlatList, useWindowDimensions } from 'react-native';
+import Touchable from '../Touchable';
+import React, { useState } from 'react';
 import { useNavigation, NavigationProp } from "@react-navigation/native";
 import {LessonDTO, RootStackParamList} from "../../types";
 import {useRecommendedLessonsByGenre} from "../../hooks/useRecommendedLessonsByGenre";
+
+/** Lecciones por página: el carrusel avanza de PAGE_SIZE en PAGE_SIZE. */
+const PAGE_SIZE = 4;
+const GAP = 18;
+const SIDE_PADDING = 16;
+/** Proporción alto/ancho de la portada (la de antes: 51x93). */
+const IMAGE_RATIO = 93 / 51;
 
 type CarouselProps = {
     title: string;
@@ -13,23 +21,26 @@ export default function GenreLessonsCarousel({ title, genreId }: CarouselProps) 
     // Lecciones recomendadas del género (endpoint de recomendaciones)
     const { lessons } = useRecommendedLessonsByGenre(genreId);
     const navigation = useNavigation<NavigationProp<RootStackParamList>>();
+    // Ancho del carrusel (hasta medirlo, el de la pantalla): reparte PAGE_SIZE lecciones en él
+    const { width: windowWidth } = useWindowDimensions();
+    const [width, setWidth] = useState(windowWidth);
+    const itemWidth = (width - SIDE_PADDING * 2 - GAP * (PAGE_SIZE - 1)) / PAGE_SIZE;
 
     // Si no hay lecciones para este género, no renderizamos el carrusel
     if (lessons.length === 0) return null;
 
     const renderItem = ({ item }: { item: LessonDTO }) => (
-        <View className="w-[51px]">
-            <TouchableOpacity
-                activeOpacity={0.7}
+        <View style={{ width: itemWidth }}>
+            <Touchable
                 onPress={() => navigation.navigate('LessonScreen', { lessonId: item.id })}
             >
                 <Image
                     source={{ uri: item.imageUrl }} // Usamos imageUrl del DTO
-                    className="w-[51px] h-[93px] mb-1"
-                    style={{ borderRadius: 6 }}
+                    className="mb-1"
+                    style={{ width: itemWidth, height: itemWidth * IMAGE_RATIO, borderRadius: 6 }}
                     resizeMode="cover"
                 />
-            </TouchableOpacity>
+            </Touchable>
             <Text
                 className="text-white text-center text-[10px] leading-tight font-roboto"
                 numberOfLines={2}
@@ -41,7 +52,7 @@ export default function GenreLessonsCarousel({ title, genreId }: CarouselProps) 
     );
 
     return (
-        <View className="my-2">
+        <View className="my-2" onLayout={(e) => setWidth(e.nativeEvent.layout.width)}>
             <Text className="text-xl font-semibold text-secondary mb-4 text-center w-full">{title}</Text>
             <FlatList
                 data={lessons}
@@ -49,9 +60,10 @@ export default function GenreLessonsCarousel({ title, genreId }: CarouselProps) 
                 renderItem={renderItem}
                 horizontal
                 showsHorizontalScrollIndicator={false}
-                ItemSeparatorComponent={() => <View style={{ width: 18 }} />}
-                contentContainerStyle={{ paddingHorizontal: 16 }} // Mejor espaciado lateral
-                snapToAlignment="start"
+                ItemSeparatorComponent={() => <View style={{ width: GAP }} />}
+                contentContainerStyle={{ paddingHorizontal: SIDE_PADDING }}
+                // Avanza una página entera: las siguientes PAGE_SIZE lecciones ocupan el sitio de las anteriores
+                snapToInterval={(itemWidth + GAP) * PAGE_SIZE}
                 decelerationRate="fast"
             />
         </View>

@@ -1,5 +1,6 @@
-import { render, screen, fireEvent } from '@testing-library/react-native';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react-native';
 import SuggestionCard from '@/components/SuggestionCard';
+import * as imageColorRepository from '@/repositories/imageColor.repository';
 
 jest.setTimeout(30000);
 
@@ -16,7 +17,19 @@ jest.mock('lucide-react-native', () => {
   };
 });
 
+jest.mock('@/repositories/imageColor.repository', () => ({ getDominantColor: jest.fn() }));
+const mockedColor = imageColorRepository.getDominantColor as jest.Mock;
+
 const images = () => screen.container.queryAll((n) => n.type === 'Image');
+/** Estilo de la View de la card (la que lleva el borde). */
+const cardStyle = () =>
+  screen.container.queryAll((n) => n.type === 'View' && [n.props.style].flat().some((s: any) => s?.borderWidth === 1))[0]
+    .props.style;
+
+beforeEach(() => {
+  mockedColor.mockReset();
+  mockedColor.mockResolvedValue(null);
+});
 
 describe('SuggestionCard', () => {
   it('muestra la cabecera, el título y la imagen', async () => {
@@ -47,5 +60,29 @@ describe('SuggestionCard', () => {
     await render(<SuggestionCard label="Explora" title="Rock" onPress={onPress} />);
     await fireEvent.press(screen.getByRole('button'));
     expect(onPress).toHaveBeenCalledTimes(1);
+  });
+
+  it('toma el color principal de la imagen, con la opacidad del fondo también en el borde', async () => {
+    mockedColor.mockResolvedValue('#336699');
+    await render(<SuggestionCard label="Explora este género" title="Jazz" imageUrl="http://img/jazz.png" onPress={jest.fn()} />);
+    await waitFor(() => expect(cardStyle()).toEqual(expect.objectContaining({
+      backgroundColor: 'rgba(51, 102, 153, 0.4)',
+      borderColor: 'rgba(51, 102, 153, 0.4)',
+    })));
+    expect(mockedColor).toHaveBeenCalledWith('http://img/jazz.png');
+  });
+
+  it('sin imagen (género-instrumento) es dorada', async () => {
+    await render(<SuggestionCard label="Prueba esta combinación" title="Guitarra Rock" onPress={jest.fn()} />);
+    expect(cardStyle()).toEqual(expect.objectContaining({
+      backgroundColor: 'rgba(193, 133, 60, 0.4)',
+      borderColor: 'rgba(193, 133, 60, 0.4)',
+    }));
+    expect(mockedColor).not.toHaveBeenCalled();
+  });
+
+  it('si no se puede calcular el color de la imagen es dorada', async () => {
+    await render(<SuggestionCard label="Explora" title="Rock" imageUrl="http://img/rock.png" onPress={jest.fn()} />);
+    await waitFor(() => expect(cardStyle().backgroundColor).toBe('rgba(193, 133, 60, 0.4)'));
   });
 });

@@ -136,24 +136,57 @@ const getItemTypeLabel = (item: ItemSummaryDTO): string => {
   }
 };
 
+/** Géneros e instrumentos por id (sus Stores): dan nombre a lo que precede al tipo en las lecciones. */
+export interface ItemNameLookup {
+  genres: Record<string, GenreDTO>;
+  instruments: Record<string, InstrumentDTO>;
+}
+
 /**
- * Subtítulo de un item polimórfico: "Artista · Tipo" (el artista solo en canciones que lo tengan).
- * @param item Cualquier item (Song, Lesson, Genre, InstrumentGenre)
+ * Lo que va antes del tipo en el subtítulo: el artista en canciones y el instrumento (o si no,
+ * el género) en lecciones.
  */
-export const getItemSubtitle = (item: ItemSummaryDTO): string =>
-  [item.type === ItemType.SONG ? item.artist : null, getItemTypeLabel(item)]
+const getItemContext = (item: ItemSummaryDTO, names?: ItemNameLookup): string | null | undefined => {
+  switch (item.type) {
+    case ItemType.SONG:
+      return item.artist;
+    case ItemType.LESSON: {
+      const instrumentId = item.instrumentIds?.[0];
+      const genreId = item.genreIds?.[0];
+      return (instrumentId != null ? names?.instruments[String(instrumentId)]?.name : null)
+        ?? (genreId != null ? names?.genres[String(genreId)]?.title : null);
+    }
+    default:
+      return null;
+  }
+};
+
+/**
+ * Subtítulo de un item polimórfico: "Contexto · Tipo" (artista en canciones, instrumento o
+ * género en lecciones; si no se conoce, solo el tipo).
+ * @param item Cualquier item (Song, Lesson, Genre, InstrumentGenre)
+ * @param names Géneros e instrumentos para nombrar los de las lecciones
+ */
+export const getItemSubtitle = (item: ItemSummaryDTO, names?: ItemNameLookup): string =>
+  [getItemContext(item, names), getItemTypeLabel(item)]
     .filter(Boolean)
     .join(' · ');
 
 /**
  * Mapea un ItemSummaryDTO a las props que esperan los componentes ListItem y AddListItem.
  * @param item Cualquier item polimórfico
- * @returns Objeto con { id, title, description, imageUrl, info } (info: título y subtítulo)
+ * @param names Géneros e instrumentos para el subtítulo de las lecciones
+ * @returns Objeto con { id, title, description, imageUrl, info } (info: título y subtítulo; en
+ * los géneros, en una sola línea "Título · Género")
  */
-export const itemToListItem = (item: ItemSummaryDTO) => ({
-  id: item.id,
-  title: item.title,
-  description: getItemSubtitle(item),
-  imageUrl: item.imageUrl,
-  info: `${item.title}\n${getItemSubtitle(item)}`,
-});
+export const itemToListItem = (item: ItemSummaryDTO, names?: ItemNameLookup) => {
+  const subtitle = getItemSubtitle(item, names);
+  return {
+    id: item.id,
+    title: item.title,
+    description: subtitle,
+    imageUrl: item.imageUrl,
+    /** @TODO mover la lógica de cálculo y propagación del resumen del item al toString del backend, mandando el campo en el DTO y que info serialzie ese campo */
+    info: item.type === ItemType.GENRE ? `${item.title} · ${subtitle}` : `${item.title}\n${subtitle}`,
+  };
+};

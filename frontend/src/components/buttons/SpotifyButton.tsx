@@ -1,4 +1,5 @@
-import { TouchableOpacity, Text, Image } from "react-native";
+import { Text, Image } from "react-native";
+import Touchable from "../Touchable";
 import { useSpotifyConnect } from "../../hooks/useSpotifyConnect";
 import { useAppAlert } from "../../context/AlertModalContext";
 
@@ -18,7 +19,7 @@ export const SpotifyButton = () => {
     };
 
     return (
-        <TouchableOpacity
+        <Touchable
             className="bg-spotify px-7 py-4 rounded-full self-center flex-row items-center"
             onPress={handleSpotifyLogin}
             disabled={connecting}
@@ -27,6 +28,6 @@ export const SpotifyButton = () => {
             <Text className="text-secondary text-lg font-bold">
                 Conectar con Spotify
             </Text>
-        </TouchableOpacity>
+        </Touchable>
     );
 };

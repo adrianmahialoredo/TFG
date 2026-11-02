@@ -131,11 +131,16 @@ describe('géneros e instrumentos a carrusel', () => {
 });
 
 describe('getItemSubtitle', () => {
+  const names = {
+    genres: { '7': { id: '7', title: 'Rock' } },
+    instruments: { '3': { id: '3', name: 'Guitarra' } },
+  } as any;
+
   it.each([
     [ItemType.LESSON, 'Lección'],
     [ItemType.GENRE, 'Género'],
     [ItemType.INSTRUMENT_GENRE, 'Instrumento'],
-  ])('para %s devuelve "%s"', (type, label) => {
+  ])('para %s sin contexto devuelve "%s"', (type, label) => {
     expect(getItemSubtitle(summary({ type, artist: 'Ignorado' }))).toBe(label);
   });
 
@@ -145,6 +150,21 @@ describe('getItemSubtitle', () => {
 
   it('en canciones sin artista solo muestra el tipo', () => {
     expect(getItemSubtitle(summary({ artist: null }))).toBe('Canción');
+  });
+
+  it('en lecciones antepone el instrumento', () => {
+    const lesson = summary({ type: ItemType.LESSON, genreIds: ['7'], instrumentIds: ['3'] });
+    expect(getItemSubtitle(lesson, names)).toBe('Guitarra · Lección');
+  });
+
+  it('en lecciones sin instrumento antepone el género', () => {
+    const lesson = summary({ type: ItemType.LESSON, genreIds: ['7'], instrumentIds: [] });
+    expect(getItemSubtitle(lesson, names)).toBe('Rock · Lección');
+  });
+
+  it('en lecciones con ids que no están en las Stores solo muestra el tipo', () => {
+    const lesson = summary({ type: ItemType.LESSON, genreIds: ['99'], instrumentIds: ['98'] });
+    expect(getItemSubtitle(lesson, names)).toBe('Lección');
   });
 
   it('con un tipo desconocido devuelve cadena vacía', () => {
@@ -161,5 +181,9 @@ describe('itemToListItem', () => {
       imageUrl: 'img.png',
       info: 'Título\nQueen · Canción',
     });
+  });
+
+  it('en géneros pone título y tipo en una sola línea', () => {
+    expect(itemToListItem(summary({ type: ItemType.GENRE, title: 'Rock' })).info).toBe('Rock · Género');
   });
 });

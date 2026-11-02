@@ -6,7 +6,10 @@ jest.setTimeout(30000);
 jest.mock('lucide-react-native', () => {
   const { jsx: mockJsx } = require('react/jsx-runtime');
   const { View } = require('react-native');
-  return { Check: (props: any) => mockJsx(View, { testID: 'icon-Check', ...props }) };
+  return {
+    Check: (props: any) => mockJsx(View, { testID: 'icon-Check', ...props }),
+    Search: (props: any) => mockJsx(View, { testID: 'icon-Search', ...props }),
+  };
 });
 
 let mockState: any;
@@ -74,6 +77,30 @@ describe('AddToListModal', () => {
     });
     expect(onClose).not.toHaveBeenCalled();
     expect(screen.getByText('No se pudo añadir a la lista')).toBeTruthy();
+  });
+
+  it('el buscador filtra las listas por nombre sin distinguir mayúsculas ni tildes', async () => {
+    mockState.lists.push({ id: 'L3', name: 'Canciones fáciles', itemIds: [] });
+    await render(<AddToListModal item={item} onClose={jest.fn()} />);
+    await fireEvent.changeText(screen.getByLabelText('Buscar lista por nombre'), 'FACIL');
+    expect(screen.getByText('Canciones fáciles')).toBeTruthy();
+    expect(screen.queryByText('Rock')).toBeNull();
+    expect(screen.queryByText('blues')).toBeNull();
+  });
+
+  it('si ninguna lista coincide con la búsqueda lo dice', async () => {
+    await render(<AddToListModal item={item} onClose={jest.fn()} />);
+    await fireEvent.changeText(screen.getByLabelText('Buscar lista por nombre'), 'jazz');
+    expect(screen.getByText('Ninguna lista coincide con la búsqueda.')).toBeTruthy();
+  });
+
+  it('la búsqueda se vacía al cerrar y volver a abrir el modal', async () => {
+    const { rerender } = await render(<AddToListModal item={item} onClose={jest.fn()} />);
+    await fireEvent.changeText(screen.getByLabelText('Buscar lista por nombre'), 'jazz');
+    await rerender(<AddToListModal item={null} onClose={jest.fn()} />);
+    await rerender(<AddToListModal item={item} onClose={jest.fn()} />);
+    expect(screen.getByLabelText('Buscar lista por nombre').props.value).toBe('');
+    expect(screen.getByText('Rock')).toBeTruthy();
   });
 
   it('sin listas avisa de que se crean desde el perfil', async () => {

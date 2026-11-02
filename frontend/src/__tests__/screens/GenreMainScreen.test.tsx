@@ -25,15 +25,18 @@ jest.mock('../../components/ProfileHeader', () => {
 });
 jest.mock('../../screens/GenreInstrumentsScreen', () => {
   const { Text } = require('react-native');
-  return ({ genreId }: any) => <Text>{`Vista instrumentos ${genreId}`}</Text>;
+  // Pinta la cabecera que recibe (el título del género va dentro de su scroll)
+  return ({ genreId, header }: any) => <>{header}<Text>{`Vista instrumentos ${genreId}`}</Text></>;
 });
 jest.mock('../../screens/GenreSongsScreen', () => {
   const { Text } = require('react-native');
-  return ({ genreId }: any) => <Text>{`Vista canciones ${genreId}`}</Text>;
+  // Pinta la cabecera que recibe (el título del género va dentro de su scroll)
+  return ({ genreId, header }: any) => <>{header}<Text>{`Vista canciones ${genreId}`}</Text></>;
 });
 jest.mock('../../screens/GenreDescriptionScreen', () => {
   const { Text } = require('react-native');
-  return ({ genreId }: any) => <Text>{`Vista descripción ${genreId}`}</Text>;
+  // Pinta la cabecera que recibe (el título del género va dentro de su scroll)
+  return ({ genreId, header }: any) => <>{header}<Text>{`Vista descripción ${genreId}`}</Text></>;
 });
 
 describe('GenreMainScreen', () => {

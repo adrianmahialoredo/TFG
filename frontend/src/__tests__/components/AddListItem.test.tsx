@@ -44,4 +44,11 @@ describe('AddListItem', () => {
     await rerender(<AddListItem item={item} onPress={jest.fn()} inverted />);
     expect(screen.getByTestId('icon-Plus').props.color).toBe(COLORS.secondary);
   });
+
+  it('con scale reduce la imagen, el texto y el botón en la misma proporción', async () => {
+    await render(<AddListItem item={item} onPress={jest.fn()} scale={0.5} />);
+    const image = screen.container.queryAll((n) => n.type === 'Image')[0];
+    expect(image.props.style).toEqual(expect.objectContaining({ width: 48, height: 48 }));
+    expect(screen.getByText('Canción\nArtista · Canción').props.style).toEqual(expect.objectContaining({ fontSize: 7, lineHeight: 12 }));
+  });
 });

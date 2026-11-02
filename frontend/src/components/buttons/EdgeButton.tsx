@@ -1,4 +1,5 @@
-import { TouchableOpacity, Text, StyleSheet } from 'react-native';
+import { Text, StyleSheet } from 'react-native';
+import Touchable from '../Touchable';
 
 const styles = StyleSheet.create({
   buttonNormal: {
@@ -24,7 +25,7 @@ interface TopButtonProps {
 export default function EdgeButton({ name, isSelected, isTopEdge, isBottomEdge, onPress }: TopButtonProps) {
 
   return (
-    <TouchableOpacity 
+    <Touchable 
       className={`h-11 px-3 border justify-center 
         ${isTopEdge ? 'rounded-t-lg' : ''} 
         ${isBottomEdge ? 'rounded-b-lg' : ''}`
@@ -40,6 +41,6 @@ export default function EdgeButton({ name, isSelected, isTopEdge, isBottomEdge, 
       >
         {name}
       </Text>
-    </TouchableOpacity>
+    </Touchable>
   );
 };

@@ -1,5 +1,6 @@
 import React, {forwardRef, useImperativeHandle, useRef} from "react";
-import {StyleSheet, TouchableOpacity, View} from "react-native";
+import {StyleSheet, View} from "react-native";
+import Touchable from "../Touchable";
 import Animated, {Easing, useAnimatedStyle, useSharedValue, withSequence, withTiming} from "react-native-reanimated";
 import {Play, Square} from "lucide-react-native";
 import {COLORS} from "../../constants/Theme";
@@ -110,10 +111,8 @@ const MetronomePulse = forwardRef<MetronomePulseHandle, MetronomePulseProps>(fun
             {[...Array(RIPPLE_COUNT).keys()].map((index) => (
                 <Ripple key={index} ref={(ripple) => { rippleRefs.current[index] = ripple; }} />
             ))}
-            {/* TouchableOpacity sin className: con Pressable + style en función el botón se quedaba sin estilo (invisible) */}
-            <TouchableOpacity
+            <Touchable
                 onPress={onToggle}
-                activeOpacity={0.8}
                 accessibilityRole="button"
                 accessibilityLabel={isPlaying ? 'Parar metrónomo' : 'Iniciar metrónomo'}
                 style={[styles.dot, styles.center]}
@@ -121,7 +120,7 @@ const MetronomePulse = forwardRef<MetronomePulseHandle, MetronomePulseProps>(fun
                 {isPlaying
                     ? <Square size={34} color={COLORS.background} fill={COLORS.background} />
                     : <Play size={40} color={COLORS.background} fill={COLORS.background} style={{marginLeft: 6}} />}
-            </TouchableOpacity>
+            </Touchable>
         </View>
     );
 });

@@ -1,4 +1,5 @@
-import { Image, Text, TextInput, TouchableOpacity, View, ActivityIndicator } from "react-native";
+import { Image, Text, TextInput, View, ActivityIndicator } from "react-native";
+import Touchable from "../components/Touchable";
 import AppLayout from "../components/AppLayout";
 import { UserRound, Lock } from "lucide-react-native";
 import { COLORS } from "../constants/Theme";
@@ -57,16 +58,16 @@ export default function LoginScreen() {
 
   return (
     <AppLayout backgroundColor="bg-primary">
-      <View className="items-center mt-24 mb-10">
+      <View className="items-center mt-16 mb-20">
         <Image
           source={{ uri: 'https://storage.googleapis.com/pr-newsroom-wp/1/2023/05/Spotify_Primary_Logo_RGB_White.png' }}
           className="h-32 w-32 mb-7"
         />
-        <Text className="text-4xl font-bold text-secondary mb-4">Bienvenido</Text>
-        <Text className="text-2xl font-bold text-secondary">Empieza a aprender música!</Text>
+        <Text className="text-4xl font-bold text-secondary mb-4">Bienvenido a Toco</Text>
+        <Text className="text-xl font-bold text-secondary">¡Empieza a aprender música!</Text>
       </View>
 
-      <View className="relative mb-4">
+      <View className="relative mb-2">
         <TextInput
           value={identifier}
           onChangeText={setIdentifier}
@@ -108,8 +109,8 @@ export default function LoginScreen() {
         </View>
       </View>
 
-      <View className="flex-column justify-center gap-4 mt-4">
-        <TouchableOpacity
+      <View className="flex-column justify-center gap-3 mt-4">
+        <Touchable
           className="bg-secondary px-6 py-3 rounded-lg w-full disabled:opacity-50"
           onPress={handleLogin}
           disabled={loading}
@@ -119,14 +120,14 @@ export default function LoginScreen() {
           ) : (
             <Text className="text-primary text-lg self-center">Iniciar Sesión</Text>
           )}
-        </TouchableOpacity>
-        <TouchableOpacity
+        </Touchable>
+        <Touchable
           className="bg-primary border border-secondary px-6 py-3 rounded-lg w-full"
           onPress={() => navigation.navigate("RegisterScreen")}
           disabled={loading}
         >
           <Text className="text-secondary text-lg self-center">Registrarse</Text>
-        </TouchableOpacity>
+        </Touchable>
       </View>
     </AppLayout>
   );

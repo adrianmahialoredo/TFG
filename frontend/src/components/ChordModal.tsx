@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, Image, TouchableOpacity } from 'react-native';
+import { View, Text, Image } from 'react-native';
+import Touchable from './Touchable';
 import BaseModal from './BaseModal';
 import { ChordDTO } from '../types';
 import { COLORS } from '../constants/Theme';
@@ -52,15 +53,13 @@ export default function ChordModal({ chord, onClose }: Props) {
             </View>
           </View>
 
-          {/* Estilos en línea: con className NativeWind pisa la opacidad animada del TouchableOpacity */}
-          <TouchableOpacity
+          <Touchable
             onPress={onClose}
-            activeOpacity={0.8}
             accessibilityRole="button"
             style={{ paddingHorizontal: 28, paddingVertical: 10, borderRadius: 9999, backgroundColor: COLORS.secondary }}
           >
             <Text style={{ color: COLORS.primary, fontWeight: '600', fontSize: 16 }}>Cerrar</Text>
-          </TouchableOpacity>
+          </Touchable>
         </View>
       )}
     </BaseModal>

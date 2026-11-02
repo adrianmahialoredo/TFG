@@ -4,7 +4,9 @@ import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
 import { COLORS } from '../constants/Theme';
 
 /** Alto del degradado superior. */
-const FADE_HEIGHT = 32;
+const FADE_HEIGHT = 56;
+/** Parte de arriba del degradado que es color sólido antes de empezar a desvanecerse. */
+const FADE_SOLID_FRACTION = 0.3;
 
 // Cada degradado necesita un id de SVG propio
 let gradientCount = 0;
@@ -49,6 +51,7 @@ export default function FadeScrollView({
           <Defs>
             <LinearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
               <Stop offset="0" stopColor={fadeColor} stopOpacity="1" />
+              <Stop offset={FADE_SOLID_FRACTION} stopColor={fadeColor} stopOpacity="1" />
               <Stop offset="1" stopColor={fadeColor} stopOpacity="0" />
             </LinearGradient>
           </Defs>

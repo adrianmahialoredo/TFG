@@ -5,6 +5,7 @@ import {
   rgbToHex,
   Rgb,
   toColorSampleUrl,
+  withOpacity,
 } from '@/utils/imageColor.utils';
 
 /** BMP de 24 bits (BI_RGB), filas de abajo arriba y rellenas a múltiplo de 4. */
@@ -135,5 +136,16 @@ describe('rgbToHex / hexToRgb', () => {
   it('redondea y limita los valores, y rechaza lo que no es un color', () => {
     expect(rgbToHex({ r: 300, g: -5, b: 10.6 })).toBe('#ff000b');
     expect(hexToRgb('dorado')).toBeNull();
+  });
+});
+
+describe('withOpacity', () => {
+  it('convierte un color hexadecimal a rgba con la opacidad', () => {
+    expect(withOpacity('#336699', 0.4)).toBe('rgba(51, 102, 153, 0.4)');
+    expect(withOpacity('#fff', 1)).toBe('rgba(255, 255, 255, 1)');
+  });
+
+  it('si no es hexadecimal devuelve el color tal cual', () => {
+    expect(withOpacity('red', 0.5)).toBe('red');
   });
 });

@@ -55,7 +55,7 @@ jest.mock('../../components/EmailVerificationModal', () => {
 });
 
 const fillForm = async () => {
-  await fireEvent.changeText(screen.getByPlaceholderText('Nombre completo'), 'Ana');
+  await fireEvent.changeText(screen.getByPlaceholderText('Nombre'), 'Ana');
   await fireEvent.changeText(screen.getByPlaceholderText('Email'), ' ana@mail.com ');
   await fireEvent.changeText(screen.getByPlaceholderText('Usuario'), 'ana');
   await fireEvent.changeText(screen.getByPlaceholderText('Contraseña'), 'Secreta1');
@@ -72,7 +72,7 @@ describe('RegisterScreen', () => {
 
   it('muestra todos los campos del formulario', async () => {
     await render(<RegisterScreen />);
-    ['Nombre completo', 'Email', 'Usuario', 'Contraseña', 'Repetir contraseña'].forEach((p) =>
+    ['Nombre', 'Email', 'Usuario', 'Contraseña', 'Repetir contraseña'].forEach((p) =>
       expect(screen.getByPlaceholderText(p)).toBeTruthy()
     );
     expect(screen.getByText('Crear cuenta')).toBeTruthy();

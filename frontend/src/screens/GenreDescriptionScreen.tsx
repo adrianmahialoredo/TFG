@@ -6,9 +6,11 @@ import { useGenreDescription } from '../hooks/useGenreDescription';
 
 interface GenreDescriptionProps {
     genreId: string;
+    /** Cabecera (el título del género) que va dentro del scroll, encima del contenido. */
+    header?: React.ReactNode;
 }
 
-export default function GenreDescriptionScreen({ genreId }: GenreDescriptionProps) {
+export default function GenreDescriptionScreen({ genreId, header }: GenreDescriptionProps) {
     // NIVEL 6: Obtenemos los datos limpios
     const {
         description,
@@ -20,11 +22,14 @@ export default function GenreDescriptionScreen({ genreId }: GenreDescriptionProp
 
     if (!isValid) {
         return (
-            <View className="flex-1 justify-center items-center p-10">
-                <Text className="text-secondary text-center font-roboto">
-                    La historia de este género se está escribiendo...
-                </Text>
-            </View>
+            <>
+                {header}
+                <View className="flex-1 justify-center items-center p-10">
+                    <Text className="text-secondary text-center font-roboto">
+                        La historia de este género se está escribiendo...
+                    </Text>
+                </View>
+            </>
         );
     }
 
@@ -34,6 +39,8 @@ export default function GenreDescriptionScreen({ genreId }: GenreDescriptionProp
             contentContainerStyle={{ paddingBottom: 120 }}
             showsVerticalScrollIndicator={false}
         >
+            {header}
+
             {/* Banner de Género */}
             {bannerUrl && (
                 <Image
