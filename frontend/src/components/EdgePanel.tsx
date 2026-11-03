@@ -1,12 +1,14 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { View, Animated, PanResponder, Dimensions, ScrollView } from 'react-native';
 import EdgeButton from './buttons/EdgeButton';
 import { LessonDTO } from '../types';
+import { LAYOUT_HORIZONTAL_PADDING } from './AppLayout';
 
 const { height } = Dimensions.get('window');
-const PANEL_WIDTH = 152;
-const HANDLE_WIDTH = 6;          // Ancho de la pestaña naranja que queda siempre visible
-const HANDLE_TOUCH_WIDTH = 24;   // Zona táctil de la pestaña (más ancha que la propia pestaña para poder arrastrarla)
+
+export const PANEL_WIDTH = 150;
+const HANDLE_WIDTH = 9;          // Ancho de la pestaña naranja que queda siempre visible
+export const HANDLE_TOUCH_WIDTH = 50;   // Zona táctil de la pestaña (más ancha que la propia pestaña para poder arrastrarla)
 const PANEL_MAX_HEIGHT = height * 0.6;
 const CLOSED_POSITION = -PANEL_WIDTH; // Cerrado: el panel queda fuera y solo asoma la pestaña
 const SWIPE_THRESHOLD = PANEL_WIDTH / 3;
@@ -36,6 +38,13 @@ export default function EdgePanel({ lessons, activeLessonId, onSelectLessonId }:
     // sola vez), que con el estado vería siempre el valor inicial.
     const [isOpen, setIsOpen] = useState(false);
     const isOpenRef = useRef(false);
+
+    // Fast Refresh conserva los refs: al cambiar PANEL_WIDTH, translateX seguía con el
+    // CLOSED_POSITION antiguo y asomaba parte del cajón. Fast Refresh vuelve a ejecutar los
+    // efectos, así que aquí se recoloca con el valor nuevo (al montar no cambia nada).
+    useEffect(() => {
+        if (!isOpenRef.current) translateX.setValue(CLOSED_POSITION);
+    }, [translateX]);
 
     const animateTo = (open: boolean) => {
         isOpenRef.current = open;
@@ -88,10 +97,14 @@ export default function EdgePanel({ lessons, activeLessonId, onSelectLessonId }:
 
     return (
         // Contenedor fijo que recibe los gestos. Cerrado solo ocupa la franja de la pestaña,
-        // para no tapar los toques del contenido de la pantalla.
+        // para no tapar los toques del contenido de la pantalla. Va dentro de AppLayout, cuyo
+        // margen lateral lo separaría del borde: se compensa para que quede pegado a la pantalla.
         <View
-            className="absolute top-0 bottom-0 left-0 z-50 justify-center"
-            style={{ width: isOpen ? PANEL_WIDTH + HANDLE_TOUCH_WIDTH : HANDLE_TOUCH_WIDTH }}
+            className="absolute top-0 bottom-0 z-50 justify-center"
+            style={{
+                left: -LAYOUT_HORIZONTAL_PADDING,
+                width: isOpen ? PANEL_WIDTH + HANDLE_TOUCH_WIDTH : HANDLE_TOUCH_WIDTH,
+            }}
             {...panResponder.panHandlers}
         >
             {/* Estilos en línea (no className) en la vista animada: NativeWind pisa el estilo
@@ -106,8 +119,9 @@ export default function EdgePanel({ lessons, activeLessonId, onSelectLessonId }:
                 }}
             >
                 {/* CAJÓN CON LAS LECCIONES (con un margen extra fuera de pantalla para el rebote) */}
+                {/* Fondo negro como los botones: el margen del rebote y las esquinas no asoman en otro color */}
                 <View
-                    className="bg-secondary rounded-r-xl overflow-hidden"
+                    className="bg-background rounded-r-xl overflow-hidden"
                     style={{ width: BOUNCE_OVERFLOW + PANEL_WIDTH, paddingLeft: BOUNCE_OVERFLOW, maxHeight: PANEL_MAX_HEIGHT, elevation: 5 }}
                 >
                     <ScrollView showsVerticalScrollIndicator={false}>

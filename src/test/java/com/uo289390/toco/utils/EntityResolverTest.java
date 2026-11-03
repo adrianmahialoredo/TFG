@@ -22,6 +22,7 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import jakarta.persistence.EntityNotFoundException;
@@ -54,6 +55,15 @@ class EntityResolverTest {
         new EntityResolver(chordRepository, genreRepository, instrumentRepository, instrumentGenreRepository,
                 itemRepository, itemListRepository, lessonRepository, lessonSectionRepository, songRepository,
                 songLessonRepository, spotifyUserRepository, tabSectionRepository, tuneRepository, userRepository);
+    }
+
+    @Test
+    void isNeverLazilyInitialised() {
+        // Nobody injects it: with lazy initialisation (production) it would never be created
+        // and its static repositories would stay null
+        Lazy lazy = EntityResolver.class.getAnnotation(Lazy.class);
+        assertNotNull(lazy);
+        assertFalse(lazy.value());
     }
 
     /**

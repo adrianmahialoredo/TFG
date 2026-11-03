@@ -83,7 +83,7 @@ export default function SongScreen() {
     <AppLayout>
       <GradientBackground color={gradient.color} height={gradient.height} />
       {/* Sin fondo propio: deja ver el degradado */}
-      <View className="flex-1 pt-2" onLayout={gradient.onContainerLayout}>
+      <View className="flex-1 pt-2 mb-16" onLayout={gradient.onContainerLayout}>
         {/* Icono de perfil y titulo */}
         <ProfileHeader title="Canciones" />
         
@@ -191,7 +191,7 @@ export default function SongScreen() {
               <View className="mb-10">
                 <Text className="text-primary text-lg font-bold mb-3 text-center">Tabs</Text>
                 {tabSections.map((section: TabSectionDTO) => (
-                  <View key={section.id} className="mb-4 bg-gray-800 p-4 rounded-lg">
+                  <View key={section.id} className="mb-4 bg-background border-2 border-primary p-4 rounded-lg">
                     <Text className="text-primary font-bold mb-2">{section.identifier.toUpperCase()}</Text>
                     <Text className="text-secondary font-mono text-xs">{section.content}</Text>
                   </View>

@@ -1,6 +1,7 @@
 import { PanResponder, PanResponderCallbacks, StyleSheet } from 'react-native';
 import { render, screen, fireEvent, act } from '@testing-library/react-native';
-import EdgePanel from '@/components/EdgePanel';
+import EdgePanel, { HANDLE_TOUCH_WIDTH, PANEL_WIDTH } from '@/components/EdgePanel';
+import { LAYOUT_HORIZONTAL_PADDING } from '@/components/AppLayout';
 import { LessonDTO } from '@/types';
 
 jest.setTimeout(30000);
@@ -11,12 +12,13 @@ const lessons = [
   { id: 'l3', title: 'Ritmo' },
 ] as LessonDTO[];
 
-const CLOSED_WIDTH = 24;
-const OPEN_WIDTH = 152 + 24;
+const CLOSED_WIDTH = HANDLE_TOUCH_WIDTH;
+const OPEN_WIDTH = PANEL_WIDTH + HANDLE_TOUCH_WIDTH;
 
 /** Contenedor fijo que recibe los gestos (el que lleva los panHandlers). */
 const gestureContainer = () => screen.container.queryAll((n) => n.type === 'View' && !!n.props.onResponderRelease)[0];
 const containerWidth = () => StyleSheet.flatten(gestureContainer().props.style).width;
+const containerLeft = () => StyleSheet.flatten(gestureContainer().props.style).left;
 
 const gesture = (dx: number, dy = 0) => ({ dx, dy } as any);
 
@@ -59,6 +61,11 @@ describe('EdgePanel', () => {
   it('cerrado solo ocupa la franja de la pestaña', async () => {
     await render(<EdgePanel lessons={lessons} activeLessonId="l1" onSelectLessonId={jest.fn()} />);
     expect(containerWidth()).toBe(CLOSED_WIDTH);
+  });
+
+  it('compensa el margen lateral de AppLayout para quedar pegado al borde de la pantalla', async () => {
+    await render(<EdgePanel lessons={lessons} activeLessonId="l1" onSelectLessonId={jest.fn()} />);
+    expect(containerLeft()).toBe(-LAYOUT_HORIZONTAL_PADDING);
   });
 
   it('un toque en la pestaña lo abre y amplía el área táctil', async () => {

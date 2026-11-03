@@ -16,9 +16,14 @@ def _get_defaults() -> dict:
     host = os.getenv("DB_HOST") or "localhost"
     port = int(os.getenv("DB_PORT") or 5432)
     database = os.getenv("DB_NAME") or "postgres"
+    sslmode = os.getenv("DB_SSLMODE")
     if jdbc_url.startswith("jdbc:postgresql://"):
         trimmed = jdbc_url.replace("jdbc:postgresql://", "", 1)
         host_port, _, dbname = trimmed.partition("/")
+        # Neon (and other hosted databases) add query parameters: ?sslmode=require
+        dbname, _, query = dbname.partition("?")
+        params = dict(p.split("=", 1) for p in query.split("&") if "=" in p)
+        sslmode = sslmode or params.get("sslmode")
         if host_port:
             if ":" in host_port:
                 host, port_str = host_port.split(":", 1)
@@ -38,6 +43,7 @@ def _get_defaults() -> dict:
         "dbname": database,
         "user": user,
         "password": password,
+        "sslmode": sslmode,
     }
 
 
@@ -81,6 +87,7 @@ def main() -> int:
     parser.add_argument("--dbname", default=defaults["dbname"])
     parser.add_argument("--user", default=defaults["user"])
     parser.add_argument("--password", default=defaults["password"])
+    parser.add_argument("--sslmode", default=defaults["sslmode"])
     parser.add_argument("--schema", default=os.getenv("DB_SCHEMA") or "public")
     parser.add_argument("--dry-run", action="store_true", help="Print SQL without executing.")
     parser.add_argument("--confirm", action="store_true", help="Actually execute the cleanup.")
@@ -97,6 +104,8 @@ def main() -> int:
         dbname=args.dbname,
         user=args.user,
         password=args.password,
+        # Only sent when the URL asks for it (Neon requires SSL; a local PostgreSQL usually has none)
+        **({"sslmode": args.sslmode} if args.sslmode else {}),
     )
     try:
         tables = _fetch_tables(conn, args.schema)

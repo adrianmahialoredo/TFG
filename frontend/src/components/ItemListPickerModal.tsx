@@ -55,7 +55,7 @@ export default function ItemListPickerModal({
   renderTrailing,
   isDisabled,
   footer,
-  borderColor = COLORS.secondary,
+  borderColor = COLORS.primary,
 }: ItemListPickerModalProps) {
   const { height } = useWindowDimensions();
   const [query, setQuery] = useState('');

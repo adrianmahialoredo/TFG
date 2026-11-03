@@ -9,6 +9,7 @@ import com.uo289390.toco.model.*;
 import com.uo289390.toco.repository.*;
 import jakarta.persistence.EntityNotFoundException;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 
 import java.util.*;
@@ -31,11 +32,16 @@ import java.util.stream.Collectors;
  * The {@code findX(id)} variants return an {@link Optional} instead of throwing,
  * for callers that translate a missing entity into a 404 response.
  *
+ * It is never lazily initialised ({@code @Lazy(false)}): no bean injects it, so with
+ * {@code spring.main.lazy-initialization=true} (LAZY_INIT in production) it would never be
+ * created, the static repositories would stay {@code null} and every resolve would fail with a 500.
+ *
  * @author Adrián Mahía
  * @version 1.0
  * @since 2026-09-29
  */
 @Component
+@Lazy(false)
 public class EntityResolver {
 
     private static ChordRepository chordRepository;

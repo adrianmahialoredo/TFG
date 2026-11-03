@@ -482,5 +482,181 @@
         "orderIndex": 1
       }
     ]
+  },
+  {
+    "id": 134,
+    "level": 1,
+    "title": "Rasgueo en Corcheas a Tempo Rápido",
+    "belongsToGenre": false,
+    "genreId": null,
+    "belongsToInstrumentGenre": true,
+    "instrumentGenreId": 301,
+    "genrePopular": false,
+    "popular": false,
+    "sections": [
+      {
+        "title": "Púa abajo constante",
+        "htmlContent": "<h3>Todo hacia abajo</h3><p>El pop punk se toca casi siempre con púa hacia abajo en corcheas. Empieza a 120 BPM con el metrónomo y sube de 10 en 10 hasta llegar a 180 sin perder la igualdad entre golpes.</p>",
+        "videoUrl": "https://www.youtube.com/watch?v=NstT7n8KzZQ",
+        "orderIndex": 1
+      },
+      {
+        "title": "Resistencia de la muñeca",
+        "htmlContent": "<h3>Relaja el antebrazo</h3><p>El movimiento sale de la muñeca, no del codo. Si notas tensión, baja el tempo: tocar relajado es lo que permite aguantar una canción entera a velocidad.</p>",
+        "videoUrl": "https://www.youtube.com/watch?v=hTWKbfoikeg",
+        "orderIndex": 2
+      }
+    ]
+  },
+  {
+    "id": 135,
+    "level": 2,
+    "title": "Progresión I–V–vi–IV con Power Chords",
+    "belongsToGenre": false,
+    "genreId": null,
+    "belongsToInstrumentGenre": true,
+    "instrumentGenreId": 301,
+    "genrePopular": false,
+    "popular": false,
+    "sections": [
+      {
+        "title": "La progresión del género",
+        "htmlContent": "<h3>I–V–vi–IV</h3><p>Cientos de canciones de pop punk usan la misma progresión. En Do: C5, G5, A5 y F5. Practica los cambios moviendo la misma forma de power chord por el mástil sin levantar la mano más de lo necesario.</p>",
+        "videoUrl": "https://www.youtube.com/watch?v=NstT7n8KzZQ",
+        "orderIndex": 1
+      }
+    ]
+  },
+  {
+    "id": 136,
+    "level": 2,
+    "title": "Cambios Limpios entre Estrofa y Estribillo",
+    "belongsToGenre": false,
+    "genreId": null,
+    "belongsToInstrumentGenre": true,
+    "instrumentGenreId": 301,
+    "genrePopular": false,
+    "popular": false,
+    "sections": [
+      {
+        "title": "Estrofa apagada",
+        "htmlContent": "<h3>Palm mute en la estrofa</h3><p>Toca la estrofa con palm mute y corcheas cortas para dejar espacio a la voz.</p>",
+        "videoUrl": "https://www.youtube.com/watch?v=NstT7n8KzZQ",
+        "orderIndex": 1
+      },
+      {
+        "title": "Estribillo abierto",
+        "htmlContent": "<h3>Suelta la mano</h3><p>En el estribillo levanta la mano del puente y deja sonar los acordes. El contraste de dinámica es lo que hace que el estribillo explote.</p>",
+        "videoUrl": "https://www.youtube.com/watch?v=hTWKbfoikeg",
+        "orderIndex": 2
+      }
+    ]
+  },
+  {
+    "id": 137,
+    "level": 3,
+    "title": "Riffs de Una Sola Cuerda",
+    "belongsToGenre": false,
+    "genreId": null,
+    "belongsToInstrumentGenre": true,
+    "instrumentGenreId": 301,
+    "genrePopular": false,
+    "popular": false,
+    "sections": [
+      {
+        "title": "Melodías en la 6ª y 5ª cuerda",
+        "htmlContent": "<h3>Riffs monocuerda</h3><p>Muchos riffs del género se tocan en una sola cuerda grave con púa alternada. Practica escalas cortas en la 6ª cuerda manteniendo el palm mute ligero.</p>",
+        "videoUrl": "https://www.youtube.com/watch?v=NstT7n8KzZQ",
+        "orderIndex": 1
+      }
+    ]
+  },
+  {
+    "id": 138,
+    "level": 3,
+    "title": "Octavas para Leads Sencillos",
+    "belongsToGenre": false,
+    "genreId": null,
+    "belongsToInstrumentGenre": true,
+    "instrumentGenreId": 301,
+    "genrePopular": false,
+    "popular": false,
+    "sections": [
+      {
+        "title": "La forma de octava",
+        "htmlContent": "<h3>Dedos 1 y 4</h3><p>Coloca el índice en la 6ª cuerda y el meñique dos cuerdas más abajo, dos trastes más adelante. Apaga la cuerda del medio con la parte blanda del índice.</p>",
+        "videoUrl": "https://www.youtube.com/watch?v=NstT7n8KzZQ",
+        "orderIndex": 1
+      },
+      {
+        "title": "Melodías en octavas",
+        "htmlContent": "<h3>Leads con distorsión</h3><p>Las octavas suenan gruesas con distorsión y son la forma clásica de doblar la melodía de la voz en los estribillos.</p>",
+        "videoUrl": "https://www.youtube.com/watch?v=hTWKbfoikeg",
+        "orderIndex": 2
+      }
+    ]
+  },
+  {
+    "id": 139,
+    "level": 2,
+    "title": "Paradas y Acentos con la Batería",
+    "belongsToGenre": false,
+    "genreId": null,
+    "belongsToInstrumentGenre": true,
+    "instrumentGenreId": 301,
+    "genrePopular": false,
+    "popular": false,
+    "sections": [
+      {
+        "title": "Cortes en seco",
+        "htmlContent": "<h3>Silencios a tiempo</h3><p>Apaga las cuerdas con la mano izquierda justo en los cortes que marca la batería. Los silencios precisos dan la sensación de banda compacta.</p>",
+        "videoUrl": "https://www.youtube.com/watch?v=hTWKbfoikeg",
+        "orderIndex": 1
+      }
+    ]
+  },
+  {
+    "id": 140,
+    "level": 4,
+    "title": "Downpicking Extremo a 200 BPM",
+    "belongsToGenre": false,
+    "genreId": null,
+    "belongsToInstrumentGenre": true,
+    "instrumentGenreId": 301,
+    "genrePopular": false,
+    "popular": false,
+    "sections": [
+      {
+        "title": "Economía de movimiento",
+        "htmlContent": "<h3>Golpes pequeños</h3><p>A tempos muy altos la púa apenas debe salir de las cuerdas. Trabaja ráfagas cortas de 4 compases a 200 BPM y descansa entre ellas.</p>",
+        "videoUrl": "https://www.youtube.com/watch?v=NstT7n8KzZQ",
+        "orderIndex": 1
+      },
+      {
+        "title": "Sincronía entre manos",
+        "htmlContent": "<h3>Cambios sin huecos</h3><p>Cambia de acorde en la última corchea del compás, no en la primera del siguiente, para que no se oiga el hueco.</p>",
+        "videoUrl": "https://www.youtube.com/watch?v=hTWKbfoikeg",
+        "orderIndex": 2
+      }
+    ]
+  },
+  {
+    "id": 141,
+    "level": 3,
+    "title": "Sonido y Ajustes del Amplificador",
+    "belongsToGenre": false,
+    "genreId": null,
+    "belongsToInstrumentGenre": true,
+    "instrumentGenreId": 301,
+    "genrePopular": false,
+    "popular": false,
+    "sections": [
+      {
+        "title": "Distorsión justa",
+        "htmlContent": "<h3>Menos ganancia de la que crees</h3><p>Para que los power chords se entiendan, usa ganancia media, medios presentes y graves controlados. Demasiada distorsión emborrona el palm mute.</p>",
+        "videoUrl": "https://www.youtube.com/watch?v=NstT7n8KzZQ",
+        "orderIndex": 1
+      }
+    ]
   }
 ]

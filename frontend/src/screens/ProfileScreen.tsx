@@ -323,7 +323,7 @@ export default function ProfileScreen() {
                   onPress={handleCreateListPress}
                   style={{ paddingHorizontal: 16, paddingVertical: 8, borderRadius: 9999, backgroundColor: COLORS.primary }}
               >
-                <Text style={{ color: COLORS.background, fontWeight: '600' }}>Añadir lista</Text>
+                <Text style={{ color: COLORS.secondary, fontWeight: '600' }}>Añadir lista</Text>
               </Touchable>
             }
         />

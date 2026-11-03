@@ -22,8 +22,6 @@ La aplicación utiliza:
 
 ### Instalación
 
-> ⚠️ **Windows: compilar la app nativa de Android (`frontend/`) necesita rutas largas.** CMake repite la ruta del proyecto dentro de sus carpetas y supera el límite de 260 caracteres de Windows, incluso desde una ruta corta como `E:\frontend`. Hay que activar las rutas largas de Windows y usar Ninja 1.12 o posterior, o compilar en la nube con EAS Build. No afecta al backend ni a Expo Go. Ver [Problemas en Windows](#problemas-en-windows).
-
 ```bash
 # Clonar el repositorio
 git clone <repository-url>
@@ -47,11 +45,12 @@ El servidor escucha en el puerto `8080` de todas las interfaces (`http://localho
 
 Hay dos formas de probar la app:
 
-| | **A. Expo Go** (lo más rápido) | **B. Development build** (app nativa completa) |
+| | **A. Expo Go** (lo más rápido) | **B. Development build con EAS** (app nativa completa) |
 |---|---|---|
-| Dónde | Móvil físico (Android o iOS) o emulador | Emulador de Android / simulador de iOS (o móvil por USB) |
-| Qué hay que instalar | Node.js y la app **Expo Go** | Node.js, Android Studio (o Xcode en macOS), JDK 17–23 |
-| Compilar | No | Sí (la primera vez, 5–15 min) |
+| Dónde | Móvil físico (Android o iOS) o emulador | Emulador de Android o móvil Android |
+| Qué hay que instalar | Node.js y la app **Expo Go** | Node.js y `eas-cli` (cuenta gratuita de expo.dev) |
+| Compilar | No | En la nube, una sola vez (15–20 min); nada en local |
+| Cambios en directo | Sí | Sí: Metro recarga el JavaScript al guardar, igual que en Expo Go |
 | Afinador | Modo demostración: una cuerda simulada en vez del micrófono | Micrófono real |
 
 El afinador usa `react-native-audio-api`, un módulo nativo que **no está en Expo Go**: ahí todo funciona igual salvo el micrófono, que se sustituye por una cuerda simulada que pasa por el mismo análisis. Detalle en [`architecture.md`](architecture.md) §12 (*Afinador*).
@@ -80,7 +79,7 @@ Las variables `EXPO_PUBLIC_*` se incrustan al empaquetar: tras cambiarlas, `npx 
 
 ### A. Expo Go
 
-1. Instalar **Expo Go** en el móvil (Play Store / App Store). Tiene que ser la versión compatible con el **SDK 57** de Expo (la última de la tienda).
+1. Instalar **Expo Go** en el móvil (Play Store / App Store). Tiene que ser la versión compatible con el **SDK 58** de Expo (la última de la tienda).
 2. Arrancar Metro en modo Expo Go:
 
    ```bash
@@ -93,56 +92,53 @@ También sirve en el emulador: con el emulador abierto, pulsar `a` en la termina
 
 Si el móvil no conecta con Metro (redes de universidad o con aislamiento de clientes), `npx expo start --go --tunnel` lo hace a través de internet. Ojo: el backend sigue teniendo que ser accesible desde el móvil por la IP local.
 
-### B. Development build
+### B. Development build con EAS
 
-> ⚠️ **Windows:** sin rutas largas activadas y Ninja 1.12 o posterior, la compilación falla en un `buildCMake…` con `ninja: error: mkdir(...)`. Ver [Problemas en Windows](#problemas-en-windows). Alternativa sin compilar en local: `eas build -p android --profile development` (ver [Despliegue](#-despliegue-render--neon--apk)).
+La *development build* es la app nativa completa (con `expo-dev-client`, el módulo del micrófono y el resto de módulos nativos). Se compila **en la nube con EAS Build**, así que no hace falta Android Studio para compilar ni JDK, y se evitan los problemas de rutas largas de Windows. Solo se compila una vez: después se desarrolla **en directo** igual que con Expo Go, porque Metro sirve el JavaScript desde el PC y la app se recarga al guardar.
 
-#### Requisitos
+#### Compilar e instalar (una vez)
 
-| | Android | iOS |
-|---|---|---|
-| Sistema | Windows, macOS o Linux | **Solo macOS** |
-| Node.js | 20 LTS o superior | 20 LTS o superior |
-| Herramientas | [Android Studio](https://developer.android.com/studio) con un emulador (AVD) creado (*Device Manager*) | Xcode (App Store) con un simulador, y CocoaPods (`brew install cocoapods`) |
-| JDK | **17 a 23** (por ejemplo [Temurin 17](https://adoptium.net/)). El que trae Android Studio puede ser más nuevo y no sirve (ver *Problemas en Windows*) | — |
-| Variables de entorno | `ANDROID_HOME` = carpeta del SDK y `%ANDROID_HOME%\platform-tools` en el `PATH`; `JAVA_HOME` = el JDK 17–23 | — |
-
-La carpeta del SDK aparece en Android Studio en *Settings → Languages & Frameworks → Android SDK* (en Windows suele ser `C:\Users\<usuario>\AppData\Local\Android\Sdk`). En Windows, las variables se crean en *Editar las variables de entorno de esta cuenta*; después hay que **cerrar y volver a abrir** las terminales y VS Code para que las vean.
-
-#### Ejecutar
-
-Con el backend arrancado y el emulador abierto:
+Desde `frontend/`:
 
 ```bash
-npm run android          # compila, instala la app en el emulador y arranca Metro
-npm run ios              # ídem en el simulador de iOS (macOS)
+npm install -g eas-cli
+eas login                                       # cuenta gratuita de expo.dev
+eas init                                        # solo la primera vez: añade el projectId a app.json
+eas build -p android --profile development
 ```
 
-La app instalada es una *development build*: al abrirla sin Metro muestra el lanzador de `expo-dev-client` ("Development servers"). Con la app ya instalada no hace falta volver a compilar: basta con `npx expo start` y pulsar `a` (o tocar el servidor en el lanzador). Solo hay que recompilar si cambian las dependencias nativas o `app.json`.
+- Si pregunta por la clave de firma (*keystore*), contestar **Yes** para que EAS la cree y la guarde.
+- Al terminar da un enlace (y un QR) al `.apk`. En el emulador se instala **arrastrándolo a su ventana**; en un móvil, abriendo el enlace (hay que permitir instalar apps de origen desconocido).
+- En esta build no hace falta configurar variables en EAS: la URL del backend y el resto de `EXPO_PUBLIC_*` las pone Metro desde el `.env` local.
 
-Para probar la app **sin Metro** (el JavaScript va dentro de la app):
+#### Desarrollar en directo
+
+Con el backend arrancado:
 
 ```bash
-npm run android:release  # instala una release; el APK queda en android/app/build/outputs/apk/release/
-npm run ios:release      # release en el simulador de iOS
+npx expo start
 ```
 
-Las carpetas `android/` e `ios/` se generan desde `app.json` y no se versionan. Si se cambia `app.json` (permisos, plugins…) o se mueve el proyecto de carpeta, hay que regenerarlas con `npm run prebuild` (o `npx expo prebuild --clean --platform android`).
+Abrir la app **Toco** instalada (no Expo Go) y tocar el servidor que aparece en el lanzador ("Development servers"), o pulsar `a` en la terminal de Metro.
 
-#### Problemas en Windows
+- Al guardar un fichero, la app se recarga sola. `r` en Metro la recarga entera.
+- Si se cambia el `.env`, parar Metro y arrancar con `npx expo start --clear`.
+- **Solo hay que volver a ejecutar `eas build`** si cambia algo nativo: una dependencia con código nativo, los `plugins` o permisos de `app.json`, o la versión del SDK de Expo. El síntoma típico de que falta recompilar es un error de *native module not found*. El APK nuevo se instala encima del anterior.
 
-| Error | Causa | Solución |
-|---|---|---|
-| `SDK location not found` | La terminal no ve `ANDROID_HOME` | Crear la variable y abrir una terminal nueva (cerrar también VS Code). |
-| `WARNING: A restricted method in java.lang.System has been called` en `configureCMake…` | Gradle usa un JDK 24 o superior (el que trae Android Studio, por ejemplo) | Instalar un JDK 17–23 y añadir a `%USERPROFILE%\.gradle\gradle.properties` la línea `org.gradle.java.home=C:/Program Files/Java/jdk-17` (con la ruta de ese JDK). Después, `cd android && gradlew --stop`. |
-| `mkdir: command not found` / `rm: command not found` en `react-native-audio-api:downloadPrebuiltBinaries` | El script que descarga los binarios del afinador se ejecuta con el Bash de Git y necesita sus comandos | Compilar desde **Git Bash**, o añadir `C:\Program Files\Git\usr\bin` **al final** del `PATH` (en cmd, solo para esa ventana: `set "PATH=%PATH%;C:\Program Files\Git\usr\bin"`). |
-| `ninja: error: mkdir(...): No such file or directory` en un `buildCMake…` (`react-native-audio-api`, `react-native-gesture-handler`…) | Las rutas de los objetos de CMake superan los 260 caracteres de Windows, incluso con el proyecto en una ruta corta (`E:\frontend`), y el Ninja 1.10.2 del SDK (`cmake\3.22.1`) no admite rutas largas | 1) Activar las rutas largas, en un PowerShell **como administrador**: `New-ItemProperty -Path HKLM:\SYSTEM\CurrentControlSet\Control\FileSystem -Name LongPathsEnabled -Value 1 -PropertyType DWORD -Force`. 2) Sustituir `ninja.exe` de `%ANDROID_HOME%\cmake\3.22.1\bin` por el de [Ninja 1.12.1](https://github.com/ninja-build/ninja/releases/tag/v1.12.1) (`ninja-win.zip`), guardando el original. 3) Reiniciar el PC, `cd android && gradlew --stop && gradlew clean` y volver a compilar. Una ruta corta sigue ayudando; una unidad `subst` no sirve, porque Gradle resuelve la ruta real. |
+#### Probar el micrófono en el emulador
+
+Por defecto el emulador de Android no oye el micrófono del PC:
+
+1. En el emulador, **⋯** (*Extended controls*) → **Microphone** → activar **"Virtual microphone uses host audio input"**. Se desactiva cada vez que se reinicia el emulador.
+2. La primera vez que se abre el afinador, aceptar el permiso de micrófono.
+
+El micrófono del emulador puede tener algo de retardo o ruido: la prueba buena del afinador es en un móvil físico.
 
 ---
 
 ## 🌐 Despliegue (Render + Neon + APK)
 
-El backend se publica en **Render** (con Docker: Render no tiene runtime de Java) y la base de datos en **Neon** (PostgreSQL). La app se distribuye como **APK** generado con **EAS Build**, que compila en la nube y evita los problemas de compilar en Windows.
+El backend se publica en **Render** (con Docker: Render no tiene runtime de Java) y la base de datos en **Neon** (PostgreSQL). La app se distribuye como **APK** generado con **EAS Build**, que compila en la nube, sin herramientas nativas en local.
 
 ### 1. Base de datos (Neon)
 
@@ -220,7 +216,7 @@ Los perfiles de `eas.json`:
 | Perfil | Qué genera |
 |---|---|
 | `preview` | APK para distribuir: el JavaScript va dentro, sin Metro |
-| `development` | APK de la *development build* (con `expo-dev-client`), para desarrollar sin compilar en local |
+| `development` | APK de la *development build* (con `expo-dev-client`), para desarrollar en directo con Metro (ver [B. Development build con EAS](#b-development-build-con-eas)) |
 
 ---
 

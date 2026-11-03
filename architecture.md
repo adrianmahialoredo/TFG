@@ -446,9 +446,10 @@ Pantalla `TunerScreen` (CU-11), abierta desde el botón "Afinador" del Home. Las
 - Mandar el audio al backend añade latencia y consumo de red: el afinador tiene que responder en tiempo real.
 - `AudioRecorder.onAudioReady` entrega bloques PCM en `Float32` (4096 muestras, ~93 ms a 44.1 kHz) y la misma vía servirá al "Identificador" de acordes.
 
-**El micrófono real necesita una *development build*.** La librería es un módulo nativo que Expo Go no incluye:
-`npx expo run:android` / `run:ios` (o `eas build --profile development`) compila e instala la app, y después
-`npx expo start` sirve el JS como antes.
+**El micrófono real necesita una *development build*.** La librería es un módulo nativo que Expo Go no incluye.
+La build se compila en la nube con `eas build -p android --profile development` y se instala una vez; después
+`npx expo start` sirve el JS desde el PC y los cambios se ven en directo, como en Expo Go. Solo se recompila si
+cambia algo nativo (dependencias, plugins o permisos de `app.json`). Pasos en el README (*B. Development build con EAS*).
 
 **En Expo Go el afinador funciona en modo demostración.** `utils/microphone.utils.ts` define una interfaz `Microphone`
 con dos implementaciones, y `useTuner` elige una con `isRunningInExpoGo()`:

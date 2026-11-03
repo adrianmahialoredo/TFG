@@ -32,31 +32,31 @@ export default function ChordModal({ chord, onClose }: Props) {
   const capoFret = chord?.capoFret ?? 0;
 
   return (
-    <BaseModal visible={!!chord} onClose={onClose}>
+    <BaseModal visible={!!chord} onClose={onClose} maxWidth={300}>
       {chord && (
         <View className="items-center">
-          <Text className="text-primary text-2xl font-bold mb-4">{chord.name}</Text>
+          <Text className="text-primary text-2xl font-bold mb-3">{chord.name}</Text>
 
           {/* Los diagramas son líneas oscuras sobre fondo transparente: necesitan un fondo claro */}
-          <View className="bg-secondary rounded-lg p-2 mb-4">
-            <Image source={{ uri: chord.imageUrl }} className="w-32 h-40" resizeMode="contain" />
+          <View className="bg-secondary rounded-lg p-1 mb-3">
+            <Image source={{ uri: chord.imageUrl }} className="w-24 h-32" resizeMode="contain" />
           </View>
 
-          <View className="flex-row flex-wrap justify-center gap-2 mb-5">
+          <View className="flex-row flex-wrap justify-center gap-1.5 mb-4">
             {flags.map((label) => (
-              <View key={label} className="px-3 py-1 bg-primary rounded-lg border border-secondary/20">
-                <Text className="text-secondary text-base">{label}</Text>
+              <View key={label} className="px-2 py-0.5 bg-primary rounded-md border border-secondary/20">
+                <Text className="text-secondary text-sm">{label}</Text>
               </View>
             ))}
-            <View className="px-3 py-1 bg-primary rounded-lg border border-secondary/20">
-              <Text className="text-secondary text-base">{capoFret > 0 ? `Capo: ${capoFret}` : 'Sin capo'}</Text>
+            <View className="px-2 py-0.5 bg-primary rounded-md border border-secondary/20">
+              <Text className="text-secondary text-sm">{capoFret > 0 ? `Capo: ${capoFret}` : 'Sin capo'}</Text>
             </View>
           </View>
 
           <Touchable
             onPress={onClose}
             accessibilityRole="button"
-            style={{ paddingHorizontal: 28, paddingVertical: 10, borderRadius: 9999, backgroundColor: COLORS.secondary }}
+            style={{ paddingHorizontal: 24, paddingVertical: 8, borderRadius: 9999, backgroundColor: COLORS.secondary }}
           >
             <Text style={{ color: COLORS.primary, fontWeight: '600', fontSize: 16 }}>Cerrar</Text>
           </Touchable>
