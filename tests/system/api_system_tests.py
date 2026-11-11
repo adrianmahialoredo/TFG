@@ -236,11 +236,16 @@ def main() -> int:
         return res.status_code == 403, f'{res.status_code}', ms
     r.check('SIS-18', 'PA-14 / RNF-03', 'Artistas de otro usuario', '403', other_top_artists)
 
+    linked = bool(user.get('spotifyConnected'))
+
     def spotify_items():
+        # Sin Spotify vinculado la API responde 404 (la app ni siquiera hace la llamada)
         res, ms = r.call('GET', f'/spotify/recommendations/items/{uid}', token=token)
         n = len(res.json()) if res.ok else 0
-        return res.status_code in (200, 204), f'{res.status_code}, {n} ítems (vinculado: {user.get("spotifyConnected")})', ms
-    r.check('SIS-19', 'PA-15 / RF-REC-05', '"Basado en tu Spotify" del Inicio', '200 (vacío si no está vinculado)', spotify_items)
+        ok = res.status_code == 200 if linked else res.status_code == 404
+        return ok, f'{res.status_code}, {n} ítems (vinculado: {linked})', ms
+    r.check('SIS-19', 'PA-15 / RF-REC-05', '"Basado en tu Spotify" del Inicio',
+            '200 si está vinculado; 404 si no', spotify_items)
 
     # ---------- RF-ADM-01 / PA-13 ----------
     def song_as_user():

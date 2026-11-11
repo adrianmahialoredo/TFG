@@ -64,7 +64,7 @@ Regla: **en el dominio musical nunca hay entidades repetidas**, así que las col
 | `Song.genres`, `Song.instruments`, `Genre.lessons`, `Preferences.favorite*` | `Set` | Relación sin duplicados |
 | `Song.lessons`, `SongLesson.chords` | `Set` + `@OrderBy("id ASC")` | Sin duplicados y con orden estable (el frontend usa el primero como lección por defecto) |
 | `InstrumentGenre.lessons` | `Set` + `@OrderBy("indexInInstrumentGenre ASC")` | Lecciones ordenadas dentro del instrument-genre |
-| `ItemList.items` | `List` **sin duplicados** | Conserva el orden en que el usuario añadió los items. `addItem` ignora repetidos y `setItems` deduplica |
+| `ItemList.items` | `List` **sin duplicados**, con `@OrderColumn(name = "item_position")` | Conserva el orden en que el usuario añadió los items (sin la columna de orden Hibernate no lo guarda y la base de datos devuelve las filas en cualquier orden). `addItem` ignora repetidos y `setItems` deduplica |
 | `Lesson.sections`, `SongLesson.tabSections`, `Chord.notes` | `List` | Contenido ordenado |
 | `Tune.notes` | `List` + `@OrderColumn("string_index")` | Una nota por cuerda: el orden es el de las cuerdas y puede haber notas repetidas |
 | `User.itemLists` | `List` | Fuera del dominio musical |
@@ -95,7 +95,7 @@ En el código de servicios se aplica lo mismo: resultados como `Set`/`LinkedHash
 - Hibernate añade columnas y tablas, pero nunca borra ni relaja columnas existentes.
 - Campos primitivos nuevos en tablas con datos: añadir `@ColumnDefault` (PostgreSQL rechaza añadir una columna `NOT NULL` sin valor por defecto si la tabla ya tiene filas).
 - Quitar un campo de una entidad no borra su columna. Si era `NOT NULL`, los `insert` nuevos fallan: hay que borrarla con un script (p. ej. `preferences.difficulty_level`, que se quitó de `Preferences` y borra `migrate_preferences_table.py`).
-- Cambios que requieren mover datos se hacen con un script idempotente en `scripts/migrate_*.py` (ejemplos: `migrate_preferences_table.py`, `migrate_instrument_genre_lessons.py`, `migrate_song_chords_join_column.py`, `migrate_chord_instrument.py`).
+- Cambios que requieren mover datos se hacen con un script idempotente en `scripts/migrate_*.py` (ejemplos: `migrate_preferences_table.py`, `migrate_itemlist_order.py`, `migrate_instrument_genre_lessons.py`, `migrate_song_chords_join_column.py`, `migrate_chord_instrument.py`).
 - Hibernate tampoco renombra columnas: si cambia el nombre de una columna o de una columna de unión, hace falta un script de migración (si no, intenta añadir la nueva y falla si es `NOT NULL`).
 
 ---

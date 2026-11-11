@@ -192,6 +192,12 @@ python scripts/clean_db.py
 python scripts/migrate_preferences_table.py
 ```
 
+**Orden de las listas:** `itemlist_items` tiene ahora la columna `item_position` (`@OrderColumn`), que guarda el orden en que se añadieron los ítems. Hibernate la crea vacía y una lista con posiciones vacías no se puede cargar, así que hay que numerar las filas que ya existen. Ejecutar **antes y justo después** de desplegar (el backend viejo puede añadir filas sin posición mientras se despliega el nuevo):
+
+```bash
+python scripts/migrate_itemlist_order.py
+```
+
 ### 4. Spotify
 
 En el [dashboard de Spotify](https://developer.spotify.com/dashboard), en *Redirect URIs*, añadir `https://<servicio>.onrender.com/api/spotify/callback` (exactamente igual que `SPOTIFY_REDIRECT_URI`). La vuelta del login pasa por el backend, no por la app, así que no hace falta nada más en la app.

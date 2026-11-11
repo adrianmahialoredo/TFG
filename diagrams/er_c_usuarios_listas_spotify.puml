@@ -83,6 +83,7 @@ entity "item_lists" as item_lists {
 entity "itemlist_items" as itemlist_items <<join>> {
     * itemlist_id : bigint <<FK>>
     * item_id : bigint <<FK>>
+    item_position : integer
 }
 
 entity "item" as item <<ver ER-a>> {

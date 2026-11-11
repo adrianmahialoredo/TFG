@@ -73,6 +73,9 @@ public class ItemList {
      * This is a many-to-many relationship, meaning that an item list can contain multiple items,
      * and an item can belong to multiple item lists.
      * The items are stored in a separate table to manage the many-to-many relationship.
+     * The column {@code item_position} keeps the order in which they were added: without it
+     * Hibernate does not persist the order of a {@link List} and the database returns the rows
+     * in any order (see scripts/migrate_itemlist_order.py for existing databases).
      */
     @ManyToMany
     @JoinTable(
@@ -80,6 +83,7 @@ public class ItemList {
         joinColumns = @JoinColumn(name = "itemlist_id"),
         inverseJoinColumns = @JoinColumn(name = "item_id")
     )
+    @OrderColumn(name = "item_position")
     private List<Item> items = new ArrayList<>();
 
     /**

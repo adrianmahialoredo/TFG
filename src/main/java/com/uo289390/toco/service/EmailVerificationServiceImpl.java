@@ -110,11 +110,13 @@ public class EmailVerificationServiceImpl implements EmailVerificationService {
     @Override
     public void sendPasswordResetCode(String email) {
         String key = normalize(email);
-        // The cooldown is applied before looking the account up, so registered and unknown
-        // emails get the same answer (204, or 429 if asked again too soon)
+        // Registered and unknown emails must get the same answers (204, 429 if asked again too
+        // soon, "Invalid verification code" when checking a code), or they would reveal which
+        // emails have an account. For an unknown email a code is stored but never sent.
         ensureCooldownElapsed(resetCodes, key);
         if (!userRepository.existsByEmailIgnoreCase(key)) {
             log.info("Password reset requested for an email without account; nothing is sent");
+            resetCodes.put(key, new PendingCode(generateCode(), clock.instant()));
             return;
         }
         issueCode(resetCodes, key, code -> emailService.sendPasswordResetCode(email, code, CODE_TTL.toMinutes()));

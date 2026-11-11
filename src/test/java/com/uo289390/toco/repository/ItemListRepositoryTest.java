@@ -77,6 +77,36 @@ class ItemListRepositoryTest {
     }
 
     @Test
+    void removingAndAddingItems_keepsInsertionOrderInDatabase() {
+        Genre jazz = em.persist(genre(3L, "Jazz"));
+        ItemList list = list("Practice");
+        list.addItem(song);
+        list.addItem(jazz);
+        list.addItem(genre);
+        Long id = itemListRepository.saveAndFlush(list).getId();
+        em.clear();
+
+        ItemList loaded = itemListRepository.findById(id).orElseThrow();
+        loaded.getItems().removeIf(item -> item.getId().equals(3L));
+        itemListRepository.saveAndFlush(loaded);
+        em.clear();
+
+        ItemList reloaded = itemListRepository.findById(id).orElseThrow();
+        reloaded.addItem(em.find(Genre.class, 3L));
+        itemListRepository.saveAndFlush(reloaded);
+        em.clear();
+
+        assertEquals(List.of(1L, 2L, 3L),
+                itemListRepository.findById(id).orElseThrow().getItems().stream().map(Item::getId).toList());
+        @SuppressWarnings("unchecked")
+        List<Object[]> rows = em.getEntityManager().createNativeQuery(
+                "select item_id, item_position from itemlist_items where itemlist_id = :id order by item_position")
+                .setParameter("id", id).getResultList();
+        assertEquals(List.of("1:0", "2:1", "3:2"),
+                rows.stream().map(r -> ((Number) r[0]).longValue() + ":" + ((Number) r[1]).intValue()).toList());
+    }
+
+    @Test
     void save_withoutUser_fails() {
         ItemList list = new ItemList();
         list.setName("Orphan");

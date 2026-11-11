@@ -283,14 +283,28 @@ class EmailVerificationServiceImplTest {
     }
 
     @Test
-    void sendPasswordResetCode_unknownEmail_sendsNothingAndDoesNotFail() {
+    void sendPasswordResetCode_unknownEmail_sendsNothingButAnswersLikeARegisteredOne() {
         when(userRepository.existsByEmailIgnoreCase(EMAIL)).thenReturn(false);
 
         assertDoesNotThrow(() -> service.sendPasswordResetCode(EMAIL));
 
         verifyNoInteractions(emailService);
-        assertEquals("Verification code not requested",
-                assertThrows(IllegalArgumentException.class, () -> service.checkPasswordResetCode(EMAIL, "123456")).getMessage());
+        // Same message as a wrong code for a registered email: it does not reveal that there is no account
+        String message = assertThrows(IllegalArgumentException.class,
+                () -> service.checkPasswordResetCode(EMAIL, "not-a-code")).getMessage();
+        assertEquals("Invalid verification code", message);
+    }
+
+    @Test
+    void sendPasswordResetCode_unknownEmailAskedAgainTooSoon_returnsTooManyRequests() {
+        when(userRepository.existsByEmailIgnoreCase(EMAIL)).thenReturn(false);
+        service.sendPasswordResetCode(EMAIL);
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> service.sendPasswordResetCode(EMAIL));
+
+        assertEquals(HttpStatus.TOO_MANY_REQUESTS, ex.getStatusCode());
+        verifyNoInteractions(emailService);
     }
 
     @Test
