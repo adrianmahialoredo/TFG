@@ -1,0 +1,65 @@
+@startuml DS-CU-01-1
+title DS-CU-01 (1/2) - Registrar nuevo usuario: formulario y código de verificación
+
+' Diagrama de secuencia de análisis (patrón Boundary-Control-Entity)
+' Fuentes: RegisterScreen.tsx, EmailVerificationModal.tsx, useRegister.ts, auth.service.ts,
+' AuthContext.tsx, AuthController.java, EmailVerificationServiceImpl.java, UserServiceImpl.java
+autonumber
+hide footbox
+skinparam sequenceMessageAlign center
+skinparam roundcorner 6
+
+actor "Visitante" as visitante
+boundary "RegistroScreen" as pantalla
+boundary "ModalVerificacionEmail" as modal
+control "GestorAutenticacion" as gestor
+entity "CodigoVerificacion" as codigo
+entity "Usuario" as usuario
+participant "ServidorCorreo\n<<sistema externo>>" as correo
+
+visitante -> pantalla : accederRegistro()
+pantalla --> visitante : mostrarFormulario(nombre, email, username,\npassword, confirmación, favoritos)
+visitante -> pantalla : solicitarRegistro(datos)
+pantalla -> pantalla : validarFormato()
+
+alt 4a. Datos con formato inválido
+    pantalla --> visitante : mostrarError(primera regla incumplida)
+else Datos válidos
+
+    pantalla -> gestor : solicitarCodigo(email)
+    note right of gestor : POST /api/auth/verification-code
+    gestor -> usuario : comprobarEmailUnico(email)
+    usuario --> gestor : resultado
+
+    alt 6a. El email ya está registrado
+        gestor --> pantalla : 400 "Email already registered"
+        pantalla --> visitante : mostrarError("Ya existe una cuenta con ese email")
+    else Se pidió otro código hace menos de 60 s
+        gestor --> pantalla : 429 Too Many Requests
+        pantalla -> modal : abrir(email)
+        modal --> visitante : mostrarAviso("Ya te enviamos un código hace poco,\nrevisa tu email")
+    else Email libre
+        gestor -> codigo : generarCodigo(email)
+        note right of codigo : 6 dígitos, válido 10 minutos,\nmáximo 5 intentos fallidos
+        gestor ->> correo : enviarCodigo(email, codigo)
+        opt Falla el envío (en segundo plano)
+            gestor -> codigo : descartar(email)
+            note right of codigo : No llega al cliente:\npuede pedir otro código ya
+        end
+        gestor --> pantalla : 204 No Content
+        pantalla -> modal : abrir(email)
+        modal --> visitante : pedirCodigo()
+
+        opt El visitante no recibe el código
+            note over modal : "Reenviar" activo tras 60 s
+            visitante -> modal : reenviarCodigo()
+            modal -> gestor : solicitarCodigo(email)
+            gestor -> codigo : generarCodigo(email)
+            gestor ->> correo : enviarCodigo(email, codigo)
+            gestor --> modal : 204 No Content
+        end
+    end
+end
+
+note over visitante, modal : Continúa en DS-CU-01 (2/2) con el modal abierto
+@enduml

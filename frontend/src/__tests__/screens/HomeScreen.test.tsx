@@ -82,29 +82,29 @@ describe('HomeScreen', () => {
     await render(<HomeScreen />);
     expect(screen.getByText('¡Bienvenido Ana!')).toBeTruthy();
     expect(screen.getByText('Carrusel Recientes')).toBeTruthy();
-    expect(screen.getByText('Carrusel Recomendaciones')).toBeTruthy();
+    expect(screen.getByText('Carrusel Para ti')).toBeTruthy();
     expect(screen.getByText(/se muestren tus recientes/)).toBeTruthy();
     expect(screen.getByText(/se muestren tus recomendaciones/)).toBeTruthy();
   });
 
   it('mientras no se sabe si hay Spotify vinculado no muestra ni carrusel ni botón', async () => {
     await render(<HomeScreen />);
-    expect(screen.queryByText('Carrusel Según tus gustos de Spotify')).toBeNull();
+    expect(screen.queryByText('Carrusel Basado en tu Spotify')).toBeNull();
     expect(screen.queryByText('Botón Spotify')).toBeNull();
   });
 
   it('sin Spotify vinculado ofrece conectarlo en vez del carrusel', async () => {
     mockHomeState.spotifyConnected = false;
     await render(<HomeScreen />);
-    expect(screen.queryByText('Carrusel Según tus gustos de Spotify')).toBeNull();
-    expect(screen.getByText('Según tus gustos de Spotify')).toBeTruthy();
+    expect(screen.queryByText('Carrusel Basado en tu Spotify')).toBeNull();
+    expect(screen.getByText('Basado en tu Spotify')).toBeTruthy();
     expect(screen.getByText('Botón Spotify')).toBeTruthy();
   });
 
   it('con Spotify vinculado muestra su carrusel (con mensaje si está vacío)', async () => {
     mockHomeState.spotifyConnected = true;
     await render(<HomeScreen />);
-    expect(screen.getByText('Carrusel Según tus gustos de Spotify')).toBeTruthy();
+    expect(screen.getByText('Carrusel Basado en tu Spotify')).toBeTruthy();
     expect(screen.getByText(/Escucha música en Spotify/)).toBeTruthy();
   });
 

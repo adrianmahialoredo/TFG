@@ -1,0 +1,80 @@
+@startuml DSD-CU-02-1
+title DSD-CU-02 (1/2) - Iniciar sesión: login y precarga (app)
+
+' Parte de la app de la realización de CU-02 (análisis en
+' diagrams/use_cases/description/CU02_iniciar_sesion.puml). El backend se dibuja como una
+' sola línea de vida ("API REST"); lo que hace el endpoint está en DSD-CU-02 (2/2).
+' Fuentes: screens/LoginScreen.tsx, context/AuthContext.tsx, repositories/auth.repository.ts,
+' item.repository.ts, genre.repository.ts, services/auth.service.ts, item.service.ts,
+' genre.service.ts, services/apiClient.ts, stores/entities/auth.entities.store.ts,
+' user.entities.store.ts, utils/entityCache.utils.ts, config/apiConfig.ts.
+' Diferencias con el guion:
+' - LoginScreen no llama a authRepository: llama a login() de AuthContext (useAuth), que es
+'   quien llama a authRepository.login(identifier, password).
+' - El body es { identifier, password } (no { email, pass }); `email` solo se acepta como alias.
+' - authRepository guarda el usuario en useUserEntitiesStore y en disco con userLocal.saveBatch
+'   y llama a useAuthStore.setAuth(token, userId); la AuthStore se persiste sola (persist de
+'   Zustand), no con AsyncStorage.multiSet.
+' - La precarga del catálogo no la lanza authRepository: la lanza el efecto de AuthProvider
+'   (loadInitialData) al cambiar el token.
+!include ../_estilo.iuml
+
+actor "Visitante" as actor
+box "App (React Native)" #F3F8FF
+    participant "LoginScreen\n<<Nivel 7>>" as screen
+    participant "AuthProvider\n(useAuth)\n<<Nivel 6>>" as context
+    participant "auth / item / genre\nRepository\n<<Nivel 3>>" as repo
+    participant "useUserEntitiesStore\nuseAuthStore\n<<Nivel 4>>" as store
+    participant "auth / item / genre\nService\n<<Nivel 1>>" as service
+end box
+participant "API REST\n(backend)" as api
+
+actor -> screen : introduce email o nombre de usuario\ny contraseña
+actor -> screen : pulsa "Iniciar Sesión"
+screen -> screen : handleLogin() -> validateForm()
+
+alt Campo vacío
+    screen --> actor : showAlert({ title: 'Error', message: 'Por favor ingresa\ntu email o tu usuario' | 'Por favor ingresa tu contrasena' })
+else Formulario completo
+    screen -> context : login(identifier, password)
+    context -> repo : authRepository.login(identifier, password)
+    repo -> service : authService.login(identifier, password)
+    service -> api : POST /api/auth/login\n{ identifier: identifier.trim(), password }
+    note right of service : apiClient no añade JWT (aún no hay token)\ny /api/auth/** es público (SecurityConfig)
+
+    alt Usuario (email o nombre) inexistente o contraseña errónea
+        api --> service : 401 Unauthorized { message }
+        service --> repo : AuthServiceError("Usuario, email\no contraseña incorrectos", 401)
+        repo --> screen : throw (vía AuthProvider)
+        screen --> actor : showAlert({ title: 'Error de Inicio de Sesion', message })
+    else Credenciales válidas
+        api --> service : 200 OK LoginResponse { token, user }
+        service --> repo : { token, user }
+        repo -> store : useUserEntitiesStore.setUsers([user])
+        repo -> repo : userLocal.saveBatch([user])
+        note right of repo : Disco (AsyncStorage)
+        repo -> store : useAuthStore.setAuth(token, userId)
+        note right of store : AuthStore persistida ('auth-store',\npersist sin partialize): token,\ncurrentUserId, isAuthenticated e\nisHydrated. Desde aquí apiClient añade\nAuthorization: Bearer <token>
+        repo --> context : { token, user }
+        context --> screen : void
+        screen -> screen : navigation.reset({ routes: [BottomTab] })
+        screen --> actor : pantalla principal (BottomTab)
+
+        == Precarga de datos globales (efecto de AuthProvider) ==
+
+        store ->> context : token cambia (selector de useAuthStore)
+        context -> context : useEffect -> initializeAuth()\n(initialDataLoadedRef = true)\n-> loadInitialData()
+        context ->> repo : itemRepository.getCatalog() (sin esperar)
+        repo ->> service : cache.list('items_catalog', itemService.getAll)
+        service ->> api : GET /api/items (segundo plano)
+        note right of repo : Si hay índice en disco devuelve sus IDs\nal instante; la red se consulta una vez por\nsesión e hidrata useItemEntitiesStore + disco
+        context -> repo : await genreRepository.getAll()
+        repo -> service : cache.list('all', genreService.getAll)
+        service -> api : GET /api/genres
+        api --> service : 200 List<GenreDTO>
+        service --> repo : GenreDTO[]
+        repo -> store : setGenres(genres) + índice
+    end
+end
+
+@enduml

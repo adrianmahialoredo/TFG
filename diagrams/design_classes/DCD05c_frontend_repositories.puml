@@ -1,0 +1,108 @@
+@startuml DCD-05c
+title DCD-05c - Diagrama de clases de diseño: frontend (React Native),\nnivel 3 (repositories)
+
+' Partes: DCD-05a niveles 7-5; DCD-05b nivel 4 (Entity Stores); DCD-05c nivel 3 (este);
+' DCD-05d niveles 2-1 (local y services).
+' Cada recurso (genre, lesson, itemList, tune...) repite el patrón
+' <x>Service -> <x>Local -> <x>Repository -> use<X>EntitiesStore; aquí se muestra
+' el de canciones, el de items (catálogo, feeds, recientes) y el de autenticación.
+' Fuentes: repositories/{song,item,auth}.repository.ts, utils/entityCache.utils.ts.
+skinparam classAttributeIconSize 0
+skinparam roundcorner 6
+skinparam nodesep 12
+skinparam ranksep 55
+skinparam packageStyle rectangle
+skinparam class {
+    BackgroundColor<<store>> #F3EAFB
+    BorderColor<<store>> #7A4FA8
+    BackgroundColor<<repository>> #E6F5E6
+    BorderColor<<repository>> #3C8A3C
+    BackgroundColor<<local>> #FFF4E0
+    BorderColor<<local>> #B07A1F
+    BackgroundColor<<service>> #FDF7E3
+    BorderColor<<service>> #B07A1F
+    BackgroundColor<<utils>> #F3F3F3
+    BackgroundColor<<external>> #FFFFFF
+    BorderColor<<external>> #888888
+}
+hide empty members
+
+package "Nivel 3 - Repositories" {
+    class songRepository <<repository>> {
+        + getById(id : string) : Promise<SongDTO | null>
+        + getAllById(ids : string[]) : Promise<SongDTO[]>
+        + hydrate(songs : SongDTO[]) : string[]
+        + getPopular(onFresh?) : Promise<string[]>
+        + getNewByGenreId(genreId : string, onFresh?) : Promise<string[]>
+        + getFromSpotify(userId : string, onFresh?) : Promise<string[]>
+        + getByFavouriteArtists(userId : string, onFresh?)\n    : Promise<{newSongs; popularSongs}>
+        {method} ...
+    }
+    class "songLessonRepository /\nchordRepository /\ntabSectionRepository" as contentRepos <<repository>> {
+        + getAllById(ids : string[]) : Promise<T[]>
+    }
+    class itemRepository <<repository>> {
+        + getCatalog(onFresh?) : Promise<string[]>
+        + getAllById(ids : string[]) : Promise<ItemSummaryDTO[]>
+        + hydrateSummaries(summaries) : string[]
+        + getFeed(cacheKey, fetchIds, onFresh?) : Promise<string[]>
+        + getCustomFeed(cacheKey, load, onFresh?) : Promise<string[]>
+        + markAsAccessed(id : string) : void
+    }
+    class authRepository <<repository>> {
+        + login(identifier, password) : Promise<{token, user}>
+        + requestVerificationCode(email : string) : Promise<void>
+        + register(formData, code : string) : Promise<{token, user}>
+        + requestPasswordResetCode(email : string) : Promise<void>
+        + verifyPasswordResetCode(email, code) : Promise<void>
+        + resetPassword(email, code, newPassword) : Promise<void>
+        + logout() : Promise<void>
+    }
+    note bottom of authRepository : logout limpia la RAM (clearAuth, clearUsers,\nclearItemLists) y del disco los datos del usuario\ny los índices personalizados (Spotify,\nrecomendadas, artistas favoritos)
+
+    class "EntityCache<T>" as EntityCache <<utils>> {
+        + getAllById(ids : string[]) : Promise<T[]>
+        + hydrate(entities : T[], cacheKey?) : string[]
+        + list(cacheKey, fetchList, onFresh?) : Promise<string[]>
+        + idList(cacheKey, fetchIds, onFresh?) : Promise<string[]>
+        + feed(cacheKey, load, onFresh?) : Promise<string[]>
+        + readIndex(cacheKey) : Promise<string[]>
+        + markFresh(ids : string[]) : void
+        + revalidate(ids : string[]) : void
+    }
+    note bottom of EntityCache
+        utils/entityCache.utils.createEntityCache(config).
+        Por id: RAM -> disco -> API.
+        Listas: índice guardado al instante y la red
+        refresca después avisando con onFresh
+        (stale-while-revalidate).
+    end note
+}
+
+' Stores del nivel 4 (detalladas en DCD-05b)
+package "Nivel 4 - Entity Stores (ver DCD-05b)" {
+    class "useSongEntitiesStore /\nuseSongLessonEntitiesStore /\nuseChordEntitiesStore /\nuseTabSectionEntitiesStore" as songStores <<store>>
+    class "useItemEntitiesStore /\nuseRecentItemsStore" as itemStores <<store>>
+    class "useAuthStore /\nuseUserEntitiesStore /\nuseItemListEntitiesStore" as sessionStores <<store>>
+}
+
+' Niveles 2 y 1 (detallados en DCD-05d)
+class "songLocal" as songLocal <<local>> <<ver DCD-05d>>
+class "songService / userService" as songServices <<service>> <<ver DCD-05d>>
+class "authService" as authService <<service>> <<ver DCD-05d>>
+
+songRepository --> EntityCache
+songRepository --> contentRepos : lessonIds -> chordIds, tabSectionIds
+songRepository -----> songServices : getTopArtists (userService)
+songRepository -----> songLocal
+songRepository -----> songStores
+songRepository -----> itemStores : resumen del catálogo
+contentRepos -----> songStores
+itemRepository --> EntityCache
+itemRepository -----> itemStores
+itemRepository -----> sessionStores : currentUserId
+authRepository -----> authService
+authRepository -----> sessionStores
+authRepository -----> songLocal : removeQueryIndexes
+
+@enduml

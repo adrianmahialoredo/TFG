@@ -26,7 +26,7 @@ export default function LearnScreen() {
 
   const categories = useMemo(() => [
     { title: 'Populares', data: populars },
-    { title: 'Nuevas', data: news },
+    { title: 'Novedades', data: news },
     { title: 'Para ti', data: recommendations },
     // Solo si el usuario tiene algún instrumento favorito (y ya se conoce su nombre)
     ...(favouriteInstrument?.title

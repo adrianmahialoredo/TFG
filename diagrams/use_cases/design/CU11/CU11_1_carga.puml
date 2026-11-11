@@ -1,0 +1,59 @@
+@startuml DSD-CU-11-1
+title DSD-CU-11 (1/5) - Utilizar afinador cromático: carga de las afinaciones (app)
+
+' Parte de la app de la realización de CU-11 (análisis en
+' diagrams/use_cases/description/CU11_1_carga_y_escucha.puml y CU11_2_acciones_y_salida.puml). El backend se dibuja como una sola
+' línea de vida ("API REST"); lo que hace cada endpoint está en DSD-CU-11 (5/5).
+' Fuentes: screens/TunerScreen.tsx, components/tuner/(TunerStringSelector, TunerGauge,
+' TuneWheel).tsx, hooks/useTunes.ts, hooks/useInstruments.ts,
+' repositories/tune.repository.ts, instrument.repository.ts, services/tune.service.ts,
+' services/instrument.service.ts, utils/entityCache.utils.ts; architecture.md §12 "Afinador".
+' Notas de diseño:
+'  - La captura y el análisis del audio son solo del frontend: el backend solo sirve el
+'    catálogo de afinaciones (GET /api/tunes) y los instrumentos (POST /api/instruments/by-ids).
+'  - La afinación por defecto la elige useTunes: la primera de un instrumento favorito del
+'    usuario o, si no tiene ninguno con afinaciones, la primera de la lista.
+!include ../_estilo.iuml
+
+actor "Músico" as actor
+box "App (React Native)" #F3F8FF
+    participant "TunerScreen\n+ components/tuner\n<<Nivel 7>>" as screen
+    participant "useTunes\n<<Nivel 6>>" as useTunes
+    participant "tune / instrument\nRepository <<Nivel 3>>" as repo
+    participant "tune / instrument\nService <<Nivel 1>>" as service
+end box
+participant "API REST\n(backend)" as api
+
+== Carga de las afinaciones ==
+
+actor -> screen : pulsa "Afinador" en el Home\n(navigate('TunerScreen'))
+screen -> useTunes : useTunes()
+useTunes -> repo : tuneRepository.getAll(onFresh)
+note right of repo : cache.list('all', tuneService.getAll, onFresh):\nCache-First sobre el índice del catálogo
+alt Hay índice en caché (RAM / disco)
+    repo --> useTunes : tuneIds (al instante)
+    repo ->> service : revalidación en segundo plano (onFresh)
+else Sin índice: se espera a la API
+    repo -> service : tuneService.getAll()
+    service -> api : GET /api/tunes
+    api --> service : 200 List<TuneDTO>
+    service -> service : map(toAppTuneDTO) (ids a string)
+    service --> repo : TuneDTO[]
+    repo -> repo : setTunes (TuneEntitiesStore)\n+ disco + índice 'all'
+    repo --> useTunes : tuneIds
+end
+useTunes -> repo : useInstrumentsByIds(instrumentIds):\ninstrumentRepository.getAllById(faltan)
+repo -> service : instrumentService.getAllById(ids)
+service -> api : POST /api/instruments/by-ids
+api --> service : 200 List<InstrumentDTO>
+useTunes -> useTunes : label "Instrumento (Afinación)"; ordena por\nnombre del instrumento y por id;\ndefaultTuneId = 1.ª de un instrumento favorito\n(useAuth().user) o la 1.ª de la lista
+useTunes --> screen : { tunes, defaultTuneId, loading }
+alt No hay afinaciones (sin conexión ni caché)
+    screen --> actor : "No hay afinaciones disponibles.\nComprueba tu conexión."
+else
+    screen --> actor : cuerdas (TunerStringSelector), medidor (TunerGauge)\ny rueda (TuneWheel) con la afinación por defecto
+end
+
+note over screen, useTunes : Sigue en DSD-CU-11 (2/5): arranque del micrófono
+
+@enduml

@@ -1,0 +1,69 @@
+@startuml DS-CU-09-2
+title DS-CU-09 (2/2) - Consultar recomendaciones adaptativas: "Basado en tu Spotify"
+
+' Diagrama de secuencia de análisis (patrón Boundary-Control-Entity)
+' Fuentes: HomeScreen.tsx (SPOTIFY_TITLE), useHomeItems.ts, itemFeed.repository.ts,
+' SpotifyRecommendationController.java, SpotifyRecommendationServiceImpl.java,
+' SpotifyAuthServiceImpl.getValidAccessToken, RecommendationConstants.java
+autonumber
+hide footbox
+skinparam sequenceMessageAlign center
+skinparam roundcorner 6
+
+actor "Músico" as musico
+boundary "RecomendacionesView" as vista
+control "MotorRecomendacion" as motor
+control "GestorSpotifyAuth" as auth
+entity "Usuario" as usuario
+entity "Item" as item
+entity "Song" as cancion
+participant "SpotifyAPI\n<<sistema externo>>" as spotify
+
+note over musico, vista : Solo en Inicio (en Canciones, el carrusel "Basado en tu Spotify" solo trae canciones)
+
+alt 13a. El usuario no tiene Spotify vinculado
+    vista --> musico : mostrarBotonConectarSpotify()
+    note right of vista : Título "Basado en tu Spotify"\n+ botón "Conectar con Spotify" (DS-CU-10)
+else Spotify vinculado
+    vista -> motor : pedirRecomendacionesDeSpotify(userId)
+    note right of motor : GET /api/spotify/recommendations/items/{id}
+    motor -> auth : obtenerTokenValido(userId)
+    note right of auth : Si caduca en menos de 1 minuto,\nlo renueva con el refresh token (DS-CU-10)
+    auth --> motor : token
+
+    alt Error de Spotify o de red
+        motor --> vista : error
+        vista --> musico : mostrarCarruselVacio()
+    else Spotify responde
+        motor -> spotify : obtenerTopsDeSpotify(token)
+        spotify --> motor : canciones top (medium, long, short_term)
+        motor -> cancion : buscarPorTituloYArtista(canciones top)
+        note right of cancion : Sin las que estén en 3 o más listas
+        cancion --> motor : canciones que existen en la app (hasta 6)
+        opt Faltan canciones
+            motor -> spotify : obtenerArtistasTop(token, 5, medium_term)
+            spotify --> motor : artistas top
+            motor -> cancion : buscarPopularesClasicasYNuevas(artistas)
+            cancion --> motor : canciones de sus artistas
+        end
+        alt 15a. Ninguna canción de Spotify está en la app
+            motor --> vista : sin ítems
+            vista --> musico : mostrarAvisoSinRecomendaciones()
+            note right of vista : "Escucha música en Spotify para que te\nrecomendemos canciones, lecciones y géneros"
+        else Hay canciones
+            motor -> motor : calcularTopGenerosEInstrumentos(canciones)
+            motor -> item : buscarLecciones(géneros, 3, filtrarExclusiones(idsEnListas))
+            item --> motor : lecciones
+            motor -> item : buscarInstrumentGenres(topGéneros, topInstrumentos, 2,\nfiltrarExclusiones(idsEnListas))
+            item --> motor : instrument-genres
+            motor -> usuario : obtenerGenerosEn3OMasListas()
+            usuario --> motor : géneros excluidos
+            motor -> motor : elegirGeneroMasRepetidoNoExcluido()
+            motor -> motor : unificarYBarajar()
+            motor --> vista : retornarItemsPolimorficos()
+            vista --> musico : mostrarCarrusel("Basado en tu Spotify")
+        end
+    end
+end
+
+@enduml

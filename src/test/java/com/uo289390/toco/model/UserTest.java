@@ -108,7 +108,6 @@ class UserTest {
     @Test
     void setPreferences_linksBackReference() {
         Preferences preferences = new Preferences();
-        preferences.setDifficultyLevel(70);
 
         user.setPreferences(preferences);
 
@@ -122,7 +121,6 @@ class UserTest {
 
         assertNotNull(user.getPreferences());
         assertSame(user, user.getPreferences().getUser());
-        assertEquals(0, user.getPreferences().getDifficultyLevel());
         assertTrue(user.getPreferences().getFavoriteGenres().isEmpty());
     }
 

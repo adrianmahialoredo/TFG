@@ -46,7 +46,7 @@ describe('SpotifyButton', () => {
   it('mientras conecta el botón está desactivado', async () => {
     mockedUseSpotifyConnect.mockReturnValue({ connect, connecting: true });
     await render(<SpotifyButton />);
-    await fireEvent.press(screen.getByText('Conectar con Spotify'));
+    await fireEvent.press(screen.getByText('Conectando…'));
     expect(connect).not.toHaveBeenCalled();
   });
 });

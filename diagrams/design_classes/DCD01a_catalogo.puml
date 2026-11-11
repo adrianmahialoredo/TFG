@@ -1,0 +1,122 @@
+@startuml DCD-01a
+title DCD-01a - Diagrama de clases de diseño: modelo (1/3) - jerarquía del catálogo
+
+' Entidades JPA tal y como están en el código (com.uo289390.toco.model). Se muestran los
+' atributos persistentes con su tipo Java, las relaciones con su multiplicidad y nombre de
+' rol, y los métodos de dominio. Se omiten getters/setters (Lombok) y los timestamps de
+' auditoría salvo createdAt de Item.
+' Partes: DCD-01a (jerarquía Item), DCD-01b (contenido de canciones y lecciones),
+' DCD-01c (usuario y listas). Esquema físico equivalente: diagrams/er*.puml.
+' Reglas: architecture.md §2.
+' Fuentes: model/Item.java, Song.java, Lesson.java, Genre.java, InstrumentGenre.java,
+'          Instrument.java, utils/Identifiable.java, dto/ItemDTO.java (@Min(0) @Max(5) level)
+'
+' Notas de diseño:
+'   - IDs asignados a mano (vienen de data/*.json) en Item e Instrument.
+'   - Las colecciones del dominio musical son Set (sin duplicados).
+skinparam classAttributeIconSize 0
+skinparam roundcorner 6
+skinparam nodesep 40
+skinparam ranksep 50
+skinparam class {
+    BackgroundColor<<entity>> #FFF4E0
+    BorderColor<<entity>> #B07A1F
+    BackgroundColor<<enum>> #F3F3F3
+    BackgroundColor<<interface>> #E3F0FF
+    BorderColor<<interface>> #3D6FA8
+}
+hide empty members
+
+interface "Identifiable<ID>" as Identifiable <<interface>> {
+    + getId() : ID
+}
+note left of Identifiable : utils.Identifiable: las entidades\nque entran en rankings (getTopNMostRepeated)
+
+abstract class Item <<entity>> {
+    # id : Long {PK, asignado}
+    # title : String {NotBlank}
+    # imageUrl : String
+    # level : int {0..5, validado en ItemDTO}
+    # createdAt : LocalDateTime
+    # type : Item.Type
+    --
+    + equals(o : Object) : boolean {por id, instanceof}
+    + hashCode() : int
+}
+note right of Item : @Entity (sin @Table: tabla item)\n@Inheritance(strategy = JOINED)\n@DiscriminatorColumn("dtype")\n@DiscriminatorValue de los subtipos:\nSONG, LESSON, GENRE, INSTRUMENT_GENRE\nComparten espacio de IDs
+
+enum "Item.Type" as ItemType <<enum>> {
+    Song
+    Lesson
+    Genre
+    InstrumentGenre
+}
+
+class Song <<entity>> {
+    - artist : String
+    - decade : String
+    - popular : boolean
+    - newSong : boolean
+    - genreClassic : boolean
+    - genrePopular : boolean
+    - genreNew : boolean
+    - artistClassic : boolean
+    - artistPopular : boolean
+    - artistNew : boolean
+}
+
+class Lesson <<entity>> {
+    - belongsToGenre : boolean
+    - belongsToInstrument : boolean
+    - belongsToInstrumentGenre : boolean
+    - indexInInstrumentGenre : int
+    - popular : boolean
+    - genrePopular : boolean
+    - instrumentPopular : boolean
+    --
+    + addSection(section : LessonSection) : void
+    + joinInstrumentGenre(ig : InstrumentGenre, index : int) : void
+    + leaveInstrumentGenre() : void
+}
+
+class Genre <<entity>> {
+    - description : String {TEXT}
+    - bannerUrl : String
+    - welcomeIntroVideoId : String
+    - welcomeSongVideoId : String
+    --
+    + setLessons(lessons : Collection<Lesson>) : void
+}
+
+class InstrumentGenre <<entity>> {
+    --
+    + setLessons(lessons : Collection<Lesson>) : void
+}
+note bottom of InstrumentGenre : setLessons une las lecciones en orden\n(su índice = su posición) y desvincula\nlas que salen. Dueño de la relación: Lesson
+
+class Instrument <<entity>> {
+    - id : Long {PK, asignado}
+    - name : String {unique}
+    # imageUrl : String
+    --
+    + equals(o : Object) : boolean
+    + hashCode() : int
+}
+
+Identifiable <|.. Item
+Identifiable <|.. Instrument
+Item <|-- Song
+Item <|-- Lesson
+Item <|-- Genre
+Item <|-- InstrumentGenre
+Item --> ItemType
+
+Song "*" --> "*" Genre : genres
+Song "*" --> "*" Instrument : instruments
+Lesson "*" -- "0..1" Genre : genre / lessons
+Lesson "*" -- "0..1" InstrumentGenre : instrumentGenre / lessons\n{@OrderBy indexInInstrumentGenre}
+Lesson "*" --> "0..1" Instrument : instrument
+InstrumentGenre "*" --> "1" Instrument : instrument
+InstrumentGenre "*" --> "1" Genre : genre
+
+@enduml

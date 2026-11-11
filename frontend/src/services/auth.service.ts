@@ -136,7 +136,7 @@ export const login = async (
       user: response.data.user,
     };
   } catch (error: unknown) {
-    throw toAuthServiceError(error, 'No se pudo iniciar sesion');
+    throw toAuthServiceError(error, 'No se pudo iniciar sesión');
   }
 };
 
@@ -154,6 +154,60 @@ export const requestVerificationCode = async (email: string): Promise<void> => {
       throw new AuthServiceError('No se pudo enviar el email de verificación. Inténtalo más tarde', error.response.status);
     }
     throw toRegisterServiceError(error);
+  }
+};
+
+/** Mensajes de la recuperación de contraseña: los del código son los mismos que en el registro. */
+const toPasswordResetError = (error: unknown): AuthServiceError => {
+  if (axios.isAxiosError(error) && error.response?.status === 429) {
+    return new AuthServiceError('Espera un minuto antes de pedir otro código', 429);
+  }
+  if (axios.isAxiosError(error) && error.response?.status === 400) {
+    const payload = (error.response.data || {}) as AuthErrorPayload;
+    const field = payload.errors ? Object.keys(payload.errors)[0] : undefined;
+    const message =
+      (field === 'newPassword' && REGISTER_FIELD_MESSAGES.password) ||
+      (field && REGISTER_FIELD_MESSAGES[field]) ||
+      (payload.message && REGISTER_BACKEND_MESSAGES[payload.message]) ||
+      'No se pudo cambiar la contraseña';
+    return new AuthServiceError(message, 400, payload.errors);
+  }
+  if (axios.isAxiosError(error) && !error.response) {
+    return new AuthServiceError('No se pudo conectar con el servidor. Revisa tu red.');
+  }
+  return new AuthServiceError(
+    'No se pudo cambiar la contraseña. Inténtalo más tarde',
+    axios.isAxiosError(error) ? error.response?.status : undefined
+  );
+};
+
+/**
+ * Olvidé mi contraseña, paso 1: pide un código para la cuenta de ese email.
+ * El backend responde igual exista o no la cuenta (no revela qué emails están registrados).
+ */
+export const requestPasswordResetCode = async (email: string): Promise<void> => {
+  try {
+    await apiClient.post(API_ENDPOINTS.AUTH.PASSWORD_RESET_CODE, { email });
+  } catch (error: unknown) {
+    throw toPasswordResetError(error);
+  }
+};
+
+/** Olvidé mi contraseña, paso 2: comprueba el código (sin gastarlo) antes de pedir la contraseña nueva. */
+export const verifyPasswordResetCode = async (email: string, code: string): Promise<void> => {
+  try {
+    await apiClient.post(API_ENDPOINTS.AUTH.PASSWORD_RESET_VERIFY, { email, code });
+  } catch (error: unknown) {
+    throw toPasswordResetError(error);
+  }
+};
+
+/** Olvidé mi contraseña, paso 3: guarda la contraseña nueva con el código ya comprobado. */
+export const resetPassword = async (email: string, code: string, newPassword: string): Promise<void> => {
+  try {
+    await apiClient.post(API_ENDPOINTS.AUTH.PASSWORD_RESET, { email, code, newPassword });
+  } catch (error: unknown) {
+    throw toPasswordResetError(error);
   }
 };
 

@@ -1,0 +1,60 @@
+@startuml DSD-CU-05-2
+title DSD-CU-05 (2/3) - Consultar detalle de canción y lección: lección mostrada e interacción (app)
+
+' Fuentes: screens/SongScreen.tsx, components/InstrumentCarousel.tsx, OptionSelector.tsx,
+' Touchable.tsx, ChordModal.tsx, DifficultyStars.tsx, YoutubeVideo.tsx; hooks/useSong.ts,
+' useInstruments.ts; stores/ui/songScreen.store.ts; constants/Preferences.ts; utils/song.utils.ts.
+' Además del análisis: selector de instrumento (InstrumentCarousel, solo si hay lecciones de más
+' de uno) y elección de la lección inicial según los instrumentos favoritos y el nivel del usuario.
+' Todo se deriva con useMemo de las Entity Stores ya cargadas en DSD-CU-05 (1/3): sin peticiones.
+!include ../_estilo.iuml
+
+actor "Músico" as actor
+box "App (React Native)" #F3F8FF
+    participant "SongScreen\n(+ ChordModal)\n<<Nivel 7>>" as screen
+    participant "useSong\n<<Nivel 6>>" as hook
+    participant "useSongScreenStore\n<<Nivel 5>>" as uiStore
+    participant "Entity Stores\n<<Nivel 4>>" as stores
+end box
+
+hook -> stores : songs[songId], songLessons, chords,\ntabSections (selectores) y usuario actual
+hook -> hook : allLessons = song.lessonIds -> SongLessonDTO
+hook -> hook : useMemo: instrumento = el elegido, si no el primer\ninstrumento favorito con lecciones, si no el de la 1.ª lección
+hook -> hook : useMemo: dificultad = la elegida, si no ORIGINAL si\nnivel >= ORIGINAL_LESSON_MIN_LEVEL (y existe),\nsi no la de la 1.ª lección del instrumento
+hook -> hook : selectedLesson, chords, tabSections,\nparseLyrics(chordedLyrics)
+hook --> screen : { song, selectedLesson, chords, tabSections,\navailableInstruments, availableDifficulties, parsedLyrics, ... }
+
+alt sin lecciones para la canción
+    screen --> actor : "No hay lecciones disponibles para esta canción"
+else
+    screen --> actor : carátula, título, artista, DifficultyStars,\nYoutubeVideo(videoUrl), InstrumentCarousel (si hay\nmás de un instrumento), OptionSelector de dificultad,\nacordes, letra con acordes y tabs
+end
+
+opt 3a. La canción tiene varias dificultades (EASY, MEDIUM, ORIGINAL)
+    actor -> screen : elige dificultad en OptionSelector
+    screen -> hook : changeDifficulty(difficulty)
+    hook -> uiStore : setDifficulty(difficulty)
+    uiStore --> hook : selectedDifficulty
+    hook -> hook : useMemo: nueva selectedLesson, chords,\ntabSections y parsedLyrics
+    hook --> screen : lección seleccionada
+    screen --> actor : actualiza vídeo, acordes, letra y tablaturas
+end
+
+opt Cambia de instrumento (solo si hay lecciones de más de uno)
+    actor -> screen : elige instrumento en InstrumentCarousel
+    screen -> hook : changeInstrument(instrumentId)
+    hook -> uiStore : setInstrument(instrumentId)
+    hook -> hook : useMemo: lecciones y dificultades de ese\ninstrumento (dificultad por defecto si la elegida no existe)
+    hook --> screen : lección seleccionada
+    screen --> actor : actualiza la lección mostrada
+end
+
+opt 5a. Pulsa un acorde
+    actor -> screen : pulsa un acorde (Touchable)
+    screen -> screen : setSelectedChord(chord)
+    screen --> actor : <ChordModal chord />: nombre, diagrama (imageUrl),\ntags (Mayor, Menor, Séptima, Power chord, Abierto,\nCejilla) y "Capo: n" / "Sin capo"
+    actor -> screen : cierra el modal
+    screen -> screen : setSelectedChord(null)
+end
+
+@enduml

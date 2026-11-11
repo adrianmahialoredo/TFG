@@ -53,7 +53,7 @@ describe('LearnScreen', () => {
     await render(<LearnScreen />);
     expect(screen.getByText('Aprender')).toBeTruthy();
     expect(screen.getByText('Carrusel Populares (1)')).toBeTruthy();
-    expect(screen.getByText('Carrusel Nuevas (2)')).toBeTruthy();
+    expect(screen.getByText('Carrusel Novedades (2)')).toBeTruthy();
     expect(screen.queryByText(/Carrusel Para ti/)).toBeNull();
   });
 

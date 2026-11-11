@@ -1,0 +1,55 @@
+@startuml DSD-CU-01-4
+title DSD-CU-01 (4/4) - Registrar usuario: registro (backend)
+
+' Lo que hace el backend en POST /api/auth/register (DSD-CU-01 2/4).
+' Fuentes: AuthController.java, EmailVerificationServiceImpl.java, UserServiceImpl.java,
+' UserRepository.java, EntityResolver.java, utils/mapper/EntityMapper.java, DtoMapper.java,
+' JwtUtil.java, GlobalExceptionHandler.java.
+' El código solo se consume cuando el usuario ya está guardado: un registro rechazado por
+' otro motivo se puede reintentar con el mismo código.
+!include ../_estilo.iuml
+
+participant "App\n(services)" as app
+box "Backend (Spring Boot)" #FFF9F0
+    participant "AuthController\n<<controller>>" as ctrl
+    participant "EmailVerification\nServiceImpl\n<<service>>" as verification
+    participant "UserServiceImpl\n<<service>>" as userService
+    participant "UserRepository /\nEntityResolver" as userRepo
+    participant "JwtUtil\n<<security>>" as jwt
+end box
+database "PostgreSQL" as db
+
+group POST /api/auth/register
+    app -> ctrl : register(@Validated(OnCreate.class) UserDto)
+    note right of ctrl : Un campo inválido ->\n400 { errors: { campo: ... } }
+    ctrl -> verification : checkCode(email, verificationCode)
+    alt Código vacío, no pedido, caducado, incorrecto o 5 fallos
+        verification --> ctrl : IllegalArgumentException("Invalid verification code" |\n"Verification code expired" | "Too many wrong verification codes" | ...)
+        ctrl --> app : 400 { message }
+    else Código correcto
+        verification --> ctrl : ok
+        ctrl -> userService : register(dto)
+        userService -> userRepo : existsByEmailIgnoreCase(email)\nfindByUsername(username)
+        userRepo -> db : SELECT
+        alt Email ya registrado o usuario ocupado
+            userService --> ctrl : IllegalArgumentException("Email already registered" |\n"Username already taken")
+            ctrl --> app : 400 { message }
+        else Libres
+            userService -> userRepo : resolveGenres(ids), resolveInstruments(ids)
+            userService -> userService : entityMapper.userDtoToUser(dto, genres, instruments)\nsetPassword(passwordEncoder.encode(password))\nsetRole(Role.USER)
+            userService -> userRepo : save(user)
+            userRepo -> db : INSERT
+            userService --> ctrl : UserDto
+            ctrl -> verification : consume(email)
+            ctrl -> userService : login(email, password)
+            userService -> userRepo : findByEmail(email)
+            userService -> userService : passwordEncoder.matches(password, hash)
+            userService -> jwt : generateToken(user.getId(), user.getRole())
+            jwt --> userService : token (subject = id, claim role)
+            userService --> ctrl : LoginResponse(token,\ndtoMapper.userToUserResponseDto(user))
+            ctrl --> app : 201 Created LoginResponse { token, user }
+        end
+    end
+end
+
+@enduml

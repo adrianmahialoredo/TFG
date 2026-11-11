@@ -1,0 +1,73 @@
+@startuml DSD-CU-03-3
+title DSD-CU-03 (3/3) - Configurar perfil: endpoints del backend
+
+' Lo que hace el backend en cada petición de DSD-CU-03 (1/3 y 2/3).
+' Fuentes: UserController.java, OwnershipChecker.java, UserServiceImpl.java, UserRepository.java,
+' utils/EntityResolver.java, utils/mapper/EntityMapper.java, DtoMapper.java,
+' JwtAuthenticationFilter.java, GlobalExceptionHandler.java.
+' JwtAuthenticationFilter valida el token y deja en el SecurityContext
+' authentication.getName() = id del usuario y ROLE_<rol>.
+' Un id (de usuario, género o instrumento) inexistente da 404: ResponseEntity.of con
+' Optional vacío, o EntityNotFoundException de EntityResolver.
+!include ../_estilo.iuml
+
+participant "App\n(services)" as app
+box "Backend (Spring Boot)" #FFF9F0
+    participant "UserController\n<<controller>>" as ctrl
+    participant "OwnershipChecker\n<<security>>" as ownership
+    participant "UserServiceImpl\n<<service>>" as svc
+    participant "UserRepository /\nEntityResolver" as repo
+    participant "DtoMapper\n<<mapper>>" as mapper
+end box
+database "PostgreSQL" as db
+
+note over ctrl, ownership : Todos los endpoints llevan\n@PreAuthorize("hasRole('ADMIN') or\n@ownership.isSelf(#id, authentication)"):\nisSelf = String.valueOf(id) == authentication.getName().\nSi es false: AccessDeniedException -> 403
+
+group GET /api/users/{id}
+    app -> ctrl : getById(id)
+    ctrl -> ownership : isSelf(id, authentication)
+    ownership --> ctrl : true
+    ctrl -> svc : findById(id)
+    svc -> repo : EntityResolver.findUser(id)
+    repo -> db : SELECT
+    svc -> mapper : userToUserDto(user)
+    ctrl --> app : 200 UserDto / 404 (ResponseEntity.of)
+end
+
+group PUT /api/users/{id}
+    app -> ctrl : update(id, @Valid UserDto)
+    note right of ctrl : @Valid UserDto -> 400 { errors }\nantes de evaluar @PreAuthorize
+    ctrl -> ownership : isSelf(id, authentication)
+    ownership --> ctrl : true (si no, 403)
+    ctrl -> svc : update(id, dto)
+    svc -> repo : findUser(id); findByUsername(username)\n(ensureUsernameAvailable)
+    svc -> repo : resolveGenres(ids), resolveInstruments(ids)
+    svc -> svc : entityMapper.userDtoToUser(...)\nensureMinimumFavourites(...)\ncopia name, username, favoritos, profileImageUrl\ny validDifficultyLevel (el email no se cambia)
+    alt Usuario ocupado (u otra IllegalArgumentException:\nnivel fuera de 0-5, pocos favoritos)
+        svc --> ctrl : IllegalArgumentException
+        ctrl --> app : 400 { message }
+    else Datos válidos
+        svc -> repo : save(existingUser)
+        repo -> db : UPDATE
+        svc -> mapper : userToUserDto(saved)
+        ctrl --> app : 200 UserDto
+    end
+end
+
+group POST | DELETE /api/users/{id}/favorite-genres/{genreId} (o favorite-instruments)
+    app -> ctrl : addFavoriteGenre | removeFavoriteGenre(id, genreId)
+    ctrl -> ownership : isSelf(id, authentication)
+    ctrl -> svc : addFavoriteGenre | removeFavoriteGenre(id, genreId)
+    svc -> repo : findUser(id); resolveGenre(genreId) (al añadir)
+    alt Quitar dejaría menos del mínimo
+        svc --> ctrl : IllegalArgumentException("A user must have\nat least N favourite genres")
+        ctrl --> app : 400 { message }
+    else
+        svc -> repo : save(user)
+        repo -> db : UPDATE
+        svc -> mapper : userToUserDto(saved)
+        ctrl --> app : 200 UserDto (404 si el id no existe)
+    end
+end
+
+@enduml

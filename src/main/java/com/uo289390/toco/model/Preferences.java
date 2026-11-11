@@ -3,8 +3,6 @@ package com.uo289390.toco.model;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
 import jakarta.persistence.*;
-import jakarta.validation.constraints.Max;
-import jakarta.validation.constraints.Min;
 import lombok.*;
 
 import java.util.HashSet;
@@ -14,8 +12,9 @@ import java.util.Set;
  * Represents the musical preferences owned by a {@link User}.
  *
  * This entity groups the musical preferences that previously lived directly
- * inside {@link User}: the favourite genres, favourite instruments and the
- * desired difficulty level. It shares its primary key with the owning
+ * inside {@link User}: the favourite genres and the favourite instruments.
+ * The level of the user is not here but in {@link User#getDifficultyLevel()}
+ * (0 to 5). It shares its primary key with the owning
  * {@code User} through {@link MapsId}, so {@code preferences.id == user.id}.
  * Thanks to that, the existing {@code user_favorite_genres} and
  * {@code user_favorite_instruments} join tables keep using the {@code user_id}
@@ -56,14 +55,6 @@ public class Preferences {
     @JoinColumn(name = "user_id")
     @JsonIgnore
     private User user;
-
-    /**
-     * The user's desired difficulty level.
-     */
-    @Column(name = "difficulty_level", nullable = false)
-    @Min(value = 0, message = "Difficulty level must be at least 0")
-    @Max(value = 100, message = "Difficulty level must be at most 100")
-    private int difficultyLevel = 0;    // Between 0 and 100
 
     /**
      * The user's favourite musical genres.

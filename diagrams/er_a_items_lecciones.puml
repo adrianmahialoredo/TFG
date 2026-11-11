@@ -1,0 +1,145 @@
+@startuml ER-a
+title ER-a - Diagrama entidad-relación: jerarquía Item y lecciones
+
+' =====================================================================
+' Esquema físico de la base de datos PostgreSQL (1/3).
+' Generado por Hibernate (spring.jpa.hibernate.ddl-auto=update) a partir
+' de las entidades de com.uo289390.toco.model, con la estrategia de nombres
+' por defecto de Spring (camelCase -> snake_case).
+' Partes: ER-a jerarquía Item y lecciones; ER-b canciones y contenido;
+'         ER-c usuarios, listas y Spotify.
+'
+' Leyenda:
+'   PK  clave primaria        FK  clave foránea
+'   NN  NOT NULL explícito    UQ  UNIQUE
+'   Los campos primitivos (int, boolean) son siempre NOT NULL.
+'   Tablas con <<ver ER-x>>: se detallan en otra parte.
+' =====================================================================
+
+hide circle
+hide empty members
+skinparam linetype ortho
+skinparam roundcorner 6
+skinparam class {
+    BackgroundColor<<join>> #F3F3F3
+    BackgroundColor<<item>> #FFF4E0
+    BackgroundColor<<ver ER-b>> #FFFFFF
+    BorderColor<<ver ER-b>> #999999
+}
+
+' ---------------------------------------------------------------------
+' Jerarquía Item (herencia JOINED, discriminador dtype)
+' ---------------------------------------------------------------------
+
+entity "item" as item <<item>> {
+    * id : bigint <<PK>>
+    --
+    * dtype : varchar(31) <<NN>> {SONG, LESSON, GENRE, INSTRUMENT_GENRE}
+    * type : varchar <<NN>> {Song, Lesson, Genre, InstrumentGenre}
+    * title : varchar <<NN>>
+    image_url : varchar
+    * level : int
+    created_at : timestamp
+}
+
+entity "songs" as songs <<item>> {
+    * id : bigint <<PK, FK>>
+    --
+    * artist : varchar <<NN>>
+    decade : varchar
+    * popular : boolean
+    * new_song : boolean = false
+    * genre_classic : boolean
+    * genre_popular : boolean
+    * genre_new : boolean
+    * artist_classic : boolean = false
+    * artist_popular : boolean = false
+    * artist_new : boolean = false
+}
+
+entity "genres" as genres <<item>> {
+    * id : bigint <<PK, FK>>
+    --
+    * description : text <<NN>>
+    banner_url : varchar
+    * welcome_intro_video : varchar <<NN>>
+    * welcome_song_video : varchar <<NN>>
+}
+
+entity "lessons" as lessons <<item>> {
+    * id : bigint <<PK, FK>>
+    --
+    * belongs_to_genre : boolean
+    * belongs_to_instrument_genre : boolean = false
+    * belongs_to_instrument : boolean = false
+    * index_in_instrument_genre : int = 0
+    * popular : boolean
+    * genre_popular : boolean = false
+    * instrument_popular : boolean = false
+    genre_id : bigint <<FK>>
+    instrument_genre_id : bigint <<FK>>
+    instrument_id : bigint <<FK>>
+}
+
+entity "instrument_genres" as instrument_genres <<item>> {
+    * id : bigint <<PK, FK>>
+    --
+    instrument_id : bigint <<FK>>
+    genre_id : bigint <<FK>>
+}
+
+entity "lesson_sections" as lesson_sections {
+    * id : bigserial <<PK>>
+    --
+    title : varchar
+    html_content : text
+    video_url : varchar
+    * order_index : int
+    lesson_id : bigint <<FK>>
+}
+
+entity "instruments" as instruments <<ver ER-b>> {
+    * id : bigint <<PK>>
+}
+
+' ---------------------------------------------------------------------
+' Relaciones
+' ---------------------------------------------------------------------
+
+' Herencia (PK compartida con item.id)
+item ||--o| songs
+item ||--o| genres
+item ||--o| lessons
+item ||--o| instrument_genres
+
+' Lecciones
+genres |o--o{ lessons : genre_id
+instrument_genres |o--o{ lessons : instrument_genre_id
+instruments |o--o{ lessons : instrument_id
+lessons |o--o{ lesson_sections : lesson_id
+
+instruments |o--o{ instrument_genres : instrument_id
+genres |o--o{ instrument_genres : genre_id
+
+' ---------------------------------------------------------------------
+' Notas
+' ---------------------------------------------------------------------
+
+note top of item
+    Tabla raíz de la herencia JOINED
+    (Item no tiene @Table: se llama item).
+    Cada subtipo (songs, genres, lessons,
+    instrument_genres) comparte su id con item.id.
+    dtype es el discriminador de Hibernate;
+    type es el subtipo expuesto en la API.
+end note
+
+note bottom of lessons
+    Una lección pertenece a un género
+    (genre_id), a un instrumento-género
+    (instrument_genre_id, ordenada por
+    index_in_instrument_genre) y/o a un
+    instrumento (instrument_id).
+end note
+
+@enduml

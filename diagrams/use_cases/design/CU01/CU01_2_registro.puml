@@ -1,0 +1,61 @@
+@startuml DSD-CU-01-2
+title DSD-CU-01 (2/4) - Registrar usuario: registro con el código (app)
+
+' Fuentes: screens/RegisterScreen.tsx, components/EmailVerificationModal.tsx, hooks/useRegister.ts,
+' context/AuthContext.tsx, repositories/auth.repository.ts, services/auth.service.ts,
+' stores/entities/auth.entities.store.ts, user.entities.store.ts, navigation/AppNavigator.tsx.
+' Backend en DSD-CU-01 (4/4).
+' La precarga del catálogo no la lanza la pantalla de registro, sino el efecto de
+' AuthProvider al guardarse el token (como en DSD-CU-02).
+!include ../_estilo.iuml
+
+actor "Visitante" as actor
+box "App (React Native)" #F3F8FF
+    participant "RegisterScreen\n(+ EmailVerificationModal)\n<<Nivel 7>>" as screen
+    participant "useRegister\n<<Nivel 6>>" as hook
+    participant "authRepository\n<<Nivel 3>>" as repo
+    participant "useUserEntitiesStore\nuseAuthStore\n<<Nivel 4>>" as store
+    participant "authService\n<<Nivel 1>>" as service
+end box
+participant "API REST\n(backend)" as api
+
+actor -> screen : escribe el código de 6 dígitos
+screen -> screen : handleChange(value): 6 cifras -> onSubmit(code)
+screen -> hook : handleCodeSubmit(code) -> register(form, code)
+hook -> hook : validate(form)
+hook -> repo : register({ ...form, email: email.trim() }, code)
+repo -> repo : quita confirmPassword
+repo -> service : register(registerData, verificationCode)
+service -> api : POST /api/auth/register\n{ email, username, name, password,\nfavouriteGenresIds, favouriteInstrumentsIds,\nverificationCode }
+
+alt Código vacío, no pedido, caducado, incorrecto o 5 fallos
+    api --> service : 400 { message }
+    service --> repo : AuthServiceError(mensaje en español, 400)\n('El código no es correcto' | 'El código ha caducado...' | ...)
+    repo --> screen : throw (vía hook)
+    screen -> screen : setCodeError(error.message)
+    screen --> actor : el modal muestra el error y vacía el campo\n(puede reintentar o pedir otro código)
+else Email o nombre de usuario ya en uso
+    api --> service : 400 { message: "Email already registered" |\n"Username already taken" }
+    service --> repo : AuthServiceError("Ya existe una cuenta con ese email" |\n"Ese nombre de usuario ya está en uso", 400)
+    repo --> screen : throw (vía hook)
+    screen --> actor : el modal muestra el error\n(el código no se ha consumido: se puede\ncorregir el usuario y reintentar)
+else Campo inválido (@Validated(OnCreate))
+    api --> service : 400 { errors: { campo: ... } }
+    service --> screen : AuthServiceError(REGISTER_FIELD_MESSAGES[campo], 400)\n(vía repo y hook; el modal lo muestra)
+else Registro correcto
+    api --> service : 201 Created\nLoginResponse { token, user }
+    service --> repo : { token, user }
+    repo -> store : useUserEntitiesStore.setUsers([user])
+    repo -> repo : userLocal.saveBatch([user])
+    note right of repo : Disco (AsyncStorage)
+    repo -> store : useAuthStore.setAuth(token, userId)
+    note right of store : AuthStore persistida en AsyncStorage\n('auth-store', persist sin partialize):\ntoken, currentUserId, isAuthenticated\ne isHydrated
+    repo --> hook : { token, user }
+    hook --> screen : { token, user }
+    screen -> screen : setVerifying(false)
+    screen --> actor : showAlert({ title: 'Exito',\nmessage: 'Creando tu perfil musical...' })
+    store ->> screen : isAuthenticated = true
+    note over screen, store : AppNavigator cambia a BottomTab (no se navega a mano).\nEl efecto de AuthProvider ve el nuevo token y llama a\nloadInitialData(): itemRepository.getCatalog() en segundo\nplano (GET /api/items) y genreRepository.getAll()\n(GET /api/genres) (ver DSD-CU-02).
+end
+
+@enduml

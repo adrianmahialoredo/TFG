@@ -40,7 +40,7 @@ export const getRecommendedByItemList = async (id: string): Promise<AnyItemDTO[]
 };
 
 /**
- * DTOs completos de los items recomendados a un usuario (Home "Recomendaciones").
+ * DTOs completos de los items recomendados a un usuario (Home "Para ti").
  * Cada uno es del DTO de su subtipo y trae `type`.
  */
 export const getRecommendedByUser = async (userId: string): Promise<AnyItemDTO[]> => {
@@ -49,7 +49,7 @@ export const getRecommendedByUser = async (userId: string): Promise<AnyItemDTO[]
 };
 
 /**
- * DTOs completos de los items recomendados a un usuario a partir de su Spotify (Home "Desde tu Spotify").
+ * DTOs completos de los items recomendados a un usuario a partir de su Spotify (Home "Basado en tu Spotify").
  * Cada uno es del DTO de su subtipo y trae `type`. Requiere la cuenta de Spotify vinculada.
  */
 export const getRecommendedFromSpotify = async (userId: string): Promise<AnyItemDTO[]> => {

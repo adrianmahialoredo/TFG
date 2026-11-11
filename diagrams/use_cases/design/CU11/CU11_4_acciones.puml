@@ -1,0 +1,56 @@
+@startuml DSD-CU-11-4
+title DSD-CU-11 (4/5) - Utilizar afinador cromático: acciones y salida (app)
+
+' Acciones del músico durante la escucha y limpieza al salir (sin backend).
+' Fuentes: screens/TunerScreen.tsx (handleStringPress, handleTuneSelect, handleGaugePress,
+' useFocusEffect), components/tuner/(TunerStringSelector, TuneWheel, TunerGauge).tsx,
+' hooks/useTuner.ts (start, stop, selectString), utils/microphone.utils.ts.
+' Nota: con notas nuevas (otra afinación), un useEffect de useTuner borra la lectura y vuelve
+' a seleccionar la primera cuerda. Los tabs no se desmontan: la salida la gestiona useFocusEffect.
+!include ../_estilo.iuml
+
+actor "Músico" as actor
+box "App (React Native)" #F3F8FF
+    participant "components/tuner\n<<Nivel 7>>" as comps
+    participant "TunerScreen\n<<Nivel 7>>" as screen
+    participant "useTuner\n<<Nivel 6>>" as tuner
+    participant "Microphone\n(microphone.utils)" as mic
+end box
+participant "react-native-audio-api\n<<librería nativa>>" as lib
+
+== Acciones del músico durante la escucha ==
+
+alt Seleccionar otra cuerda
+    actor -> comps : pulsa la cuerda i (TunerStringSelector)
+    comps -> screen : onSelect(i) -> handleStringPress(i)
+    screen -> tuner : selectString(i)
+    tuner -> tuner : recentPitches = []; reading = null;\nselectedString = i
+    opt No estaba escuchando
+        screen -> tuner : start() (ver DSD-CU-11 2/5)
+    end
+else Cambiar de afinación
+    actor -> comps : gira la rueda (TuneWheel)
+    comps -> screen : onSelect(index) -> handleTuneSelect(index)
+    screen -> tuner : stop()
+    screen -> screen : setSelectedTuneId(tunes[index].id)
+    screen -> tuner : useTuner(nuevas notas)
+    tuner -> tuner : recentPitches = []; reading = null;\nselectedString = 0
+    note right of tuner : Se vuelve a escuchar tocando\nel medidor o una cuerda
+else Pausar / reanudar
+    actor -> comps : pulsa el medidor (TunerGauge)
+    comps -> screen : onPress -> handleGaugePress()
+    screen -> tuner : isListening ? stop() : start()
+end
+
+== Salida (limpieza de useFocusEffect) ==
+
+actor -> screen : sale del afinador
+screen -> tuner : stop()
+tuner -> tuner : ++sessionRef; recentPitches = [];\nreading = null;\nstatus = 'idle' (salvo si estaba en 'denied')
+tuner -> tuner : releaseMicrophone()
+tuner -> mic : microphoneRef.current?.stop()
+mic -> lib : clearOnAudioReady(); clearOnError();\nrecorder.stop() si graba; [iOS] setAudioSessionActivity(false)
+note right of mic : Simulado: clearInterval(timer)
+note over screen, tuner : Al desmontar useTuner: ++sessionRef y releaseMicrophone()
+
+@enduml

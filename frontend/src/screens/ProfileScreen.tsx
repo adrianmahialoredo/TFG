@@ -165,11 +165,11 @@ export default function ProfileScreen() {
 
   const handleLogout = () => {
     showAlert({
-      title: 'Cerrar sesion',
-      message: 'Estas seguro?',
+      title: 'Cerrar sesión',
+      message: '¿Estás seguro?',
       actions: [
         { text: 'Cancelar', style: 'cancel' },
-        { text: 'Cerrar sesion', style: 'destructive', onPress: logout },
+        { text: 'Cerrar sesión', style: 'destructive', onPress: logout },
       ],
     });
   };
@@ -196,8 +196,9 @@ export default function ProfileScreen() {
             </View>
           </View>
 
-          {/* CAROUSEL */}
+          {/* CARRUSEL "MIS LISTAS" */}
           <ListCarousel
+              title="Mis listas"
               data={carouselData}
               onItemPress={(id) => navigation.navigate('ListScreen', { itemListId: id })}
               onEmptyPress={handleCreateListPress}

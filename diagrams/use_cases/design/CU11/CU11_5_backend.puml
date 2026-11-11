@@ -1,0 +1,40 @@
+@startuml DSD-CU-11-5
+title DSD-CU-11 (5/5) - Utilizar afinador cromático: endpoints del backend
+
+' Lo que hace el backend en las peticiones de DSD-CU-11 (1/5).
+' Fuentes: TuneController.java, TuneServiceImpl.java, InstrumentController.java,
+' InstrumentServiceImpl.java, utils/mapper/DtoMapper.java, SecurityConfig.java.
+' Ambas rutas exigen un JWT válido (GET de catálogo autenticado; POST /api/*/by-ids es
+' lectura y solo pide estar autenticado).
+!include ../_estilo.iuml
+
+participant "App\n(services)" as app
+box "Backend (Spring Boot)" #FFF9F0
+    participant "XController\n<<controller>>" as ctrl
+    participant "XServiceImpl\n<<service>>" as svc
+    participant "XRepository" as repo
+    participant "DtoMapper\n<<mapper>>" as mapper
+end box
+database "PostgreSQL" as db
+
+group GET /api/tunes
+    app -> ctrl : TuneController.getAll()
+    ctrl -> svc : TuneServiceImpl.findAll()
+    svc -> repo : TuneRepository.findAll()
+    repo -> db : SELECT
+    db --> repo : List<Tune>
+    svc -> mapper : tuneToTuneDto(tune)
+    mapper --> svc : TuneDTO (id, title,\ninstrumentId, notes)
+    ctrl --> app : 200 List<TuneDTO>
+end
+
+group POST /api/instruments/by-ids
+    app -> ctrl : InstrumentController.getByIds(ids)
+    ctrl -> svc : InstrumentServiceImpl.findByIds(ids)
+    svc -> repo : InstrumentRepository.findAllById(ids)\n(lista vacía si no hay ids)
+    repo -> db : SELECT ... WHERE id IN (...)
+    svc -> mapper : instrumentToInstrumentDto(instrument)
+    ctrl --> app : 200 List<InstrumentDTO>
+end
+
+@enduml

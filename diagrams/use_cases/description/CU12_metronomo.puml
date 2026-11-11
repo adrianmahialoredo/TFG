@@ -2,6 +2,8 @@
 title DS-CU-12 - Utilizar metrónomo
 
 ' Diagrama de secuencia de análisis (patrón Boundary-Control-Entity)
+' Fuentes: MetronomeScreen.tsx, useMetronome.ts (useMetronome, useTapTempo), MetronomeSlider.tsx,
+' MetronomePulse.tsx, MetronomeBeatIndicator.tsx
 autonumber
 hide footbox
 skinparam sequenceMessageAlign center
@@ -9,49 +11,57 @@ skinparam roundcorner 6
 
 actor "Músico" as musico
 boundary "MetronomoScreen" as pantalla
-control "MotorRitmo" as gestor
-entity "ConfiguracionRitmica" as config
-entity "SalidaAudio" as audio
+control "MotorRitmo" as motor
+boundary "SalidaAudio" as audio
 
 musico -> pantalla : abrirMetronomo()
-pantalla -> gestor : obtenerConfiguracion()
-gestor -> config : obtener()
-config --> gestor : bpm, compás, sonido
-gestor --> pantalla : configuración
-pantalla --> musico : mostrarControles(BPM 40-240, compás, sonido)
+pantalla -> motor : cargarSonidos(click, hihat)
+note right of pantalla : Sin configuración guardada: estado de la\npantalla, empieza en 120 BPM y sonido click
+pantalla --> musico : mostrarControles(BPM 30-300, -10/-1/+1/+10,\nTAP TEMPO, Hi-Hat)
 
-alt Ajuste con el deslizador
-    musico -> pantalla : ajustarBPM(bpm)
-    pantalla -> gestor : fijarBPM(bpm)
-    gestor -> config : actualizarBPM(acotar(bpm, 40, 240))
-else 3a. Tap Tempo
-    loop Por cada pulsación
-        musico -> pantalla : pulsarTapTempo()
-        pantalla -> gestor : registrarPulsacion(instante)
+opt Ajustar el tempo
+    alt Deslizador o botones -10 / -1 / +1 / +10
+        musico -> pantalla : ajustarBPM(bpm)
+        pantalla -> pantalla : acotar(bpm, 30, 300)
+    else 3a. Tap Tempo
+        loop Por cada toque
+            musico -> pantalla : pulsarTapTempo()
+            pantalla -> motor : registrarPulsacion(instante)
+            note right of motor
+                Si pasan más de 2 s desde el toque anterior, empieza de nuevo.
+                Con al menos 2 toques: promedio de los últimos 4 intervalos.
+            end note
+            motor --> pantalla : bpmCalculado (o nada)
+            pantalla -> pantalla : acotar(bpm, 30, 300)
+        end
     end
-    gestor -> gestor : promediarIntervalos()
-    gestor -> config : actualizarBPM(bpmCalculado)
-end
-gestor --> pantalla : bpm
-pantalla --> musico : mostrarBPM()
-
-musico -> pantalla : seleccionarCompasYSonido(compás, sonido)
-pantalla -> gestor : fijarCompasYSonido(compás, sonido)
-gestor -> config : actualizar(compás, sonido)
-
-musico -> pantalla : iniciar()
-pantalla -> gestor : iniciar()
-loop Cada 60 / BPM segundos, hasta que el músico lo detiene
-    gestor -> gestor : calcularSiguientePulso()
-    note right of gestor : Temporizador de alta precisión,\nsin retardos acumulados
-    gestor -> audio : reproducirClic(acentuado si es el primer tiempo)
-    gestor --> pantalla : pulso(numeroTiempo)
-    pantalla --> musico : resaltarTiempo(numeroTiempo)
-    note right of pantalla : Animación sincronizada con el audio
+    pantalla -> motor : fijarBPM(bpm)
+    pantalla --> musico : mostrarBPM()
 end
 
-musico -> pantalla : detener()
-pantalla -> gestor : detener()
-gestor --> pantalla : detenido
+opt Cambiar sonido (click | hihat)
+    musico -> pantalla : pulsarHiHat()
+    pantalla -> motor : fijarSonido(click | hihat)
+end
+note over pantalla, motor : Compás fijo de 4 tiempos, el primero acentuado.\nCon el metrónomo en marcha, los cambios se aplican desde el siguiente golpe
+
+musico -> pantalla : tocarCirculoCentral()
+pantalla -> motor : iniciar()
+loop Cada 60 / BPM segundos, hasta que se detiene
+    motor -> audio : reproducirGolpe(acentuado si es el primer tiempo)
+    motor --> pantalla : pulso(tiempoEnCompas)
+    pantalla --> musico : animarOnda(), resaltarTiempo(tiempoEnCompas)
+    motor -> motor : programarSiguienteGolpe()
+    note right of motor : setTimeout de JS calculado desde el instante\nteórico del golpe anterior: sin deriva acumulada
+end
+
+alt El músico toca de nuevo el círculo central
+    musico -> pantalla : tocarCirculoCentral()
+    pantalla -> motor : detener()
+else El músico sale de la pantalla
+    musico -> pantalla : salir()
+    pantalla -> motor : detener()
+end
+pantalla --> musico : apagarIndicadorDeTiempos()
 
 @enduml

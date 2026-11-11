@@ -8,6 +8,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
+import java.util.function.Consumer;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.HttpStatus;
@@ -18,6 +19,9 @@ import lombok.extern.slf4j.Slf4j;
 
 /**
  * Default implementation of {@link EmailVerificationService}.
+ *
+ * Registration codes and password reset codes live in two separate maps with the same rules,
+ * so a code of one flow is never accepted by the other.
  *
  * Pending codes are kept in memory (single instance), like the Spotify OAuth2 states: they
  * only live a few minutes and losing them on a restart just means asking for a new one.
@@ -46,7 +50,10 @@ public class EmailVerificationServiceImpl implements EmailVerificationService {
     private static final int CODE_DIGITS = 6;
 
     private final SecureRandom random = new SecureRandom();
+    /** Registration codes, by normalized email. */
     private final Map<String, PendingCode> pendingCodes = new ConcurrentHashMap<>();
+    /** Password reset codes, by normalized email. */
+    private final Map<String, PendingCode> resetCodes = new ConcurrentHashMap<>();
 
     private final UserRepository userRepository;
     private final EmailService emailService;
@@ -87,55 +94,91 @@ public class EmailVerificationServiceImpl implements EmailVerificationService {
             throw new IllegalArgumentException("Email already registered");
         }
 
-        Instant now = clock.instant();
-        PendingCode previous = pendingCodes.get(key);
-        if (previous != null && now.isBefore(previous.sentAt.plus(RESEND_COOLDOWN))) {
-            throw new ResponseStatusException(HttpStatus.TOO_MANY_REQUESTS, "Verification code requested too recently");
-        }
-
-        String code = generateCode();
-        PendingCode pending = new PendingCode(code, now);
-        pendingCodes.put(key, pending);
-        emailExecutor.execute(() -> {
-            try {
-                emailService.sendVerificationCode(email, code, CODE_TTL.toMinutes());
-            } catch (RuntimeException e) {
-                // Already logged by the EmailService. Only this code is discarded, not a newer one
-                // that a later request may have put in its place
-                pendingCodes.remove(key, pending);
-            }
-        });
+        issueCode(pendingCodes, key, code -> emailService.sendVerificationCode(email, code, CODE_TTL.toMinutes()));
     }
 
     @Override
     public void checkCode(String email, String code) {
+        check(pendingCodes, email, code);
+    }
+
+    @Override
+    public void consume(String email) {
+        pendingCodes.remove(normalize(email));
+    }
+
+    @Override
+    public void sendPasswordResetCode(String email) {
+        String key = normalize(email);
+        // The cooldown is applied before looking the account up, so registered and unknown
+        // emails get the same answer (204, or 429 if asked again too soon)
+        ensureCooldownElapsed(resetCodes, key);
+        if (!userRepository.existsByEmailIgnoreCase(key)) {
+            log.info("Password reset requested for an email without account; nothing is sent");
+            return;
+        }
+        issueCode(resetCodes, key, code -> emailService.sendPasswordResetCode(email, code, CODE_TTL.toMinutes()));
+    }
+
+    @Override
+    public void checkPasswordResetCode(String email, String code) {
+        check(resetCodes, email, code);
+    }
+
+    @Override
+    public void consumePasswordResetCode(String email) {
+        resetCodes.remove(normalize(email));
+    }
+
+    /** Throws 429 if the last code of that email was sent less than {@link #RESEND_COOLDOWN} ago. */
+    private void ensureCooldownElapsed(Map<String, PendingCode> codes, String key) {
+        PendingCode previous = codes.get(key);
+        if (previous != null && clock.instant().isBefore(previous.sentAt.plus(RESEND_COOLDOWN))) {
+            throw new ResponseStatusException(HttpStatus.TOO_MANY_REQUESTS, "Verification code requested too recently");
+        }
+    }
+
+    /** Stores a new code for the email (replacing the previous one) and sends it in the background. */
+    private void issueCode(Map<String, PendingCode> codes, String key, Consumer<String> sender) {
+        ensureCooldownElapsed(codes, key);
+        String code = generateCode();
+        PendingCode pending = new PendingCode(code, clock.instant());
+        codes.put(key, pending);
+        emailExecutor.execute(() -> {
+            try {
+                sender.accept(code);
+            } catch (RuntimeException e) {
+                // Already logged by the EmailService. Only this code is discarded, not a newer one
+                // that a later request may have put in its place
+                codes.remove(key, pending);
+            }
+        });
+    }
+
+    /** Checks a code of the given map without consuming it. */
+    private void check(Map<String, PendingCode> codes, String email, String code) {
         if (code == null || code.isBlank()) {
             throw new IllegalArgumentException("Verification code is required");
         }
         String key = normalize(email);
-        PendingCode pending = pendingCodes.get(key);
+        PendingCode pending = codes.get(key);
         if (pending == null) {
             throw new IllegalArgumentException("Verification code not requested");
         }
         if (clock.instant().isAfter(pending.sentAt.plus(CODE_TTL))) {
-            pendingCodes.remove(key);
+            codes.remove(key);
             throw new IllegalArgumentException("Verification code expired");
         }
         synchronized (pending) {
             if (!pending.code.equals(code)) {
                 if (++pending.failedAttempts >= MAX_ATTEMPTS) {
-                    pendingCodes.remove(key);
+                    codes.remove(key);
                     log.warn("Verification code for {} discarded after {} wrong attempts", email, MAX_ATTEMPTS);
                     throw new IllegalArgumentException("Too many wrong verification codes");
                 }
                 throw new IllegalArgumentException("Invalid verification code");
             }
         }
-    }
-
-    @Override
-    public void consume(String email) {
-        pendingCodes.remove(normalize(email));
     }
 
     private String generateCode() {

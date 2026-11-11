@@ -37,6 +37,15 @@ public interface UserRepository extends JpaRepository<User, Long> {
     boolean existsByEmailIgnoreCase(String email);
 
     /**
+     * Finds a user by email ignoring case. Used to reset a forgotten password, where the
+     * user may type the email with a different case than in the registration.
+     *
+     * @param email the email to look for
+     * @return the user with that email (in any case), if present
+     */
+    Optional<User> findByEmailIgnoreCase(String email);
+
+    /**
      * Finds a User entity by its username.
      * 
      * @param username the username of the user to search for

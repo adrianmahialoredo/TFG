@@ -12,7 +12,7 @@ import SearchResults from "../components/SearchResults";
 import { ItemType } from "../types";
 import { SearchField } from "../utils/search.utils";
 
-const SPOTIFY_TITLE = 'Según tu Spotify';
+const SPOTIFY_TITLE = 'Basado en tu Spotify';
 
 // Campos por los que busca el buscador, en orden de prioridad
 const SEARCH_FIELDS: SearchField[] = ['title', 'artist', 'genre', 'instrument', 'decade'];
@@ -29,11 +29,11 @@ export default function SongsScreen() {
 
   const categories = useMemo(() => [
     { title: 'Populares', data: populars },
-    { title: 'Nuevas', data: news },
+    { title: 'Novedades', data: news },
     ...(favouriteGenre
       ? [{ title: `Populares en ${favouriteGenre.title || 'tu género favorito'}`, data: favouriteGenre.data }]
       : []),
-    { title: 'Según tus gustos', data: recommendations },
+    { title: 'Para ti', data: recommendations },
     { title: SPOTIFY_TITLE, data: spotify },
   ], [populars, news, recommendations, spotify, favouriteGenre]);
 

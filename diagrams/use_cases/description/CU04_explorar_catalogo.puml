@@ -2,6 +2,8 @@
 title DS-CU-04 - Explorar catálogo de ítems
 
 ' Diagrama de secuencia de análisis (patrón Boundary-Control-Entity)
+' Fuentes: SongsScreen.tsx, LearnScreen.tsx, GenresScreen.tsx, useCatalogSearch.ts, useGenres.ts,
+' search.utils.ts, SearchResults.tsx, item.repository.ts
 autonumber
 hide footbox
 skinparam sequenceMessageAlign center
@@ -13,25 +15,33 @@ control "GestorCatalogo" as gestor
 entity "ItemResumenLocal" as resumen
 entity "ItemDetallado" as detalle
 
-musico -> pantalla : abrirExploracion()
+musico -> pantalla : abrirExploracion(Canciones | Aprender | Géneros)
 pantalla -> gestor : obtenerCatalogo()
 gestor -> resumen : obtenerTodos()
 resumen --> gestor : ItemSummaryDTO[]
 gestor --> pantalla : itemsPorTipo
-pantalla --> musico : mostrarItemsPorTipo()
+pantalla --> musico : mostrarCarruselesDeLaPestana()
 
 loop Por cada cambio en la barra de búsqueda
     musico -> pantalla : ingresarTextoBusqueda(query)
-    pantalla -> gestor : filtrarEnMemoriaLocal(query)
-    note right of gestor : Sin peticiones HTTP.\nInsensible a mayúsculas y acentos.
-    gestor -> resumen : obtenerTodos()
+    pantalla -> gestor : filtrarEnMemoriaLocal(query, tipo)
+    note right of gestor
+        Sin peticiones HTTP. Cada pestaña busca un solo tipo:
+        Canciones: canciones por título, artista, género, instrumento y década
+        Aprender: lecciones por título, género e instrumento
+        (sin mayúsculas, tildes, espacios ni signos)
+        Géneros: géneros por título (solo ignora mayúsculas)
+    end note
+    gestor -> resumen : obtenerTodos(tipo)
     resumen --> gestor : ItemSummaryDTO[]
-    gestor --> pantalla : coincidencias
+    gestor --> pantalla : coincidencias agrupadas
 
     alt 4a. Sin coincidencias
-        pantalla --> musico : mostrarAvisoSinResultados()
+        pantalla --> musico : mostrarAviso("No hay canciones/lecciones\nque coincidan con tu búsqueda")
+        note right of pantalla : En Géneros la lista\nqueda vacía, sin aviso
     else Hay coincidencias
-        pantalla --> musico : mostrarCoincidencias(título, artista/tipo, imagen)
+        pantalla --> musico : mostrarCoincidencias(grupos "Por título / artista /\ngénero / instrumento / década")
+        note right of pantalla : Cada ítem en un solo grupo (el de más\nprioridad); dentro, primero los que\nempiezan por la búsqueda
     end
 end
 

@@ -79,6 +79,7 @@ package "frontend/src" <<frontend>> {
 
 f_navigation ..> f_screens
 f_navigation ..> f_context
+f_navigation ..> f_components : <<AnimatedTabBarButton>>
 
 f_screens ..> f_components
 f_screens ..> f_hooks
@@ -92,6 +93,7 @@ f_hooks ..> f_stores_ui
 f_hooks ..> f_context
 f_context ..> f_repositories
 f_context ..> f_stores_entities
+f_context ..> f_components : <<AppAlertModal>>
 
 f_repositories ..> f_services
 f_repositories ..> f_local

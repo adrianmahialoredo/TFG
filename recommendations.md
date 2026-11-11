@@ -17,8 +17,8 @@ cada algoritmo.
 | Endpoint | Servicio | Límite | Respuesta | Pantalla (frontend) |
 |---|---|---|---|---|
 | `GET /items/by-item-list/{id}` | `ItemRecommendationService.findForItemList` | por tipo (§2) | `List<ItemDTO>` completos, polimórficos | Añadir a lista → "Para ti" |
-| `GET /items/by-user/{id}` | `ItemRecommendationService.findForUser` | por tipo (§2) | `List<ItemDTO>` completos, polimórficos | Home → "Recomendaciones" |
-| `GET /songs/by-user/{id}?limit=n` | `SongRecommendationService.findForUser` | `limit` obligatorio (el front pide 10) | `List<SongDTO>` | Canciones → "Según tus gustos" |
+| `GET /items/by-user/{id}` | `ItemRecommendationService.findForUser` | por tipo (§2) | `List<ItemDTO>` completos, polimórficos | Home → "Para ti" |
+| `GET /songs/by-user/{id}?limit=n` | `SongRecommendationService.findForUser` | `limit` obligatorio (el front pide 10) | `List<SongDTO>` | Canciones → "Para ti" |
 | `GET /lessons/by-user/{id}` | `LessonRecommendationService.findForUser` | `RECOMMENDED_LESSONS_COUNT` (6) | `List<LessonDTO>` | Aprender → "Para ti" |
 | `GET /lessons/by-genre/{id}` | `LessonRecommendationService.findForGenre` | `BY_GENRE_RECOMMENDED_LESSONS_COUNT` (8) | `List<LessonDTO>` | Género → pestaña Instrumentos (`GenreLessonsCarousel`) |
 

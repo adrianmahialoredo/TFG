@@ -1,0 +1,75 @@
+@startuml DSD-CU-10-3
+title DSD-CU-10 (3/4) - Vincular cuenta de Spotify: login y callback (backend)
+
+' Lo que hace el backend en GET /api/spotify/login y GET /api/spotify/callback (DSD-CU-10 1/4).
+' Fuentes: SpotifyAuthController.java, SpotifyAuthServiceImpl.java, SpotifyUserRepository.java,
+' UserRepository.java, SpotifyProperties.java, SecurityConfig.java, GlobalExceptionHandler.java.
+' Diferencias con el guion:
+'  - getLoginUrl() no recibe la Authentication como parámetro: lee el userId del SecurityContextHolder.
+'  - El state lo genera SpotifyAuthServiceImpl.buildAuthorizationUrl(userId) (UUID en un
+'    ConcurrentHashMap en memoria, caduca a los 10 min), no el controlador.
+'  - client_id/client_secret no van en el body: van en la cabecera Basic (headers.setBasicAuth);
+'    el body lleva grant_type, code y redirect_uri.
+'  - Tras obtener los tokens se llama a GET https://api.spotify.com/v1/me para conocer el
+'    spotifyUserId, y se desvincula la cuenta de otro usuario si la tenía (con flush).
+'  - handleCallback es @Transactional; un fallo de Spotify o de red -> RuntimeException -> 500.
+!include ../_estilo.iuml
+
+participant "App /\nNavegador" as app
+box "Backend (Spring Boot)" #FFF9F0
+    participant "SpotifyAuthController\n<<controller>>" as ctrl
+    participant "SpotifyAuthServiceImpl\n<<service>>" as svc
+    participant "UserRepository /\nSpotifyUserRepository" as repo
+end box
+database "PostgreSQL" as db
+participant "Spotify Accounts /\nSpotify Web API\n<<sistema externo>>" as spotify
+
+group GET /api/spotify/login (JWT)
+    app -> ctrl : getLoginUrl()
+    ctrl -> ctrl : currentUserId() : Optional<Long>\n(SecurityContextHolder)
+    ctrl -> svc : buildAuthorizationUrl(userId)
+    svc -> svc : removeIf(isExpired); state = UUID.randomUUID()\npendingAuthorizations.put(state, (userId, now + 10 min))
+    svc --> ctrl : accounts.spotify.com/authorize?client_id\n&response_type=code&redirect_uri\n&scope=user-read-email user-top-read&state
+    ctrl --> app : 200 { authUrl } / 401 sin usuario
+end
+
+group GET /api/spotify/callback?code&state&error (permitAll)
+    app -> ctrl : callback(code, state, error)
+    alt error != null (5a. permisos rechazados)
+        ctrl --> app : 400 (text/html) "No se ha conectado Spotify (error)..."
+    else
+        ctrl -> svc : handleCallback(code, state)
+        activate svc
+        svc -> svc : pendingAuthorizations.remove(state)\n.filter(!isExpired) -> userId
+        alt code vacío, o state desconocido / caducado
+            svc --> ctrl : IllegalArgumentException
+            ctrl --> app : 400 (GlobalExceptionHandler)
+        else
+            svc -> repo : userRepository.findById(userId)
+            repo -> db : SELECT
+            alt Usuario inexistente
+                svc --> ctrl : IllegalArgumentException
+                ctrl --> app : 400 (GlobalExceptionHandler)
+            else
+                svc -> spotify : POST /api/token, Basic(client_id, client_secret)\n{ grant_type=authorization_code, code, redirect_uri }
+                spotify --> svc : { access_token, refresh_token, expires_in }
+                svc -> spotify : GET /v1/me (Bearer access_token)
+                spotify --> svc : { id } -> spotifyUserId
+                svc -> repo : unlinkFromOtherUser:\nfindBySpotifyUserId(spotifyUserId)
+                opt 7a. Vinculada a otro usuario (o huérfana)
+                    svc -> repo : previousUser.setSpotifyUser(null); save(previousUser)\n(orphanRemoval) | delete(existing)
+                    svc -> repo : flush()
+                    note right of repo : Hibernate ejecuta los inserts antes que\nlos deletes: el flush libera el spotifyUserId único
+                end
+                svc -> svc : spotifyUser = appUser.getSpotifyUser() ?? new SpotifyUser()\nsetSpotifyUserId, setAccessToken, setRefreshToken,\nsetTokenExpiration(now + expires_in); enlaza user <-> spotifyUser
+                svc -> repo : spotifyUserRepository.save(spotifyUser)\nuserRepository.save(appUser)
+                repo -> db : INSERT / UPDATE
+                svc --> ctrl : void
+                ctrl --> app : 200 (text/html)\n"¡Spotify conectado! Ya puedes volver a la app."
+            end
+        end
+        deactivate svc
+    end
+end
+
+@enduml

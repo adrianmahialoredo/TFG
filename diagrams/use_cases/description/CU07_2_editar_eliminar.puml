@@ -1,0 +1,77 @@
+@startuml DS-CU-07-2
+title DS-CU-07 (2/2) - Gestionar listas de estudio: renombrar, cambiar imagen y eliminar
+
+' Diagrama de secuencia de análisis (patrón Boundary-Control-Entity)
+' Fuentes: ListScreen.tsx, useItemListDetail.ts, itemList.repository.ts, cloudinary.service.ts,
+' ItemListController.java
+autonumber
+hide footbox
+skinparam sequenceMessageAlign center
+skinparam roundcorner 6
+
+actor "Músico" as musico
+boundary "PerfilScreen" as perfil
+boundary "ListaScreen" as pantalla
+control "GestorListas" as gestor
+entity "ItemList" as lista
+participant "Cloudinary\n<<sistema externo>>" as cloudinary
+
+note over musico, pantalla : El músico tiene abierta una de sus listas (DS-CU-07 (1/2))
+
+alt 3a. Renombrar la lista
+    musico -> pantalla : renombrar(nombre)
+    alt Nombre con menos de 2 caracteres
+        pantalla --> musico : mostrarError("El nombre debe tener al menos 2 caracteres")
+    else Nombre válido
+        pantalla -> gestor : actualizarLista(id, nombre)
+        note right of gestor : PUT /api/item-lists/{id}
+        gestor -> lista : verificarPropiedad(id, userId)
+        alt Lista inexistente (404) o de otro usuario (403)
+            gestor --> pantalla : error
+            pantalla --> musico : mostrarError("No se pudo actualizar el nombre")
+        else Propietario
+            gestor -> lista : actualizar(nombre)
+            lista --> gestor : ItemListDTO
+            gestor --> pantalla : 200 OK + ItemListDTO
+            pantalla -> pantalla : actualizarAlmacenLocal(lista)
+            note right of pantalla : RAM y disco
+            pantalla --> musico : mostrarListaActualizada()
+        end
+    end
+else 3b. Cambiar la imagen
+    musico -> pantalla : cambiarImagen()
+    pantalla --> musico : abrirGaleria()
+    musico -> pantalla : elegirImagen(uri)
+    pantalla -> cloudinary : subirImagen(uri)
+    cloudinary --> pantalla : secureUrl
+    pantalla -> gestor : actualizarLista(id, imageUrl = secureUrl)
+    note right of gestor : PUT /api/item-lists/{id}\n(mismas comprobaciones)
+    gestor -> lista : actualizar(imageUrl)
+    lista --> gestor : ItemListDTO
+    gestor --> pantalla : 200 OK + ItemListDTO
+    pantalla -> pantalla : actualizarAlmacenLocal(lista)
+    pantalla --> musico : mostrarImagen()
+    opt Falla la subida o el guardado
+        pantalla --> musico : mostrarError("No se pudo actualizar la foto de la lista")
+    end
+else 3c. Eliminar la lista
+    musico -> pantalla : eliminarLista(id)
+    pantalla --> musico : solicitarConfirmacion("¿Seguro que quieres\neliminar ...? No se puede deshacer.")
+    musico -> pantalla : confirmar()
+    pantalla -> gestor : eliminarLista(id)
+    note right of gestor : DELETE /api/item-lists/{id}
+    gestor -> lista : verificarPropiedad(id, userId)
+    alt Error (404, 403 o sin red)
+        gestor --> pantalla : error
+        pantalla --> musico : mostrarError("No se pudo eliminar la lista")
+    else Propietario
+        gestor -> lista : eliminar(id)
+        gestor --> pantalla : 204 No Content
+        pantalla -> pantalla : purgarAlmacenLocal(id)
+        note right of pantalla : RAM y disco
+        pantalla -> perfil : volver()
+        perfil --> musico : mostrarCarrusel("Mis listas")
+    end
+end
+
+@enduml

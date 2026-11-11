@@ -127,12 +127,12 @@ export const simulatedBlock = (frequency: number, phase: number): { block: Audio
 
 /**
  * Micrófono simulado. `getTargets` devuelve las frecuencias de las cuerdas de la afinación
- * actual y `getLockedString` la cuerda fijada (o null). Sin cuerda fijada recorre las cuerdas
- * una a una; con una fijada, simula solo esa.
+ * actual y `getSelectedString` la cuerda seleccionada, que es la que "suena" (empieza
+ * desafinada y se va afinando). Si devuelve null, recorre las cuerdas una a una.
  */
 export const createSimulatedMicrophone = (
   getTargets: () => number[],
-  getLockedString: () => number | null
+  getSelectedString: () => number | null
 ): Microphone => {
   let timer: ReturnType<typeof setInterval> | null = null;
 
@@ -152,9 +152,9 @@ export const createSimulatedMicrophone = (
         if (targets.length === 0) return;
 
         const now = Date.now();
-        const locked = getLockedString();
+        const selected = getSelectedString();
         const note = Math.floor((now - startedAt) / SIMULATED_NOTE_MS);
-        const string = locked ?? note % targets.length;
+        const string = selected ?? note % targets.length;
         // Al cambiar de cuerda, la nueva vuelve a empezar desafinada
         if (string !== lastString) {
           lastString = string;

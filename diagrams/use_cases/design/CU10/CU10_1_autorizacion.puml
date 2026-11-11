@@ -1,0 +1,67 @@
+@startuml DSD-CU-10-1
+title DSD-CU-10 (1/4) - Vincular cuenta de Spotify: autorización (app)
+
+' Parte de la app de la realización de CU-10 (análisis en
+' diagrams/use_cases/description/CU10_vincular_spotify.puml). El backend se dibuja como una
+' sola línea de vida ("API REST"); lo que hace cada endpoint está en DSD-CU-10 (3/4 y 4/4).
+' Fuentes: components/buttons/SpotifyButton.tsx (lo pintan ProfileScreen, HomeScreen y
+' SongsScreen), hooks/useSpotifyConnect.ts, repositories/spotify.repository.ts,
+' services/spotify.service.ts, config/apiConfig.ts; SpotifyAuthController.java.
+' Notas de diseño:
+'  - El botón "Conectar con Spotify" es el componente SpotifyButton, que usa el hook
+'    useSpotifyConnect (Nivel 6). Inicio y Canciones lo muestran bajo el título del carrusel
+'    de Spotify cuando la cuenta no está vinculada (spotifyConnected === false).
+'  - El navegador se abre con WebBrowser.openBrowserAsync; el callback de Spotify llega al
+'    backend desde el navegador (sin JWT: el usuario se identifica por el state).
+!include ../_estilo.iuml
+
+actor "Músico" as actor
+box "App (React Native)" #F3F8FF
+    participant "SpotifyButton\n(Perfil, Inicio, Canciones)\n<<Nivel 7>>" as screen
+    participant "useSpotifyConnect\n<<Nivel 6>>" as hook
+    participant "spotifyRepository\n<<Nivel 3>>" as repo
+    participant "spotifyService\n<<Nivel 1>>" as service
+    participant "WebBrowser\n<<expo-web-browser>>" as browser
+end box
+participant "API REST\n(backend)" as api
+participant "Spotify Accounts\n<<sistema externo>>" as accounts
+
+== Solicitud de la URL de autorización ==
+
+actor -> screen : pulsa "Conectar con Spotify"
+screen -> hook : handleSpotifyLogin() -> connect()
+hook -> hook : appActive = waitForAppActive()\n(escucha AppState 'change')\nsetConnecting(true)
+hook -> repo : getAuthUrl()
+repo -> service : spotifyLogin()
+service -> api : GET /api/spotify/login\nAuthorization: Bearer <JWT>
+api --> service : 200 { authUrl } (401 sin JWT válido)
+service --> repo : { authUrl }
+repo --> hook : authUrl (Error si viene vacía)
+
+== Autorización en el navegador ==
+
+hook -> browser : openBrowserAsync(authUrl)
+browser -> accounts : GET /authorize?client_id&response_type=code\n&redirect_uri&scope=user-read-email user-top-read&state
+accounts --> actor : pide login y permisos
+actor -> accounts : decide sobre los permisos
+
+alt 5a. El músico rechaza los permisos
+    accounts --> browser : 302 redirect_uri?error=access_denied&state
+    browser -> api : GET /api/spotify/callback?error=access_denied&state
+    api --> browser : 400 (text/html)\n"No se ha conectado Spotify (access_denied).\nPuedes volver a la app."
+else Permisos concedidos
+    accounts --> browser : 302 redirect_uri?code&state
+    browser -> api : GET /api/spotify/callback?code&state
+    alt state desconocido o caducado (10 min), o code vacío
+        api --> browser : 400 Bad Request
+    else Usuario inexistente
+        api --> browser : 400 Bad Request
+    else Vinculada
+        api --> browser : 200 (text/html)\n"¡Spotify conectado! Ya puedes volver a la app."
+    end
+end
+browser --> actor : muestra la página
+
+note over hook, browser : Sigue en DSD-CU-10 (2/4): vuelta a la app
+
+@enduml

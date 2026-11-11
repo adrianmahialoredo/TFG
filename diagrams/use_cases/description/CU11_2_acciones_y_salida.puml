@@ -1,0 +1,40 @@
+@startuml DS-CU-11-2
+title DS-CU-11 (2/2) - Utilizar afinador cromático: acciones durante la escucha y salida
+
+' Diagrama de secuencia de análisis (patrón Boundary-Control-Entity)
+' Fuentes: TunerScreen.tsx, useTunes.ts, useTuner.ts, microphone.utils.ts, pitch.utils.ts, tuner.utils.ts
+autonumber
+hide footbox
+skinparam sequenceMessageAlign center
+skinparam roundcorner 6
+
+actor "Músico" as musico
+boundary "AfinadorScreen" as pantalla
+control "ProcesadorAudio" as procesador
+boundary "Microfono" as microfono
+
+note over musico, pantalla : El afinador está abierto y escuchando (DS-CU-11 (1/2))
+
+== Acciones del músico durante la escucha ==
+
+alt Seleccionar otra cuerda
+    musico -> pantalla : pulsarCuerda(i)
+    pantalla -> procesador : seleccionarCuerda(i)
+    note right of procesador : Se borra la lectura anterior.\nSi no estaba escuchando, empieza a escuchar
+else Cambiar de afinación
+    musico -> pantalla : elegirAfinacion(rueda)
+    pantalla -> procesador : detenerEscucha()
+    pantalla --> musico : mostrarCuerdas(nueva afinación),\nprimera cuerda seleccionada
+    note right of pantalla : Se vuelve a escuchar tocando\nel medidor o una cuerda
+else Pausar / reanudar
+    musico -> pantalla : pulsarMedidor()
+    pantalla -> procesador : detenerEscucha() / iniciarEscucha()
+end
+
+== Salida ==
+
+musico -> pantalla : salirDelAfinador()
+pantalla -> procesador : detenerEscucha()
+procesador -> microfono : liberar()
+
+@enduml

@@ -7,6 +7,7 @@ export const COLORS = {
     text: "#111827", // Dark Gray
     placeholder: "#e7e7e7", // Medium Gray
 };
+
 /** Opacidad del fondo de las cards de color (la de GOLD_CARD_STYLE). */
 export const CARD_FILL_OPACITY = 0.4;
 
@@ -20,3 +21,6 @@ export const GOLD_CARD_STYLE = {
     borderWidth: 1,
     borderRadius: 24,
 } as const;
+
+/** URL del icono de la app, para poner en el Login */
+export const ICON_URL = 'https://res.cloudinary.com/dvm8qkmuo/image/upload/v1793908797/image_17_hdf0o6.png';

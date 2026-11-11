@@ -156,7 +156,7 @@ Las tablas las crea Hibernate al arrancar (`ddl-auto=update`).
 ### 2. Backend (Render)
 
 1. En Render: *New → Blueprint* y elegir el repositorio. `render.yaml` crea el servicio `toco-backend` (Docker, plan gratuito, *health check* en `/actuator/health`).
-2. Rellenar las variables que pide (las de `sync: false`). `JWT_SECRET_KEY` la genera Render y `SHOW_SQL` va a `false`.
+2. Rellenar las variables que pide (las de `sync: false`). `JWT_SECRET_KEY` la genera Render, `SHOW_SQL` va a `false` y `LAZY_INIT` a `true` (arranque perezoso, ver `application.properties`).
 3. Al terminar, el backend queda en `https://<servicio>.onrender.com` (comprobarlo en `/actuator/health`).
 
 | Variable | Valor |
@@ -172,11 +172,24 @@ Las tablas las crea Hibernate al arrancar (`ddl-auto=update`).
 
 ### 3. Datos iniciales
 
-Con el backend ya publicado, cargar el catálogo desde local apuntando los scripts a Render (en el `.env` de la raíz):
+Con el backend ya publicado, cargar el catálogo desde local apuntando los scripts a Render. El `.env` de la raíz tiene al final un bloque **PRODUCCIÓN** comentado: descomentar `API_BASE_URL` y usar el `ADMIN_EMAIL`/`ADMIN_PASSWORD` configurados en Render.
 
 ```bash
-# .env: API_BASE_URL=https://<servicio>.onrender.com y ADMIN_EMAIL/ADMIN_PASSWORD los de Render
 python scripts/load_all_data.py
+```
+
+Para vaciar la base de datos de Neon antes de recargar, descomentar también `DB_URL`/`DB_USERNAME`/`DB_PASSWORD` de ese bloque (`clean_db.py` lee el `?sslmode=require` de la URL) y reiniciar el servicio en Render después, para que `AdminBootstrap` vuelva a crear el administrador (`clean_db.py` vacía también la tabla de usuarios).
+
+```bash
+python scripts/clean_db.py
+```
+
+**Al terminar, volver a comentar el bloque**: con él activo, los scripts y el backend local trabajan contra producción.
+
+**Base de datos ya existente:** `Preferences` ya no tiene `difficultyLevel` (el nivel es `users.difficulty_level`). Hibernate (`ddl-auto=update`) no borra columnas y la vieja `preferences.difficulty_level` es `NOT NULL`, así que los registros nuevos fallarían. Antes de desplegar esta versión, ejecutar una vez (con el bloque de producción descomentado para Neon):
+
+```bash
+python scripts/migrate_preferences_table.py
 ```
 
 ### 4. Spotify
@@ -209,7 +222,7 @@ Generar el APK:
 eas build -p android --profile preview
 ```
 
-Al terminar, EAS da un enlace (y un QR) para descargar el `.apk` e instalarlo en cualquier Android (hay que permitir instalar apps de origen desconocido). EAS crea y guarda la clave de firma la primera vez: todos los APK se firman con la misma, así que las versiones nuevas se instalan encima sin desinstalar. En cada versión nueva, subir `android.versionCode` (y `version`) en `app.json`.
+Al terminar, EAS da un enlace (y un QR) para descargar el `.apk` e instalarlo en cualquier Android (hay que permitir instalar apps de origen desconocido). EAS crea y guarda la clave de firma la primera vez: todos los APK se firman con la misma, así que las versiones nuevas se instalan encima sin desinstalar. La development build usa la misma clave y el mismo paquete (`com.uo289390.toco`), así que el APK también se instala encima de ella (y la sustituye: para volver a desarrollar con Metro hay que reinstalar la development build). En cada versión nueva, subir `android.versionCode` (y `version`) en `app.json`.
 
 Los perfiles de `eas.json`:
 
@@ -229,6 +242,9 @@ Los perfiles de `eas.json`:
 | `POST` | `/api/auth/verification-code` | Enviar un código de verificación al email de un registro (`204`; `429` si se pide otro antes de 60 s) |
 | `POST` | `/api/auth/register` | Registrar nuevo usuario con ese código (`verificationCode` en el body) y devolver el JWT |
 | `POST` | `/api/auth/login` | Iniciar sesión con email o nombre de usuario (retorna JWT token) |
+| `POST` | `/api/auth/password-reset/code` | "Olvidé mi contraseña": enviar un código al email de la cuenta (`204` exista o no la cuenta; `429` si se pide otro antes de 60 s) |
+| `POST` | `/api/auth/password-reset/verify` | Comprobar ese código sin gastarlo (`204`; `400` si no es válido) |
+| `POST` | `/api/auth/password-reset` | Cambiar la contraseña con el código (`204`; `400` si el código o la contraseña no valen) |
 
 **Registro con verificación de email:**
 ```json
@@ -244,6 +260,14 @@ POST /api/auth/register
 }
 ```
 El código tiene 6 dígitos, caduca a los 10 minutos y se descarta tras 5 intentos fallidos. Detalle en [`architecture.md`](architecture.md) §9.
+
+**Recuperación de contraseña** (desde "Olvidé mi contraseña" en el login):
+```json
+POST /api/auth/password-reset/code    { "email": "user@example.com" }
+POST /api/auth/password-reset/verify  { "email": "user@example.com", "code": "730215" }
+POST /api/auth/password-reset         { "email": "user@example.com", "code": "730215", "newPassword": "Nueva1!x" }
+```
+Los códigos de recuperación siguen las mismas reglas que los del registro, pero se guardan aparte: uno no sirve para el otro. Si el email no tiene cuenta no se envía nada, pero la respuesta es la misma (`204`). La contraseña nueva cumple la misma política que en el registro. Después, el usuario inicia sesión con ella.
 
 **Ejemplo Login** (`identifier` es el email o el nombre de usuario; se sigue aceptando el campo antiguo `email`):
 ```json
@@ -549,7 +573,7 @@ Devuelven `ItemSummaryDTO` (`id`, `title`, `imageUrl`, `type`, `level`, `artist`
 | `GET` | `/api/spotify/login` | Iniciar sesión con Spotify |
 | `GET` | `/api/spotify/callback?code={code}` | Callback de autenticación Spotify |
 | `GET` | `/api/spotify/recommendations/songs/{userId}?limit={n}` | Canciones recomendadas a partir de su Spotify (DTO completo): sus canciones top que están en la app, completadas con las de sus 5 artistas top |
-| `GET` | `/api/spotify/recommendations/items/{userId}` | Elementos recomendados a partir de su Spotify, DTO completo de cada subtipo (carrusel "Desde tu Spotify" del Inicio): 6 canciones como las anteriores, 3 lecciones de sus géneros, 2 instrument-genres de sus géneros e instrumentos más repetidos y el género más repetido. Barajados y sin nada de lo que ya está en 3 o más de sus listas; vacío si ninguna canción de Spotify está en la app |
+| `GET` | `/api/spotify/recommendations/items/{userId}` | Elementos recomendados a partir de su Spotify, DTO completo de cada subtipo (carrusel "Basado en tu Spotify" del Inicio): 6 canciones como las anteriores, 3 lecciones de sus géneros, 2 instrument-genres de sus géneros e instrumentos más repetidos y el género más repetido. Barajados y sin nada de lo que ya está en 3 o más de sus listas; vacío si ninguna canción de Spotify está en la app |
 
 `{userId}` es el ID del usuario de la app, que debe tener Spotify vinculado. Si no lo tiene, el Inicio muestra el botón "Conectar con Spotify" en lugar del carrusel.
 
@@ -568,7 +592,7 @@ Authorization: Bearer <jwt-token>
 ### Flujo de Autenticación
 
 1. Usuario pide un código de verificación para su email y se registra con él
-2. Usuario hace login (el registro ya devuelve el token)
+2. Usuario hace login (el registro ya devuelve el token). Si olvida la contraseña, la cambia con un código enviado a su email ("Olvidé mi contraseña")
 3. Backend devuelve JWT token
 4. Cliente incluye token en todos los requests
 5. Backend valida token con `JwtAuthenticationFilter`
@@ -632,6 +656,8 @@ No contiene secretos: las contraseñas y credenciales se leen de variables con `
 # Server
 server.address=0.0.0.0
 server.port=${PORT:8080}
+# Beans al primer uso (true en Render, para abrir el puerto a tiempo con su poca CPU)
+spring.main.lazy-initialization=${LAZY_INIT:false}
 
 # Variables locales desde .env (si existe)
 spring.config.import=optional:file:.env[.properties]
@@ -662,25 +688,50 @@ app.mail.from=${MAIL_FROM:TOCO <${MAIL_USERNAME:no-reply@toco.app}>}
 
 ### `.env`
 
-Fichero local en la raíz del proyecto, **ignorado por git**. Se crea copiando la plantilla `.env.example`:
+Fichero local en la raíz del proyecto, **ignorado por git**. Se crea copiando la plantilla `.env.example`, organizada por bloques:
 
 ```properties
+# --- Base de datos ---  (local: localhost:5432/demo, usuario postgres)
 DB_PASSWORD=<contraseña de PostgreSQL>
-SPOTIFY_CLIENT_ID=<client id de la app de Spotify>
-SPOTIFY_CLIENT_SECRET=<client secret de la app de Spotify>
+
+# --- Administrador inicial ---
 ADMIN_EMAIL=<email del administrador inicial>
 ADMIN_PASSWORD=<contraseña del administrador inicial>
-# Opcional: túnel HTTPS para probar el login de Spotify desde el móvil
-# SPOTIFY_REDIRECT_URI=https://<dominio>.ngrok-free.dev/api/spotify/callback
-# SMTP para el código de verificación (Gmail: smtp.gmail.com y una contraseña de aplicación)
-MAIL_HOST=smtp.gmail.com
-MAIL_PORT=587
-MAIL_USERNAME=<cuenta de Gmail>
-MAIL_PASSWORD=<contraseña de aplicación de 16 letras>
+# ADMIN_USERNAME=admin
+
+# --- Spotify ---
+SPOTIFY_CLIENT_ID=<client id de la app de Spotify>
+SPOTIFY_CLIENT_SECRET=<client secret de la app de Spotify>
+# SPOTIFY_REDIRECT_URI=https://<dominio>.ngrok-free.dev/api/spotify/callback   (túnel para el móvil)
+
+# --- Email --- (sin MAIL_HOST el código sale en el log)
+MAIL_HOST=smtp-relay.brevo.com
+MAIL_PORT=2525
+MAIL_USERNAME=<usuario SMTP de Brevo>
+MAIL_PASSWORD=<clave SMTP de Brevo>
 # MAIL_FROM=TOCO <...>   (por defecto, TOCO <MAIL_USERNAME>)
+
+# --- Opcionales ---
+# JWT_SECRET_KEY=
+# SHOW_SQL=false
+
+# --- PRODUCCIÓN (comentado: descomentar solo para trabajar contra Neon/Render desde el PC) ---
+# DB_URL=jdbc:postgresql://<host>.neon.tech/<base>?sslmode=require
+# DB_USERNAME=
+# DB_PASSWORD=
+# API_BASE_URL=https://<servicio>.onrender.com
 ```
 
-Spring lo importa al arrancar y los scripts de `scripts/` (`clean_db.py`, `migrate_*.py`) también lo leen (`scripts/env_utils.py`). Las variables de entorno reales tienen prioridad sobre el `.env`.
+En local también sirve Gmail (`smtp.gmail.com`, `587` y una contraseña de aplicación); en Render no, porque bloquea ese puerto (ver *Despliegue*).
+
+Spring lo importa al arrancar y los scripts de `scripts/` (`clean_db.py`, `migrate_*.py` y los de carga, que usan `API_BASE_URL` y `ADMIN_*`) también lo leen (`scripts/env_utils.py`). Si una variable aparece dos veces, vale la última. Las variables de entorno reales tienen prioridad sobre el `.env`.
+
+---
+
+## 🧪 Pruebas
+
+- **Unitarias:** `./mvnw test` (backend, JUnit 5 + JaCoCo en `target/site/jacoco/`) y `cd frontend && npm run test:coverage` (Jest + Testing Library).
+- **De sistema, de carga (k6) y de usabilidad (SUS):** herramientas y guía en [`tests/README.md`](tests/README.md). Los resultados reales quedan en las carpetas `results/` de cada una.
 
 ---
 
@@ -697,6 +748,7 @@ Spring lo importa al arrancar y los scripts de `scripts/` (`clean_db.py`, `migra
 | Maven | 3.9+ | Gestor de dependencias |
 | Lombok | Latest | Reducción de boilerplate |
 | Spotify API | Latest | Integración Spotify |
+| k6 | 2.3 | Pruebas de carga (`tests/load`) |
 
 ---
 
@@ -724,6 +776,7 @@ Spring lo importa al arrancar y los scripts de `scripts/` (`clean_db.py`, `migra
 - El token ha expirado
 - Token incorrecto o corrupto
 - Verificar `jwt.secret-key` (si no se define, se usa una clave por defecto)
+- **404 en todas las pantallas tras `clean_db.py`:** la app guarda un JWT de un usuario que ya no existe. Cerrar sesión y volver a registrarse.
 
 ### Error: CORS
 - Configurar CORS en `WebConfig`
@@ -731,6 +784,7 @@ Spring lo importa al arrancar y los scripts de `scripts/` (`clean_db.py`, `migra
 
 ### Error: no llega el código de verificación
 - `Couldn't connect to host, port: localhost, 587`: `MAIL_HOST` está vacío o comentado en `.env`. Con la propiedad vacía Spring crea igualmente el cliente de correo y apunta a `localhost`.
+- `Couldn't connect to host, port: smtp.gmail.com, 587` en Render: el plan gratuito bloquea ese puerto; usar Brevo en el `2525`.
 - `535 Authentication failed` (Gmail): `MAIL_PASSWORD` tiene que ser una contraseña de aplicación (https://myaccount.google.com/apppasswords, requiere verificación en dos pasos), no la contraseña de la cuenta.
 - Tras cambiar `.env` hay que reiniciar el backend: solo se lee al arrancar.
 
@@ -747,7 +801,7 @@ npm run dev      # vista previa en el navegador
 npm run export   # genera src/main/resources/templates/email/<plantilla>.html y .txt
 ```
 
-`export` deja marcadores `{{code}}`, `{{minutes}}` que `EmailServiceImpl` sustituye al enviar. Hay que volver a ejecutarlo tras cambiar una plantilla y subir los ficheros generados.
+Plantillas: `verification-code` (registro) y `password-reset` (recuperación de contraseña). `export` deja marcadores `{{code}}`, `{{minutes}}` que `EmailServiceImpl` sustituye al enviar. Hay que volver a ejecutarlo tras cambiar una plantilla y subir los ficheros generados.
 
 ---
 
@@ -762,10 +816,15 @@ java -jar target/TOCO-0.0.1-SNAPSHOT.jar
 
 ### Variables de entorno necesarias
 
-Las mismas que en `.env` (en producción, como variables de entorno reales):
+Las mismas que en `.env`, como variables de entorno reales (en Render, las de `render.yaml`):
 
 ```bash
+DB_URL=
+DB_USERNAME=
 DB_PASSWORD=
+JWT_SECRET_KEY=
+SHOW_SQL=false
+LAZY_INIT=true
 SPOTIFY_CLIENT_ID=
 SPOTIFY_CLIENT_SECRET=
 SPOTIFY_REDIRECT_URI=
@@ -775,6 +834,7 @@ MAIL_HOST=
 MAIL_PORT=
 MAIL_USERNAME=
 MAIL_PASSWORD=
+MAIL_FROM=
 ```
 
 ---

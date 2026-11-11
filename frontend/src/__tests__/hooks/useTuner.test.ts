@@ -153,9 +153,15 @@ describe('useTuner', () => {
     expect(result.current.status).toBe('error');
   });
 
-  it('compara la nota con la cuerda más cercana', async () => {
+  it('empieza con la primera cuerda seleccionada', async () => {
+    const { result } = await renderHook(() => useTuner(STANDARD));
+    expect(result.current.selectedString).toBe(0);
+  });
+
+  it('compara la nota con la cuerda seleccionada', async () => {
     const { result } = await renderHook(() => useTuner(STANDARD));
     await act(() => result.current.start());
+    await act(async () => result.current.selectString(1));
     await emit(flat(110, -8)); // La2, 8 cents bajo
 
     expect(result.current.reading?.stringIndex).toBe(1);
@@ -180,22 +186,23 @@ describe('useTuner', () => {
     expect(result.current.reading?.stringIndex).toBe(0);
   });
 
-  it('una cuerda fijada se usa aunque suene otra', async () => {
+  it('no adivina la cuerda: compara con la seleccionada aunque suene otra', async () => {
     const { result } = await renderHook(() => useTuner(STANDARD));
     await act(() => result.current.start());
-    await act(async () => result.current.selectString(0));
-    await emit(110); // La2 contra el Mi2 fijado: 5 semitonos por encima
+    await emit(110); // La2 contra el Mi2 seleccionado: 5 semitonos por encima
 
-    expect(result.current.lockedString).toBe(0);
+    expect(result.current.selectedString).toBe(0);
     expect(result.current.reading?.stringIndex).toBe(0);
     expect(result.current.reading?.cents).toBeCloseTo(500, 0);
 
-    await act(async () => result.current.selectString(null));
+    await act(async () => result.current.selectString(1));
+    expect(result.current.reading).toBeNull();
     await emit(110);
     expect(result.current.reading?.stringIndex).toBe(1);
+    expect(result.current.reading?.cents).toBeCloseTo(0, 0);
   });
 
-  it('cambiar de afinación borra la lectura y la cuerda fijada', async () => {
+  it('cambiar de afinación borra la lectura y vuelve a la primera cuerda', async () => {
     const { result, rerender } = await renderHook(({ notes }: { notes: string[] }) => useTuner(notes), {
       initialProps: { notes: STANDARD },
     });
@@ -206,7 +213,7 @@ describe('useTuner', () => {
 
     await rerender({ notes: ['D2', 'A2', 'D3', 'G3', 'B3', 'E4'] });
     expect(result.current.reading).toBeNull();
-    expect(result.current.lockedString).toBeNull();
+    expect(result.current.selectedString).toBe(0);
   });
 
   it('ignora el audio si la afinación no tiene cuerdas (aún cargando)', async () => {

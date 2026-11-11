@@ -353,7 +353,7 @@ describe('ProfileScreen', () => {
     await render(<ProfileScreen />);
     await fireEvent.press(screen.getByText('Cerrar sesión'));
     const alert = mockShowAlert.mock.calls[0][0];
-    expect(alert.title).toBe('Cerrar sesion');
+    expect(alert.title).toBe('Cerrar sesión');
     const confirm = alert.actions.find((a: any) => a.style === 'destructive');
     expect(confirm.onPress).toBe(mockLogout);
   });

@@ -68,8 +68,8 @@ const pickSuggestion = (
  * y mapea los IDs a objetos reactivos listos para los carruseles:
  *  - "Recientes": items que ha abierto el usuario actual, del más reciente al más antiguo.
  *    Salen de la RecentItemsStore (solo del front) y se pintan con el catálogo de items.
- *  - "Recomendaciones": items recomendados al usuario (`/recommendations/items/by-user`).
- *  - "Desde tu Spotify": items recomendados a partir de sus canciones y artistas top en Spotify
+ *  - "Para ti": items recomendados al usuario (`/recommendations/items/by-user`).
+ *  - "Basado en tu Spotify": items recomendados a partir de sus canciones y artistas top en Spotify
  *    (`/spotify/recommendations/items`); solo con la cuenta de Spotify vinculada.
  *  - "Prueba esta combinación": un género-instrumento que combina un género y un instrumento
  *    favoritos del usuario y no está en 3 o más de sus listas; el primero que no salga ya en los carruseles.
@@ -77,7 +77,7 @@ const pickSuggestion = (
  *    uno de sus favoritos) que no está guardado en 3 o más de ellas; el primero que no salga ya en los carruseles.
  *  - Artistas favoritos (los más repetidos en las canciones de sus listas): una tarjeta y un carrusel
  *    con sus canciones nuevas, y otra tarjeta y otro carrusel con las populares. La tarjeta destaca la
- *    primera canción que no salga ya en Recientes o Recomendaciones, y su carrusel muestra el resto.
+ *    primera canción que no salga ya en Recientes o Para ti, y su carrusel muestra el resto.
  *    La pantalla no pinta un carrusel vacío si hay alguna tarjeta (su aviso de "Añade canciones" sería falso).
  *
  * Todo lo personalizado se vuelve a pedir cuando cambian las listas, los favoritos o el nivel
@@ -162,7 +162,7 @@ export const useHomeItems = () => {
     return itemsToCarouselItems(items);
   }, [ids.recommendations, allItems]);
 
-  // --- Desde tu Spotify ---
+  // --- Basado en tu Spotify ---
   // Va aparte: solo se pide con la cuenta vinculada y se vuelve a pedir en cuanto el usuario la
   // vincula (cambia `spotifyConnected`) o cambian sus listas (se excluye lo que ya está en 3 o más).
   // Si falla (p. ej. token revocado) solo se queda vacío este carrusel, no el Home entero.
@@ -234,7 +234,7 @@ export const useHomeItems = () => {
     };
   }, [currentUserId, itemListsKey]);
 
-  // Mejor una sugerencia que no se vea ya en Recientes, Recomendaciones o Desde tu Spotify
+  // Mejor una sugerencia que no se vea ya en Recientes, Para ti o Basado en tu Spotify
   const shownIds = useMemo(
     () => new Set([...(recentIds ?? []), ...ids.recommendations, ...spotifyIds]),
     [recentIds, ids.recommendations, spotifyIds]

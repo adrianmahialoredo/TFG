@@ -1,0 +1,57 @@
+@startuml DS-CU-07-1
+title DS-CU-07 (1/2) - Gestionar listas de estudio: consultar y crear
+
+' Diagrama de secuencia de análisis (patrón Boundary-Control-Entity)
+' Fuentes: ProfileScreen.tsx (carrusel "Mis listas"), CreateListMiniModal.tsx, ListScreen.tsx,
+' useItemLists.ts, itemList.repository.ts, ItemListController.java
+autonumber
+hide footbox
+skinparam sequenceMessageAlign center
+skinparam roundcorner 6
+
+actor "Músico" as musico
+boundary "PerfilScreen" as perfil
+boundary "ListaScreen" as pantalla
+control "GestorListas" as gestor
+entity "ItemList" as lista
+
+musico -> perfil : abrirPerfil()
+perfil -> gestor : obtenerListas(userId)
+gestor -> lista : obtenerIdsPorUsuario(userId)
+note right of lista : GET /api/item-lists/by-user/{userId}/ids\n(caché primero, se revalida en segundo plano)
+lista --> gestor : ids
+gestor -> lista : obtenerTodas(ids)
+lista --> gestor : ItemListDTO[]
+gestor --> perfil : listas
+perfil --> musico : mostrarCarrusel("Mis listas")
+
+alt Crear lista
+    musico -> perfil : solicitarCreacion()
+    perfil --> musico : pedirNombre()
+    musico -> perfil : confirmar(nombre)
+    alt Nombre con menos de 2 caracteres
+        perfil --> musico : mostrarError("El nombre debe tener al menos 2 caracteres")
+    else Nombre válido
+        perfil -> gestor : crearLista(userId, nombre)
+        note right of gestor : POST /api/item-lists
+        gestor -> lista : persistirLista(userId, nombre)
+        alt La petición falla
+            gestor --> perfil : error
+            perfil --> musico : mostrarError("No se pudo crear la lista")
+        else Lista creada
+            lista --> gestor : ItemListDTO
+            gestor --> perfil : 201 Created + ItemListDTO
+            perfil -> perfil : actualizarAlmacenLocal(lista)
+            note right of perfil : RAM y disco
+            perfil -> pantalla : abrir(listId)
+            pantalla --> musico : mostrarListaVacia()
+        end
+    end
+else Abrir una lista existente
+    musico -> perfil : seleccionarLista(listId)
+    perfil -> pantalla : abrir(listId)
+    pantalla --> musico : mostrarLista(nombre, imagen, ítems)
+    note right of pantalla : Renombrar, cambiar la imagen o eliminar:\nDS-CU-07 (2/2). Añadir o quitar ítems: DS-CU-08
+end
+
+@enduml

@@ -1,0 +1,12 @@
+' Estilo común de los diagramas de secuencia de diseño (DSD-CU-xx).
+' Se incluye con: !include ../_estilo.iuml
+' Tamaño pensado para que cada diagrama quepa legible en una página A4
+' (≈1500 px de ancho como máximo al exportar sin escalar).
+autonumber
+hide footbox
+skinparam sequenceMessageAlign center
+skinparam roundcorner 6
+skinparam maxMessageSize 200
+skinparam BoxPadding 6
+skinparam ParticipantPadding 4
+skinparam defaultFontSize 12

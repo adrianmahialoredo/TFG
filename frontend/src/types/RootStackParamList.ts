@@ -2,6 +2,7 @@
 export type RootStackParamList = {
   LoginScreen: undefined;
   RegisterScreen: undefined;
+  ForgotPasswordScreen: { email?: string } | undefined;
   BottomTab: undefined;
   SongScreen: { songId: string };
   LessonScreen: { lessonId: string };

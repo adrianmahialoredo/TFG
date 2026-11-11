@@ -1,0 +1,58 @@
+@startuml DSD-CU-01-3
+title DSD-CU-01 (3/4) - Registrar usuario: envío del código (backend)
+
+' Lo que hace el backend en POST /api/auth/verification-code (DSD-CU-01 1/4).
+' Fuentes: AuthController.java, EmailVerificationServiceImpl.java, EmailServiceImpl.java,
+' UserRepository.java, GlobalExceptionHandler.java, SecurityConfig.java.
+' Los códigos pendientes viven en memoria (ConcurrentHashMap pendingCodes, una sola instancia).
+!include ../_estilo.iuml
+
+participant "App\n(services)" as app
+box "Backend (Spring Boot)" #FFF9F0
+    participant "AuthController\n<<controller>>" as ctrl
+    participant "EmailVerification\nServiceImpl\n<<service>>" as verification
+    participant "UserRepository\n<<repository>>" as userRepo
+    participant "applicationTask\nExecutor" as executor
+    participant "EmailServiceImpl\n<<service>>" as emailService
+end box
+participant "Servidor SMTP\n<<sistema externo>>" as smtp
+
+note over ctrl : /api/auth/** es público (SecurityConfig).\nErrores (GlobalExceptionHandler):\nIllegalArgumentException -> 400;\nResponseStatusException (ErrorResponse) ->\nsu estado, p. ej. 429 (handleGeneric);\notras excepciones -> 500 (handleGeneric)
+
+group POST /api/auth/verification-code
+    app -> ctrl : sendVerificationCode(@Valid dto)
+    ctrl -> verification : sendCode(email)
+    verification -> verification : key = normalize(email)\n(trim + minúsculas)
+    verification -> userRepo : existsByEmailIgnoreCase(key)
+    userRepo --> verification : boolean
+    alt El email ya está registrado
+        verification --> ctrl : IllegalArgumentException("Email already registered")
+        ctrl --> app : 400 { message }
+    else Código previo de hace menos de 60 s (RESEND_COOLDOWN)
+        verification --> ctrl : ResponseStatusException(TOO_MANY_REQUESTS)
+        ctrl --> app : 429 Too Many Requests
+    else Email libre
+        verification -> verification : generateCode()
+        note right of verification : 6 dígitos con SecureRandom.\nCaduca a los 10 min (CODE_TTL),\nmáximo 5 fallos (MAX_ATTEMPTS)
+        verification -> verification : pendingCodes.put(key,\npending = PendingCode(code, now))
+        verification ->> executor : execute(() -> sendVerificationCode(...))
+        verification --> ctrl : void
+        ctrl --> app : 204 No Content (inmediato)
+
+        executor -> emailService : sendVerificationCode(email, code, 10)
+        note right of emailService : Sin JavaMailSender (sin MAIL_HOST)\nno se envía nada: el código va al log
+        emailService -> emailService : fill(plantillas .txt y .html,\n{ code, minutes })
+        emailService -> smtp : JavaMailSender.send(message)
+        alt Fallo SMTP (MessagingException / MailException)
+            smtp --> emailService : error
+            emailService --> executor : IllegalStateException
+            executor -> verification : pendingCodes.remove(key, pending)
+            note right of executor : Solo se descarta este código (no uno\nmás nuevo). La app no recibe error:\nya tiene su 204
+        else Enviado
+            smtp --> emailService : ok
+            smtp ->> smtp : entrega el email al visitante
+        end
+    end
+end
+
+@enduml

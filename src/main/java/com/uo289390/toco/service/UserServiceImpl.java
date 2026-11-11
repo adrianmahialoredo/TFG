@@ -93,6 +93,17 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    @Transactional
+    public void resetPassword(String email, String newPassword) {
+        String key = email == null ? "" : email.trim();
+        User user = userRepository.findByEmailIgnoreCase(key)
+                .orElseThrow(() -> new IllegalArgumentException("Email not registered"));
+        user.setPassword(passwordEncoder.encode(newPassword));
+        userRepository.save(user);
+        log.info("Password reset for user {}", user.getId());
+    }
+
+    @Override
     public LoginResponse login(String identifier, String password) {
         String login = identifier == null ? "" : identifier.trim();
         log.debug("Login attempt for: {}", login);

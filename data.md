@@ -130,7 +130,7 @@ Estructura (por item):
 - `instrumentIds` (array number, opcional)
 - `decade` (string, formato `1990s`)
 - `popular`, `newSong` (boolean): carrusel "Populares" del catalogo; `newSong` no lo usa ningun carrusel
-- `genreClassic`, `genrePopular`, `genreNew` (boolean): carruseles del genero. `genreNew` tambien es el carrusel "Nuevas" de la pantalla de canciones
+- `genreClassic`, `genrePopular`, `genreNew` (boolean): carruseles del genero. `genreNew` tambien es el carrusel "Novedades" de la pantalla de canciones
 - `artistClassic`, `artistPopular`, `artistNew` (boolean): carruseles de artistas favoritos del Home
 - `lessons` (array number, opcional)
 

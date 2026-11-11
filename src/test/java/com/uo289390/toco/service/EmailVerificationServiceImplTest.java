@@ -261,4 +261,122 @@ class EmailVerificationServiceImplTest {
 
         assertThrows(IllegalArgumentException.class, () -> service.checkCode(EMAIL, code));
     }
+
+    // ---------- password reset ----------
+
+    /** Requests a password reset code for a registered email and returns the one that was "emailed". */
+    private String sendAndCaptureResetCode() {
+        when(userRepository.existsByEmailIgnoreCase(EMAIL)).thenReturn(true);
+        service.sendPasswordResetCode(EMAIL);
+        ArgumentCaptor<String> code = ArgumentCaptor.forClass(String.class);
+        verify(emailService, atLeastOnce()).sendPasswordResetCode(eq(EMAIL), code.capture(), anyLong());
+        return code.getValue();
+    }
+
+    @Test
+    void sendPasswordResetCode_registeredEmail_sendsASixDigitCode() {
+        String code = sendAndCaptureResetCode();
+
+        assertTrue(code.matches("\\d{6}"), "Expected 6 digits, got " + code);
+        verify(emailService).sendPasswordResetCode(EMAIL, code, EmailVerificationServiceImpl.CODE_TTL.toMinutes());
+        verify(emailService, never()).sendVerificationCode(anyString(), anyString(), anyLong());
+    }
+
+    @Test
+    void sendPasswordResetCode_unknownEmail_sendsNothingAndDoesNotFail() {
+        when(userRepository.existsByEmailIgnoreCase(EMAIL)).thenReturn(false);
+
+        assertDoesNotThrow(() -> service.sendPasswordResetCode(EMAIL));
+
+        verifyNoInteractions(emailService);
+        assertEquals("Verification code not requested",
+                assertThrows(IllegalArgumentException.class, () -> service.checkPasswordResetCode(EMAIL, "123456")).getMessage());
+    }
+
+    @Test
+    void sendPasswordResetCode_askedAgainTooSoon_returnsTooManyRequests() {
+        sendAndCaptureResetCode();
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class, () -> service.sendPasswordResetCode(EMAIL));
+
+        assertEquals(HttpStatus.TOO_MANY_REQUESTS, ex.getStatusCode());
+    }
+
+    @Test
+    void sendPasswordResetCode_afterCooldown_replacesTheCode() {
+        String first = sendAndCaptureResetCode();
+        clock.advance(EmailVerificationServiceImpl.RESEND_COOLDOWN.plusSeconds(1));
+
+        service.sendPasswordResetCode(EMAIL);
+        ArgumentCaptor<String> codes = ArgumentCaptor.forClass(String.class);
+        verify(emailService, times(2)).sendPasswordResetCode(eq(EMAIL), codes.capture(), anyLong());
+        String second = codes.getAllValues().get(1);
+
+        assertDoesNotThrow(() -> service.checkPasswordResetCode(EMAIL, second));
+        if (!first.equals(second)) {
+            assertThrows(IllegalArgumentException.class, () -> service.checkPasswordResetCode(EMAIL, first));
+        }
+    }
+
+    @Test
+    void checkPasswordResetCode_rightCode_passesAndIsNotConsumed() {
+        String code = sendAndCaptureResetCode();
+
+        assertDoesNotThrow(() -> service.checkPasswordResetCode(EMAIL, code));
+        assertDoesNotThrow(() -> service.checkPasswordResetCode("  JOHN@example.com ", code));
+    }
+
+    @Test
+    void checkPasswordResetCode_expired_isRejected() {
+        String code = sendAndCaptureResetCode();
+        clock.advance(EmailVerificationServiceImpl.CODE_TTL.plusSeconds(1));
+
+        assertEquals("Verification code expired",
+                assertThrows(IllegalArgumentException.class, () -> service.checkPasswordResetCode(EMAIL, code)).getMessage());
+    }
+
+    @Test
+    void checkPasswordResetCode_tooManyWrongAttempts_discardsTheCode() {
+        String code = sendAndCaptureResetCode();
+        String wrong = code.equals("000000") ? "111111" : "000000";
+
+        for (int i = 1; i < EmailVerificationServiceImpl.MAX_ATTEMPTS; i++) {
+            assertEquals("Invalid verification code",
+                    assertThrows(IllegalArgumentException.class, () -> service.checkPasswordResetCode(EMAIL, wrong)).getMessage());
+        }
+        assertEquals("Too many wrong verification codes",
+                assertThrows(IllegalArgumentException.class, () -> service.checkPasswordResetCode(EMAIL, wrong)).getMessage());
+        assertThrows(IllegalArgumentException.class, () -> service.checkPasswordResetCode(EMAIL, code));
+    }
+
+    @Test
+    void resetAndRegistrationCodes_areIndependent() {
+        String resetCode = sendAndCaptureResetCode();
+
+        // A password reset code does not verify a registration, and the other way round
+        assertThrows(IllegalArgumentException.class, () -> service.checkCode(EMAIL, resetCode));
+        service.consume(EMAIL);
+        assertDoesNotThrow(() -> service.checkPasswordResetCode(EMAIL, resetCode));
+    }
+
+    @Test
+    void consumePasswordResetCode_discardsTheCode() {
+        String code = sendAndCaptureResetCode();
+
+        service.consumePasswordResetCode(EMAIL);
+
+        assertThrows(IllegalArgumentException.class, () -> service.checkPasswordResetCode(EMAIL, code));
+    }
+
+    @Test
+    void sendPasswordResetCode_smtpFailure_discardsTheCodeSoItCanBeAskedAgain() {
+        when(userRepository.existsByEmailIgnoreCase(EMAIL)).thenReturn(true);
+        doThrow(new IllegalStateException("SMTP down"))
+                .when(emailService).sendPasswordResetCode(eq(EMAIL), anyString(), anyLong());
+
+        service.sendPasswordResetCode(EMAIL);
+
+        // No cooldown left behind: the user can ask for a new code straight away
+        assertDoesNotThrow(() -> service.sendPasswordResetCode(EMAIL));
+    }
 }

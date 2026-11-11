@@ -32,7 +32,6 @@ class UserValidationTest {
         user.setUsername("testuser");
         user.setPassword("password123");
         user.setName("Test User");
-        user.getPreferences().setDifficultyLevel(50);
         user.setRole(Role.USER);
     }
 
@@ -120,7 +119,7 @@ class UserValidationTest {
     @Test
     void testDifficultyLevelValidation_BelowMin() {
         // Arrange
-        user.getPreferences().setDifficultyLevel(-1);
+        user.setDifficultyLevel(-1);
 
         // Act
         Set<ConstraintViolation<User>> violations = validator.validate(user);
@@ -132,7 +131,7 @@ class UserValidationTest {
     @Test
     void testDifficultyLevelValidation_AboveMax() {
         // Arrange
-        user.getPreferences().setDifficultyLevel(101);
+        user.setDifficultyLevel(6);
 
         // Act
         Set<ConstraintViolation<User>> violations = validator.validate(user);

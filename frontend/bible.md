@@ -70,7 +70,7 @@ Esta arquitectura es la ley suprema del proyecto. Su objetivo es el desacoplamie
 
 | Caso | El backend devuelve | Motivo |
 |---|---|---|
-| Carruseles de entidades del catálogo (**por defecto**: lecciones, por década, por nivel, otros géneros, "Según tus gustos", recomendaciones del Home… y cualquiera nuevo) | **`List<Long>`** (ruta `/ids`) | El cliente ya tiene el resumen de todas en el catálogo: pinta con él y solo pide por `by-ids` las que falten |
+| Carruseles de entidades del catálogo (**por defecto**: lecciones, por década, por nivel, otros géneros, "Para ti" de Canciones y del Home… y cualquiera nuevo) | **`List<Long>`** (ruta `/ids`) | El cliente ya tiene el resumen de todas en el catálogo: pinta con él y solo pide por `by-ids` las que falten |
 | Carruseles de alta probabilidad de apertura (**excepciones de negocio**): canciones populares y nuevas, Spotify (canciones e items), recomendados para añadir a una lista, populares/clásicas/nuevas de un género y "Populares en <género favorito>" | **DTOs completos** | Se espera que el usuario abra lo que ve: el detalle abre al instante. La lista completa y sus endpoints está en `architecture.md` §7 |
 | Filtros cuyo consumidor necesita el objeto completo (`lessons/by-genre`, `instrument-genres/by-genre`) | **Lista de DTOs** | Esos objetos no están en caché: 1 petición mejor que 2 (IDs + `by-ids`) |
 | Relaciones de una entidad (`song.lessonIds`, `itemList.itemIds`, `user.favouriteGenresIds`) | **IDs dentro del DTO padre** | Mantiene la normalización; los hijos se piden solo si se necesitan |

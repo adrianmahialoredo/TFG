@@ -103,7 +103,6 @@ class UserRepositoryTest {
         Genre jazz = em.persist(genre(2L, "Jazz"));
         Instrument guitar = em.persist(instrument(1L, "Guitar"));
         User user = user("frank");
-        user.getPreferences().setDifficultyLevel(40);
         user.getPreferences().setFavoriteGenres(Set.of(rock, jazz));
         user.getPreferences().setFavoriteInstruments(Set.of(guitar));
         Long id = userRepository.saveAndFlush(user).getId();
@@ -111,7 +110,6 @@ class UserRepositoryTest {
 
         User loaded = userRepository.findById(id).orElseThrow();
         assertEquals(id, loaded.getPreferences().getId());
-        assertEquals(40, loaded.getPreferences().getDifficultyLevel());
         assertEquals(Set.of(1L, 2L), Set.copyOf(loaded.getPreferences().getFavoriteGenres().stream().map(Genre::getId).toList()));
         assertEquals(List.of(1L), loaded.getPreferences().getFavoriteInstruments().stream().map(Instrument::getId).toList());
     }

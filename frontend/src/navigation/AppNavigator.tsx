@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { ActivityIndicator, View } from 'react-native';
 import LoginScreen from '../screens/LoginScreen';
 import RegisterScreen from '../screens/RegisterScreen';
+import ForgotPasswordScreen from '../screens/ForgotPasswordScreen';
 import BottomTabs from './BottomTabs';
 import { RootStackParamList } from '../types';
 
@@ -35,6 +36,7 @@ export default function AppNavigator() {
             <Stack.Group screenOptions={{ animation: 'fade' }}>
               <Stack.Screen name="LoginScreen" component={LoginScreen} />
               <Stack.Screen name="RegisterScreen" component={RegisterScreen} />
+              <Stack.Screen name="ForgotPasswordScreen" component={ForgotPasswordScreen} />
             </Stack.Group>
         )}
       </Stack.Navigator>

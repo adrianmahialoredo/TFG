@@ -31,6 +31,16 @@ public interface UserService {
      */
     LoginResponse login(String identifier, String password);
 
+    /**
+     * Replaces the password of the account with that email ("Olvidé mi contraseña").
+     * The caller must have checked the password reset code first.
+     *
+     * @param email       the email of the account (case does not matter)
+     * @param newPassword the new raw password, already validated
+     * @throws IllegalArgumentException if no account has that email
+     */
+    void resetPassword(String email, String newPassword);
+
     UserDto create(UserDto userDto);
 
     Optional<UserDto> findByEmail(String email);

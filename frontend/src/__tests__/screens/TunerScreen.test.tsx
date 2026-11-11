@@ -46,10 +46,10 @@ jest.mock('../../components/ProfileHeader', () => {
 });
 jest.mock('../../components/tuner/TunerStringSelector', () => {
   const { Text, View } = require('react-native');
-  return ({ notes, activeIndex, onSelect }: any) => (
+  return ({ notes, selectedIndex, onSelect }: any) => (
     <View>
       {notes.map((note: string, i: number) => (
-        <Text key={i} onPress={() => onSelect(i)}>{i === activeIndex ? `[${note}]` : note}</Text>
+        <Text key={i} onPress={() => onSelect(i)}>{i === selectedIndex ? `[${note}]` : note}</Text>
       ))}
     </View>
   );
@@ -76,7 +76,7 @@ const tuner = (overrides: any = {}) => ({
   isListening: true,
   simulated: false,
   reading: null,
-  lockedString: null,
+  selectedString: 0,
   start: mockStart,
   stop: mockStop,
   selectString: mockSelectString,
@@ -118,7 +118,7 @@ describe('TunerScreen', () => {
   });
 
   it('con lectura dentro del margen muestra los cents, "Afinado", la frecuencia y resalta la cuerda', async () => {
-    mockTuner = tuner({ reading: { frequency: 117.4, stringIndex: 1, cents: -3.4 } });
+    mockTuner = tuner({ selectedString: 1, reading: { frequency: 117.4, stringIndex: 1, cents: -3.4 } });
     await render(<TunerScreen />);
     expect(screen.getByText('-3')).toBeTruthy();
     expect(screen.getByText('Afinado')).toBeTruthy();
@@ -147,7 +147,7 @@ describe('TunerScreen', () => {
     expect(mockUseTuner).toHaveBeenLastCalledWith(DROP_D.notes);
   });
 
-  it('pulsar una cuerda la fija y, si no escuchaba, empieza a escuchar', async () => {
+  it('pulsar una cuerda la selecciona y, si no escuchaba, empieza a escuchar', async () => {
     mockTuner = tuner({ status: 'idle', isListening: false });
     await render(<TunerScreen />);
     mockStart.mockClear();
@@ -156,12 +156,19 @@ describe('TunerScreen', () => {
     expect(mockStart).toHaveBeenCalled();
   });
 
-  it('pulsar la cuerda fijada vuelve a la detección automática', async () => {
-    mockTuner = tuner({ lockedString: 2 });
+  it('marca la cuerda seleccionada y pide elegir cuerda', async () => {
+    mockTuner = tuner({ selectedString: 2 });
+    await render(<TunerScreen />);
+    expect(screen.getByText('[D3]')).toBeTruthy();
+    expect(screen.getByText('Toca la cuerda que vas a afinar')).toBeTruthy();
+  });
+
+  it('pulsar la cuerda seleccionada la mantiene (no hay modo automático)', async () => {
+    mockTuner = tuner({ selectedString: 2 });
     await render(<TunerScreen />);
     mockStart.mockClear();
     await fireEvent.press(screen.getByText('[D3]'));
-    expect(mockSelectString).toHaveBeenCalledWith(null);
+    expect(mockSelectString).toHaveBeenCalledWith(2);
     expect(mockStart).not.toHaveBeenCalled();
   });
 

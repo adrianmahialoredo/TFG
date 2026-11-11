@@ -476,6 +476,102 @@ class AuthControllerTest {
         verifyNoInteractions(userService);
     }
 
+    // ---------- password reset ----------
+
+    @Test
+    void passwordResetCode_validEmail_returnsNoContent() throws Exception {
+        mockMvc.perform(post("/api/auth/password-reset/code")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"email\":\"john@example.com\"}"))
+                .andExpect(status().isNoContent());
+
+        verify(emailVerificationService).sendPasswordResetCode("john@example.com");
+    }
+
+    @Test
+    void passwordResetCode_invalidEmail_returnsBadRequestWithoutSending() throws Exception {
+        mockMvc.perform(post("/api/auth/password-reset/code")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"email\":\"not-an-email\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors.email").exists());
+
+        verifyNoInteractions(emailVerificationService);
+    }
+
+    @Test
+    void passwordResetCode_requestedTooSoon_returnsTooManyRequests() throws Exception {
+        doThrow(new ResponseStatusException(HttpStatus.TOO_MANY_REQUESTS, "Verification code requested too recently"))
+                .when(emailVerificationService).sendPasswordResetCode("john@example.com");
+
+        mockMvc.perform(post("/api/auth/password-reset/code")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"email\":\"john@example.com\"}"))
+                .andExpect(status().isTooManyRequests());
+    }
+
+    @Test
+    void passwordResetVerify_rightCode_returnsNoContent() throws Exception {
+        mockMvc.perform(post("/api/auth/password-reset/verify")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"email\":\"john@example.com\",\"code\":\"123456\"}"))
+                .andExpect(status().isNoContent());
+
+        verify(emailVerificationService).checkPasswordResetCode("john@example.com", "123456");
+        verifyNoInteractions(userService);
+    }
+
+    @Test
+    void passwordResetVerify_wrongCode_returnsBadRequest() throws Exception {
+        doThrow(new IllegalArgumentException("Invalid verification code"))
+                .when(emailVerificationService).checkPasswordResetCode("john@example.com", "000000");
+
+        mockMvc.perform(post("/api/auth/password-reset/verify")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"email\":\"john@example.com\",\"code\":\"000000\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Invalid verification code"));
+    }
+
+    @Test
+    void passwordReset_checksCodeThenChangesPasswordThenConsumesCode() throws Exception {
+        mockMvc.perform(post("/api/auth/password-reset")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"email\":\"john@example.com\",\"code\":\"123456\",\"newPassword\":\"NewSecret1!\"}"))
+                .andExpect(status().isNoContent());
+
+        InOrder order = inOrder(emailVerificationService, userService);
+        order.verify(emailVerificationService).checkPasswordResetCode("john@example.com", "123456");
+        order.verify(userService).resetPassword("john@example.com", "NewSecret1!");
+        order.verify(emailVerificationService).consumePasswordResetCode("john@example.com");
+    }
+
+    @Test
+    void passwordReset_wrongCode_doesNotChangeThePassword() throws Exception {
+        doThrow(new IllegalArgumentException("Verification code expired"))
+                .when(emailVerificationService).checkPasswordResetCode("john@example.com", "123456");
+
+        mockMvc.perform(post("/api/auth/password-reset")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"email\":\"john@example.com\",\"code\":\"123456\",\"newPassword\":\"NewSecret1!\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Verification code expired"));
+
+        verifyNoInteractions(userService);
+        verify(emailVerificationService, never()).consumePasswordResetCode(anyString());
+    }
+
+    @Test
+    void passwordReset_weakPassword_returnsBadRequestWithoutCheckingTheCode() throws Exception {
+        mockMvc.perform(post("/api/auth/password-reset")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"email\":\"john@example.com\",\"code\":\"123456\",\"newPassword\":\"weakpass\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors.newPassword").exists());
+
+        verifyNoInteractions(emailVerificationService, userService);
+    }
+
     @Test
     void login_doesNotRequireAuthenticationHeader() throws Exception {
         when(userService.login(anyString(), anyString())).thenReturn(loginResponse());

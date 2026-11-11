@@ -7,6 +7,8 @@ import AddButton from '../iconbuttons/AddButton';
 
 type ListCarouselProps = {
   data: CarouselItemDTO[];
+  /** Cabecera opcional, con el mismo estilo que los títulos del resto de carruseles. */
+  title?: string;
   onItemPress?: (itemId: string) => void;
   onEmptyPress?: () => void;
   /** Con más de MAX_VISIBLE_LISTS listas, el botón final es una lupa que abre todas. */
@@ -27,7 +29,7 @@ export const MAX_VISIBLE_LISTS = 6;
  * Carrusel de las listas del usuario. Al final, un botón + para crear una lista o, si hay
  * más de MAX_VISIBLE_LISTS, una lupa para verlas todas (y crear desde allí).
  */
-export default function ListCarousel({ data, onItemPress, onEmptyPress, onSeeAllPress }: ListCarouselProps) {
+export default function ListCarousel({ data, title, onItemPress, onEmptyPress, onSeeAllPress }: ListCarouselProps) {
   const lists = data ?? [];
   const tooMany = lists.length > MAX_VISIBLE_LISTS;
   const rows: ListRowItem[] = [
@@ -98,6 +100,11 @@ export default function ListCarousel({ data, onItemPress, onEmptyPress, onSeeAll
 
   return (
     <View className="my-4">
+      {title ? (
+        <Text className="text-2xl font-semibold text-secondary mb-3" accessibilityRole="header">
+          {title}
+        </Text>
+      ) : null}
       <FlatList
         data={rows}
         keyExtractor={(item) => (item.type === 'list' ? item.value.id : `__list_${item.type}__`)}

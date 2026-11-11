@@ -32,6 +32,9 @@ export const API_ENDPOINTS = {
     LOGIN: `${API_URL}/auth/login`,
     REGISTER: `${API_URL}/auth/register`,
     VERIFICATION_CODE: `${API_URL}/auth/verification-code`,
+    PASSWORD_RESET_CODE: `${API_URL}/auth/password-reset/code`,
+    PASSWORD_RESET_VERIFY: `${API_URL}/auth/password-reset/verify`,
+    PASSWORD_RESET: `${API_URL}/auth/password-reset`,
   },
 
   USERS: {

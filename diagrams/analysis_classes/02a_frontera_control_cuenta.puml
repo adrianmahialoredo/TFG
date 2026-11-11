@@ -1,0 +1,107 @@
+@startuml DCA-02a
+title DCA-02a - Diagrama de clases de análisis: fronteras y controles\n(cuenta, perfil, listas y catálogo)
+
+' Vista BCE (parte 1/3): qué frontera usa cada control. Las operaciones de los
+' controles salen de los diagramas de secuencia de los casos de uso (diagrams/use_cases);
+' entre corchetes, las entidades de DCA-01a/DCA-01b que maneja cada uno.
+' Recomendaciones, canciones, géneros y Spotify en DCA-02b; afinador y metrónomo en DCA-02c.
+' Los controles de otra parte aparecen vacíos con <<ver DCA-02b>>.
+' Fuentes: frontend/src/screens, hooks, repositories (user, itemList), services/cloudinary.service.ts.
+skinparam roundcorner 6
+skinparam classAttributeIconSize 0
+skinparam nodesep 25
+skinparam ranksep 110
+skinparam class {
+    BackgroundColor<<boundary>> #E3F0FF
+    BorderColor<<boundary>> #3D6FA8
+    BackgroundColor<<control>> #E6F5E6
+    BorderColor<<control>> #3C8A3C
+}
+hide empty members
+left to right direction
+
+package "Fronteras con el músico (app móvil)" {
+    class RegistroScreen <<boundary>>
+    class ModalVerificacionEmail <<boundary>>
+    class LoginScreen <<boundary>>
+    class PerfilScreen <<boundary>>
+    class CatalogoView <<boundary>>
+    class AnadirItemsScreen <<boundary>>
+    class ListaScreen <<boundary>>
+    class LeccionScreen <<boundary>>
+}
+
+package "Controles" {
+    class GestorAutenticacion <<control>> {
+        [User, CodigoVerificacion]
+        --
+        solicitarCodigo(email)
+        registrarUsuario(datos, codigo)
+        autenticar(emailOUsuario, pass)
+        cerrarSesion()
+    }
+    class GestorPerfil <<control>> {
+        [User, Preferencias]
+        --
+        obtenerPerfil(userId)
+        guardarPerfil(userId, nombre, username, nivel)
+        anadirFavorito(userId, tipo, id)
+        quitarFavorito(userId, tipo, id)
+        cambiarFoto(userId, imagen)
+    }
+    class GestorCatalogo <<control>> {
+        [Item, Lesson, LessonSection]
+        --
+        filtrarEnMemoriaLocal(query, tipo)
+        solicitarDetalleCompleto(id)
+    }
+    class GestorListas <<control>> {
+        [ItemList, Item, User]
+        --
+        obtenerListas(userId)
+        crearLista(userId, nombre)
+        actualizarLista(id, nombre)
+        cambiarImagenLista(id, imagen)
+        eliminarLista(id)
+        anadirItem(listId, itemId)
+        eliminarItem(listId, itemId)
+    }
+    class MotorRecomendacion <<control>> <<ver DCA-02b>>
+    class GestorSpotifyAuth <<control>> <<ver DCA-02b>>
+}
+
+package "Fronteras con sistemas externos" {
+    class ServidorCorreoGateway <<boundary>>
+    class ServicioImagenesGateway <<boundary>>
+}
+
+' Frontera -> control
+RegistroScreen --> GestorAutenticacion
+ModalVerificacionEmail --> GestorAutenticacion
+LoginScreen --> GestorAutenticacion
+PerfilScreen --> GestorAutenticacion : cerrar sesión
+PerfilScreen --> GestorPerfil
+PerfilScreen --> GestorListas : crear lista
+PerfilScreen --> GestorSpotifyAuth : vincular Spotify
+CatalogoView --> GestorCatalogo
+CatalogoView --> GestorListas : añadir a lista\ndesde el buscador
+CatalogoView --> GestorSpotifyAuth : vincular Spotify
+AnadirItemsScreen --> GestorCatalogo : búsqueda
+AnadirItemsScreen --> GestorListas
+AnadirItemsScreen --> MotorRecomendacion : "Para ti"
+ListaScreen --> GestorListas
+LeccionScreen --> GestorCatalogo
+
+' Control -> sistemas externos
+GestorAutenticacion --> ServidorCorreoGateway : envía el código
+GestorPerfil --> ServicioImagenesGateway : sube la foto\n(Cloudinary)
+GestorListas --> ServicioImagenesGateway : sube la imagen\n(Cloudinary)
+
+note top of CatalogoView
+    No hay un buscador global: cada pestaña de
+    exploración (Aprender, Canciones, Géneros)
+    tiene su barra de búsqueda y filtra en local
+    el catálogo de su tipo de ítem.
+end note
+
+@enduml

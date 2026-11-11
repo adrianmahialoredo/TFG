@@ -1,0 +1,67 @@
+@startuml DS-CU-03-2
+title DS-CU-03 (2/2) - Configurar perfil: favoritos, foto y cierre de sesión
+
+' Diagrama de secuencia de análisis (patrón Boundary-Control-Entity)
+' Fuentes: ProfileScreen.tsx, useProfile.ts, FavoritesPickerModal.tsx, user.repository.ts,
+' auth.repository.ts (logout), UserController.java, UserServiceImpl.java
+autonumber
+hide footbox
+skinparam sequenceMessageAlign center
+skinparam roundcorner 6
+
+actor "Músico" as musico
+boundary "PerfilScreen" as pantalla
+control "GestorPerfil" as gestor
+control "GestorAutenticacion" as auth
+entity "Usuario" as usuario
+entity "Preferencia" as preferencia
+participant "Cloudinary\n<<sistema externo>>" as cloudinary
+
+note over musico, pantalla : El músico está en su perfil (DS-CU-03 (1/2))
+
+alt Cambiar favoritos
+    musico -> pantalla : pulsarAnadir(géneros | instrumentos)
+    pantalla --> musico : mostrarSelectorFavoritos()
+    note right of pantalla : "Guardar" deshabilitado\ncon menos de 2 elegidos
+    musico -> pantalla : guardarSeleccion(ids)
+    pantalla -> pantalla : calcularAltasYBajas(ids)
+    loop Por cada alta y cada baja, una a una
+        pantalla -> gestor : anadirFavorito(userId, id) / quitarFavorito(userId, id)
+        note right of gestor : POST / DELETE\n/api/users/{id}/favorite-genres/{genreId}\n(o favorite-instruments)
+        gestor -> preferencia : anadir(id) / quitar(id)
+        preferencia --> gestor : usuario
+        gestor --> pantalla : 200 OK + usuario
+    end
+    alt Alguna petición falla
+        pantalla -> pantalla : restaurar(backupUser) y recargarUsuario()
+        pantalla --> musico : mostrarError("No se pudieron guardar los favoritos")
+    else Todas correctas
+        pantalla -> pantalla : actualizarAlmacenLocal(usuario)
+        pantalla --> musico : mostrarFavoritos()
+    end
+else Cambiar foto
+    musico -> pantalla : cambiarFoto()
+    pantalla --> musico : abrirGaleria()
+    musico -> pantalla : elegirImagen(uri)
+    pantalla -> cloudinary : subirImagen(uri)
+    cloudinary --> pantalla : secureUrl
+    pantalla -> gestor : guardarPerfil(userId, profileImageUrl = secureUrl)
+    note right of gestor : PUT /api/users/{id}
+    gestor -> usuario : actualizar(profileImageUrl)
+    gestor --> pantalla : 200 OK + usuarioActualizado
+    pantalla --> musico : mostrarFoto()
+    opt Falla la subida o el guardado
+        pantalla --> musico : mostrarError("No se pudo actualizar la foto de perfil")
+    end
+else 3a. Cerrar sesión
+    musico -> pantalla : cerrarSesion()
+    pantalla --> musico : pedirConfirmacion("Estas seguro?")
+    musico -> pantalla : confirmar()
+    pantalla -> auth : cerrarSesion()
+    auth -> auth : borrarDatosPersonalesLocales()
+    note right of auth : Sin petición al backend.\nUsuario, listas e índices personales\n(RAM y disco). El contenido público\nsigue en caché.
+    auth --> pantalla : sesionCerrada
+    pantalla --> musico : redirigirLogin()
+end
+
+@enduml

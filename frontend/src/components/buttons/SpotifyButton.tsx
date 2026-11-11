@@ -1,4 +1,4 @@
-import { Text, Image } from "react-native";
+import { Text, Image, ActivityIndicator } from "react-native";
 import Touchable from "../Touchable";
 import { useSpotifyConnect } from "../../hooks/useSpotifyConnect";
 import { useAppAlert } from "../../context/AlertModalContext";
@@ -23,10 +23,15 @@ export const SpotifyButton = () => {
             className="bg-spotify px-7 py-4 rounded-full self-center flex-row items-center"
             onPress={handleSpotifyLogin}
             disabled={connecting}
+            style={connecting ? { opacity: 0.7 } : undefined}
         >
-            <Image source={{ uri: SPOTIFY_WHITE_LOGO_URL }} className="h-6 w-6 mr-3" />
+            {connecting ? (
+                <ActivityIndicator color="#ffffff" style={{ marginRight: 12 }} />
+            ) : (
+                <Image source={{ uri: SPOTIFY_WHITE_LOGO_URL }} className="h-6 w-6 mr-3" />
+            )}
             <Text className="text-secondary text-lg font-bold">
-                Conectar con Spotify
+                {connecting ? 'Conectando…' : 'Conectar con Spotify'}
             </Text>
         </Touchable>
     );

@@ -1,0 +1,54 @@
+@startuml DS-CU-03-1
+title DS-CU-03 (1/2) - Configurar perfil: consultar y modificar datos
+
+' Diagrama de secuencia de análisis (patrón Boundary-Control-Entity)
+' Fuentes: ProfileScreen.tsx, useProfile.ts, FavoritesPickerModal.tsx, user.repository.ts,
+' auth.repository.ts (logout), UserController.java, UserServiceImpl.java
+autonumber
+hide footbox
+skinparam sequenceMessageAlign center
+skinparam roundcorner 6
+
+actor "Músico" as musico
+boundary "PerfilScreen" as pantalla
+control "GestorPerfil" as gestor
+entity "Usuario" as usuario
+
+musico -> pantalla : abrirPerfil()
+pantalla -> gestor : obtenerPerfil(userId)
+gestor -> usuario : obtener(userId)
+note right of usuario : RAM -> disco -> API\n(GET /api/users/{id})
+usuario --> gestor : usuario (con géneros e\ninstrumentos favoritos)
+gestor --> pantalla : perfil
+pantalla --> musico : mostrarPerfil(nombre, username, email de solo lectura,\nnivel 0-5, favoritos, foto)
+
+== Modificar datos del perfil ==
+
+musico -> pantalla : modificarDatos(nombre, username, nivel)
+musico -> pantalla : guardar()
+alt Menos de 2 géneros o 2 instrumentos favoritos
+    pantalla --> musico : mostrarAviso("Faltan favoritos")
+else Mínimo cumplido
+    pantalla -> pantalla : actualizarAlmacenLocal(cambios)
+    note right of pantalla : Optimista; se guarda backupUser
+    pantalla -> gestor : guardarPerfil(userId, nombre, username, nivel)
+    note right of gestor : PUT /api/users/{id}
+    gestor -> gestor : comprobarPropiedad(userId)
+    alt 5a. Otro usuario (403) o username ocupado (400)
+        gestor --> pantalla : error
+        pantalla -> pantalla : restaurar(backupUser)
+        pantalla --> musico : mostrarError("No se pudieron guardar los cambios")
+    else Es el propietario y los datos son válidos
+        gestor -> usuario : actualizar(nombre, username, nivel)
+        note right of usuario : El email no se cambia
+        usuario --> gestor : usuario
+        gestor --> pantalla : 200 OK + usuarioActualizado
+        pantalla -> pantalla : actualizarAlmacenLocal(usuario)
+        note right of pantalla : UserEntitiesStore\n(RAM y disco)
+        pantalla --> musico : mostrarMensaje("Perfil actualizado correctamente")
+    end
+end
+
+note over musico, pantalla : Favoritos, foto y cierre de sesión en DS-CU-03 (2/2)
+
+@enduml

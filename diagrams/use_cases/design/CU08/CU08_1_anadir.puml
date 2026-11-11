@@ -1,0 +1,86 @@
+@startuml DSD-CU-08-1
+title DSD-CU-08 (1/3) - Añadir/eliminar ítems en listas: añadir un ítem (app)
+
+' Diagrama de secuencia de diseño: realización de CU-08 (análisis en
+' diagrams/use_cases/description/CU08_1_anadir_desde_lista.puml y CU08_2_buscador_y_quitar.puml). Parte de la app: el backend se dibuja
+' como una sola línea de vida ("API REST"); lo que hace cada endpoint está en DSD-CU-08 (3/3).
+' Fuentes: frontend/src/screens/ListScreen.tsx, screens/AddItemScreen.tsx, hooks/useAddItemScreen.ts,
+' hooks/useItemListDetail.ts, repositories/itemList.repository.ts, repositories/itemFeed.repository.ts,
+' repositories/item.repository.ts, services/itemList.service.ts, config/apiConfig.ts.
+' Diferencias con el guion:
+' - No existe "ItemDetailScreen": se añade desde AddItemScreen (hook useAddItemScreen) y se quita desde
+'   ListScreen (hook useItemListDetail). La petición la hace itemListService (Nivel 1) sobre apiClient.
+' - hydrateItemLists (privada del repositorio) = setItemLists (RAM) + cache.markFresh +
+'   itemListLocal.saveBatchWithUserIndex (disco).
+!include ../_estilo.iuml
+
+actor "Músico" as actor
+box "App (React Native)" #F3F8FF
+    participant "ListScreen\n<<Nivel 7>>" as listScreen
+    participant "AddItemScreen\n<<Nivel 7>>" as addScreen
+    participant "useAddItemScreen\nuseItemListDetail\n<<Nivel 6>>" as hooks
+    participant "itemListRepository\n<<Nivel 3>>" as repo
+    participant "useItemListEntitiesStore\n<<Nivel 4>>" as store
+    participant "itemListService\n<<Nivel 1>>" as service
+end box
+participant "API REST\n(backend)" as api
+
+== Abrir la pantalla de añadir ==
+
+actor -> listScreen : pulsa "Añadir"
+listScreen -> addScreen : navigate('AddItemScreen', { itemListId })
+addScreen -> hooks : useAddItemScreen(itemListId)
+hooks -> hooks : itemFeedRepository.getRecommendedByItemList(itemListId, onFresh)
+note right of hooks : "Para ti" (ver DSD-CU-09 1/8)
+hooks -> hooks : itemRepository.getCatalog(apply)
+note right of hooks : Resúmenes de todos los items, normalmente\nya en RAM desde el arranque (CU-04)
+hooks -> hooks : useMemo: oculta los que ya están en la lista\n(listItemIds de la Store) y deja los\nVISIBLE_RECOMMENDATIONS (5) primeros
+hooks --> addScreen : items, loading, error
+addScreen --> actor : 5 recomendaciones "Para ti" (el resto, en espera)
+
+opt 3a. Busca un ítem concreto
+    actor -> addScreen : escribe en el buscador
+    addScreen -> hooks : setQuery(query)
+    hooks -> hooks : useMemo: filtra catalogIds en local\n(título y artista, sin tildes; máx. 50)
+    note right of hooks : Sin llamar al backend
+    hooks --> addScreen : resultados sin los ya añadidos
+    addScreen --> actor : muestra los resultados
+end
+
+== Añadir un ítem ==
+
+actor -> addScreen : pulsa "+" en un ítem
+addScreen -> hooks : addItem(itemId)
+hooks -> hooks : setAddedIds([..., itemId])\nsetTimeout(dismiss, 600 ms)
+hooks --> addScreen : isAdded(itemId) = true
+addScreen --> actor : tic inmediato (respuesta optimista); a los 600 ms\nel ítem desaparece y entra la siguiente recomendación
+
+hooks -> repo : addItemToList(listId, itemId)
+repo -> service : addItemToList(listId, itemId)
+service -> api : POST /api/item-lists/{listId}/items/{itemId}
+alt 200 OK (añadido, o 7a. ya estaba: se ignora)
+    api --> service : 200 OK ItemListDTO
+    service --> repo : ItemListDTO (toAppItemListDTO)
+    repo -> repo : hydrateItemLists([updated])
+    repo -> store : setItemLists([updated])
+    repo --> hooks : updated
+else 8a. Falla (401, 403, 404, sin red)
+    api --> service : 401 / 403 / 404 / error de red
+    service --> repo : throw
+    repo --> hooks : null
+    hooks -> hooks : clearTimeout(timer); quita itemId de\naddedIds y dismissedIds
+    hooks -> hooks : setError("No se pudo añadir el item a la lista")
+    hooks --> addScreen : error
+    addScreen --> actor : muestra el error en rojo en lugar de la lista
+end
+
+actor -> addScreen : vuelve atrás
+addScreen -> listScreen : navigation.goBack()
+listScreen -> hooks : refresh() (useFocusEffect)
+hooks -> repo : getItemListWithItems(itemListId)
+note right of repo : Lista desde RAM (ya actualizada) e items\nque falten: itemRepository.getAllById(itemIds)
+repo --> hooks : itemIds
+hooks --> listScreen : list, items
+listScreen --> actor : muestra la lista actualizada
+
+@enduml

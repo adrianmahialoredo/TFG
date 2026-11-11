@@ -315,34 +315,21 @@ class EntityValidationTest {
     @Nested
     class PreferencesValidation {
 
-        @ParameterizedTest
-        @ValueSource(ints = { 0, 50, 100 })
-        void difficultyWithinRange_isAccepted(int level) {
-            Preferences preferences = new Preferences();
-            preferences.setDifficultyLevel(level);
-
-            assertTrue(invalidFields(preferences).isEmpty());
-        }
-
-        @ParameterizedTest
-        @ValueSource(ints = { -1, 101 })
-        void difficultyOutOfRange_isRejected(int level) {
-            Preferences preferences = new Preferences();
-            preferences.setDifficultyLevel(level);
-
-            assertEquals(Set.of("difficultyLevel"), invalidFields(preferences));
+        @Test
+        void emptyPreferences_areValid() {
+            // The level lives in User (0-5); Preferences only holds the favourites
+            assertTrue(invalidFields(new Preferences()).isEmpty());
         }
 
         @Test
-        void invalidPreferences_cascadeToUserValidation() {
+        void userWithDefaultPreferences_isValid() {
             User user = new User();
             user.setEmail("a@example.com");
             user.setUsername("valid_user");
             user.setPassword("password123");
             user.setName("Valid Name");
-            user.getPreferences().setDifficultyLevel(150);
 
-            assertEquals(Set.of("preferences.difficultyLevel"), invalidFields(user));
+            assertTrue(invalidFields(user).isEmpty());
         }
     }
 

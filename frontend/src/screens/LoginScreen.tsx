@@ -2,13 +2,13 @@ import { Image, Text, TextInput, View, ActivityIndicator } from "react-native";
 import Touchable from "../components/Touchable";
 import AppLayout from "../components/AppLayout";
 import { UserRound, Lock } from "lucide-react-native";
-import { COLORS } from "../constants/Theme";
+import { COLORS, ICON_URL } from "../constants/Theme";
 import PasswordVisibilityToggle from "../components/iconbuttons/PasswordVisibilityToggle";
 import { useAuth } from "../context/AuthContext";
 import { useState } from "react";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { RootStackParamList } from "../types/RootStackParamList";
+import { RootStackParamList } from "../types";
 import { useAppAlert } from "../context/AlertModalContext";
 
 export default function LoginScreen() {
@@ -28,7 +28,7 @@ export default function LoginScreen() {
       return false;
     }
     if (!password.trim()) {
-      showAlert({ title: 'Error', message: 'Por favor ingresa tu contrasena' });
+      showAlert({ title: 'Error', message: 'Por favor ingresa tu contraseña' });
       return false;
     }
     return true;
@@ -50,7 +50,7 @@ export default function LoginScreen() {
         error instanceof Error
           ? error.message
           : 'Usuario, email o contraseña incorrectos';
-      showAlert({ title: 'Error de Inicio de Sesion', message: errorMessage });
+      showAlert({ title: 'Error de inicio de sesión', message: errorMessage });
     } finally {
       setLoading(false);
     }
@@ -60,8 +60,8 @@ export default function LoginScreen() {
     <AppLayout backgroundColor="bg-primary">
       <View className="items-center mt-16 mb-20">
         <Image
-          source={{ uri: 'https://storage.googleapis.com/pr-newsroom-wp/1/2023/05/Spotify_Primary_Logo_RGB_White.png' }}
-          className="h-32 w-32 mb-7"
+          source={{ uri: ICON_URL }}
+          className="h-36 w-36 mb-7"
         />
         <Text className="text-4xl font-bold text-secondary mb-4">Bienvenido a Toco</Text>
         <Text className="text-xl font-bold text-secondary">¡Empieza a aprender música!</Text>
@@ -87,7 +87,7 @@ export default function LoginScreen() {
         </View>
       </View>
 
-      <View className="relative mb-10">
+      <View className="relative">
         <TextInput
           value={password}
           onChangeText={setPassword}
@@ -107,6 +107,25 @@ export default function LoginScreen() {
             size={22}
           />
         </View>
+      </View>
+
+      {/* Como en el mockup: a la derecha, bajo la contraseña. Si ya hay un email escrito, se lleva */}
+      <View className="items-end mb-8">
+        <Touchable
+          onPress={() =>
+            navigation.navigate('ForgotPasswordScreen', identifier.includes('@') ? { email: identifier.trim() } : undefined)
+          }
+          disabled={loading}
+          hitSlop={8}
+          style={{ paddingVertical: 6 }}
+        >
+          <Text
+            className="text-secondary font-bold"
+            style={{ textShadowColor: 'rgba(0, 0, 0, 0.35)', textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 4 }}
+          >
+            Olvidé mi contraseña
+          </Text>
+        </Touchable>
       </View>
 
       <View className="flex-column justify-center gap-3 mt-4">

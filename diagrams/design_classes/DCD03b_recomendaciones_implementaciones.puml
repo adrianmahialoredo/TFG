@@ -1,0 +1,74 @@
+@startuml DCD-03b
+title DCD-03b - Diagrama de clases de diseño: motor de recomendaciones (2/3) - implementaciones
+
+' Continuación de DCD-03a: implementaciones de los cuatro subservicios y sus repositorios.
+' Sus dependencias comunes (EntityResolver, Utils, RecommendationConstants, ItemList, User)
+' se dibujan en DCD-03c.
+' Fuentes: service/recommendation/*RecommendationServiceImpl.java, repository/*Repository.java
+skinparam classAttributeIconSize 0
+skinparam roundcorner 6
+skinparam nodesep 35
+skinparam ranksep 60
+skinparam packageStyle rectangle
+skinparam class {
+    BackgroundColor<<Service>> #E6F5E6
+    BorderColor<<Service>> #3C8A3C
+    BackgroundColor<<interface>> #F4FBF4
+    BorderColor<<interface>> #3C8A3C
+    BackgroundColor<<Repository>> #FFF4E0
+    BorderColor<<Repository>> #B07A1F
+    BackgroundColor<<Component>> #F3F3F3
+}
+hide empty members
+
+package "service.recommendation" {
+    interface SongRecommendationService <<interface>> <<ver DCD-03a>>
+    interface GenreRecommendationService <<interface>> <<ver DCD-03a>>
+    interface InstrumentGenreRecommendationService <<interface>> <<ver DCD-03a>>
+    interface LessonRecommendationService <<interface>> <<ver DCD-03a>>
+
+    class SongRecommendationServiceImpl <<Service>> {
+        - songRepository : SongRepository
+    }
+    class GenreRecommendationServiceImpl <<Service>> {
+        - genreRepository : GenreRepository
+    }
+    class InstrumentGenreRecommendationServiceImpl <<Service>> {
+        - instrumentGenreRepository : InstrumentGenreRepository
+    }
+    class LessonRecommendationServiceImpl <<Service>> {
+        - lessonRepository : LessonRepository
+        - dtoMapper : DtoMapper
+    }
+}
+
+note bottom of SongRecommendationServiceImpl
+    Algoritmo por niveles: cada nivel completa lo
+    que falta del anterior y se para al llegar al límite.
+    Exclusiones acumuladas como Set<Long> (consultas
+    ...IdNotIn con Utils.idsToExclude). Por usuario,
+    solo los niveles 1-2 filtran por
+    level <= User.difficultyLevel.
+end note
+
+package "repository" {
+    interface SongRepository <<Repository>>
+    interface GenreRepository <<Repository>>
+    interface InstrumentGenreRepository <<Repository>>
+    interface LessonRepository <<Repository>>
+}
+
+class "utils.mapper.DtoMapper" as DtoMapper <<Component>> <<ver DCD-02c>>
+
+SongRecommendationService <|.. SongRecommendationServiceImpl
+GenreRecommendationService <|.. GenreRecommendationServiceImpl
+InstrumentGenreRecommendationService <|.. InstrumentGenreRecommendationServiceImpl
+LessonRecommendationService <|.. LessonRecommendationServiceImpl
+
+SongRecommendationServiceImpl --> SongRepository
+GenreRecommendationServiceImpl --> GenreRepository
+InstrumentGenreRecommendationServiceImpl --> InstrumentGenreRepository
+LessonRecommendationServiceImpl --> LessonRepository
+LessonRecommendationServiceImpl --> DtoMapper
+
+@enduml

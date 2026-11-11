@@ -1,0 +1,77 @@
+@startuml DS-CU-13
+title DS-CU-13 - Recuperar contraseña ("Olvidé mi contraseña")
+
+' Diagrama de secuencia de análisis (patrón Boundary-Control-Entity)
+' Fuentes: LoginScreen.tsx, ForgotPasswordScreen.tsx, EmailVerificationModal.tsx, useForgotPassword.ts,
+' auth.service.ts, AuthController.java, EmailVerificationServiceImpl.java, UserServiceImpl.java
+autonumber
+hide footbox
+skinparam sequenceMessageAlign center
+skinparam roundcorner 6
+
+actor "Visitante" as visitante
+boundary "LoginScreen" as login
+boundary "RecuperarContrasenaScreen" as pantalla
+boundary "ModalVerificacionEmail" as modal
+control "GestorAutenticacion" as gestor
+entity "CodigoVerificacion\n(recuperación)" as codigo
+entity "Usuario" as usuario
+participant "ServidorCorreo\n<<sistema externo>>" as correo
+
+visitante -> login : pulsar("Olvidé mi contraseña")
+login -> pantalla : abrir(email escrito, si lo hay)
+pantalla --> visitante : pedirEmail()
+visitante -> pantalla : enviarCodigo(email)
+pantalla -> pantalla : validarFormato(email)
+
+alt Email con formato inválido
+    pantalla --> visitante : mostrarError("Email no válido")
+else Email válido
+    pantalla -> gestor : solicitarCodigoRecuperacion(email)
+    note right of gestor : POST /api/auth/password-reset/code
+    alt Se pidió otro código hace menos de 60 s
+        gestor --> pantalla : 429 Too Many Requests
+        pantalla -> modal : abrir(email)
+        modal --> visitante : mostrarAviso("Ya te enviamos un código hace poco,\nrevisa tu email")
+    else
+        gestor -> usuario : existeCuenta(email)
+        opt Hay una cuenta con ese email
+            gestor -> codigo : generarCodigo(email)
+            note right of codigo : 6 dígitos, válido 10 minutos,\nmáximo 5 intentos fallidos.\nIndependiente del código de registro
+            gestor ->> correo : enviarCodigoRecuperacion(email, codigo)
+        end
+        gestor --> pantalla : 204 No Content
+        note right of pantalla : Misma respuesta exista o no la cuenta:\nno se revela qué emails están registrados
+        pantalla -> modal : abrir(email)
+        modal --> visitante : pedirCodigo()
+    end
+
+    visitante -> modal : introducirCodigo(6 dígitos)
+    modal -> gestor : comprobarCodigo(email, código)
+    note right of gestor : POST /api/auth/password-reset/verify\n(no gasta el código)
+    gestor -> codigo : comprobar(email, código)
+    alt Código incorrecto, caducado o sin pedir
+        gestor --> modal : 400 Bad Request
+        modal --> visitante : mostrarError("El código no es correcto" /\n"El código ha caducado, pide uno nuevo")
+    else Código correcto
+        gestor --> modal : 204 No Content
+        modal -> pantalla : cerrar()
+        pantalla --> visitante : pedirNuevaContrasena(nueva, repetir)
+        visitante -> pantalla : cambiarContrasena(nueva, repetir)
+        pantalla -> pantalla : validarPolitica(nueva, repetir)
+        alt No coinciden o no cumple la política
+            pantalla --> visitante : mostrarError(primera regla incumplida)
+        else Válida
+            pantalla -> gestor : restablecerContrasena(email, código, nueva)
+            note right of gestor : POST /api/auth/password-reset
+            gestor -> codigo : comprobar(email, código)
+            gestor -> usuario : cambiarPassword(hash(nueva))
+            gestor -> codigo : consumir(email)
+            gestor --> pantalla : 204 No Content
+            pantalla --> visitante : mostrarAviso("Contraseña cambiada")
+            pantalla -> login : volver()
+            note right of login : El visitante inicia sesión\ncon la nueva contraseña (CU-02)
+        end
+    end
+end
+@enduml

@@ -26,6 +26,16 @@ describe('ListCarousel', () => {
     expect(screen.getByTestId('icon-Plus')).toBeTruthy();
   });
 
+  it('muestra la cabecera si se le pasa un título', async () => {
+    await render(<ListCarousel data={data} title="Mis listas" />);
+    expect(screen.getByRole('header', { name: 'Mis listas' })).toBeTruthy();
+  });
+
+  it('sin título no muestra cabecera', async () => {
+    await render(<ListCarousel data={data} />);
+    expect(screen.queryByRole('header')).toBeNull();
+  });
+
   it('usa la portada si la hay y la inicial en mayúscula si no', async () => {
     await render(<ListCarousel data={data} />);
     expect(images()).toHaveLength(1);

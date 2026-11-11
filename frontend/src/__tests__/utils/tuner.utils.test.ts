@@ -1,7 +1,6 @@
 import {
   A4_FREQUENCY,
   centsBetween,
-  closestStringIndex,
   IN_TUNE_CENTS,
   median,
   noteToFrequency,
@@ -55,26 +54,6 @@ describe('tuner.utils', () => {
 
     it('es negativo si la nota está baja', () => {
       expect(centsBetween(108, 110)).toBeLessThan(0);
-    });
-  });
-
-  describe('closestStringIndex', () => {
-    const standard = ['E2', 'A2', 'D3', 'G3', 'B3', 'E4'].map((n) => noteToFrequency(n)!);
-
-    it('elige la cuerda más cercana', () => {
-      expect(closestStringIndex(108, standard)).toBe(1); // La2 bajo
-      expect(closestStringIndex(330, standard)).toBe(5); // Mi4
-      expect(closestStringIndex(70, standard)).toBe(0); // muy por debajo del Mi2
-    });
-
-    it('compara en cents, no en Hz', () => {
-      // 96 Hz: en Hz ganaría el Mi2 (a 13.6 Hz, frente a 14 Hz del La2),
-      // pero en cents está más cerca del La2 (-236) que del Mi2 (+264)
-      expect(closestStringIndex(96, standard)).toBe(1);
-    });
-
-    it('devuelve -1 sin cuerdas', () => {
-      expect(closestStringIndex(110, [])).toBe(-1);
     });
   });
 

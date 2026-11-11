@@ -1,0 +1,102 @@
+@startuml DCD-02b
+title DCD-02b - Diagrama de clases de diseño: capas del backend (2/3) - listas de estudio
+
+' Continuación de DCD-02a: segundo recurso representativo, las listas de estudio
+' (propiedad del usuario + método de dominio ItemList.addItem). Utilidades: DCD-02c.
+' Fuentes: controller/ItemListController.java, service/ItemListService.java,
+'          ItemListServiceImpl.java, repository/ItemListRepository.java, ItemRepository.java,
+'          security/OwnershipChecker.java, config/SecurityConfig.java
+skinparam classAttributeIconSize 0
+skinparam roundcorner 6
+skinparam nodesep 40
+skinparam ranksep 50
+skinparam packageStyle rectangle
+skinparam class {
+    BackgroundColor<<RestController>> #E3F0FF
+    BorderColor<<RestController>> #3D6FA8
+    BackgroundColor<<Service>> #E6F5E6
+    BorderColor<<Service>> #3C8A3C
+    BackgroundColor<<interface>> #F4FBF4
+    BorderColor<<interface>> #3C8A3C
+    BackgroundColor<<Repository>> #FFF4E0
+    BorderColor<<Repository>> #B07A1F
+    BackgroundColor<<Component>> #F3F3F3
+}
+hide empty members
+
+package "controller" {
+    class ItemListController <<RestController>> {
+        + getAll() : ResponseEntity<List<ItemListDTO>>
+        + getByIds(ids : List<Long>) : ResponseEntity<List<ItemListDTO>>
+        + getById(id : Long) : ResponseEntity<ItemListDTO>
+        + getIdsForUser(userId : Long) : ResponseEntity<List<Long>>
+        + create(dto : ItemListDTO) : ResponseEntity<ItemListDTO>
+        + update(id : Long, dto : ItemListDTO) : ResponseEntity<ItemListDTO>
+        + delete(id : Long) : ResponseEntity<Void>
+        + addItem(listId : Long, itemId : Long) : ResponseEntity<ItemListDTO>
+        + removeItem(listId : Long, itemId : Long) : ResponseEntity<ItemListDTO>
+    }
+    note top of ItemListController
+      @RequestMapping("/api/item-lists")
+      @PreAuthorize por método: "hasRole('ADMIN') or ..."
+        getById, delete: @ownership.ownsItemList(#id, authentication)
+        addItem, removeItem: @ownership.ownsItemList(#listId, authentication)
+        getByIds: @ownership.ownsAllItemLists(#ids, authentication)
+        getIdsForUser: @ownership.isSelf(#userId, authentication)
+        create: @ownership.isSelf(#dto.userId, authentication)
+        update: ownsItemList(#id) and isSelf(#dto.userId)
+      GET /api/item-lists (getAll): solo ADMIN (SecurityConfig)
+    end note
+}
+
+package "service" {
+    interface SongService <<interface>> <<ver DCD-02a>>
+
+    interface ItemListService <<interface>> {
+        + findAll() : List<ItemListDTO>
+        + findIdsForUser(userId : Long) : List<Long>
+        + findByIds(ids : List<Long>) : List<ItemListDTO>
+        + findById(id : Long) : Optional<ItemListDTO>
+        + create(dto : ItemListDTO) : ItemListDTO
+        + update(id : Long, dto : ItemListDTO) : Optional<ItemListDTO>
+        + delete(id : Long) : boolean
+        + addItem(listId : Long, itemId : Long) : Optional<ItemListDTO>
+        + removeItem(listId : Long, itemId : Long) : Optional<ItemListDTO>
+    }
+
+    class ItemListServiceImpl <<Service>> {
+        - itemListRepository : ItemListRepository
+        - songService : SongService
+        - dtoMapper : DtoMapper
+        - entityMapper : EntityMapper
+    }
+    note bottom of ItemListServiceImpl : addItem (@Transactional):\nfindItemList(listId) + resolveItem(itemId)\n-> ItemList.addItem(item) -> save
+}
+
+package "repository" {
+    interface "JpaRepository<T, Long>" as JpaRepository <<interface>>
+    interface ItemListRepository <<Repository>>
+    interface ItemRepository <<Repository>> {
+        + findByTitleContainingIgnoreCase(title : String) : List<Item>
+    }
+}
+
+package "utils" {
+    class EntityResolver <<Component>> <<ver DCD-02c>>
+    class "mapper.DtoMapper" as DtoMapper <<Component>> <<ver DCD-02c>>
+    class "mapper.EntityMapper" as EntityMapper <<Component>> <<ver DCD-02c>>
+}
+
+ItemListController --> ItemListService
+ItemListService <|.. ItemListServiceImpl
+ItemListServiceImpl --> SongService
+ItemListServiceImpl -down-> ItemListRepository
+ItemListServiceImpl ..down.> DtoMapper
+ItemListServiceImpl ..down.> EntityMapper
+ItemListServiceImpl ..down.> EntityResolver : <<use>>
+JpaRepository <|-- ItemListRepository
+JpaRepository <|-- ItemRepository
+EntityResolver --> ItemListRepository
+EntityResolver --> ItemRepository
+
+@enduml

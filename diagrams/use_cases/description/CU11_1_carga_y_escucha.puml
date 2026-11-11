@@ -1,0 +1,79 @@
+@startuml DS-CU-11-1
+title DS-CU-11 (1/2) - Utilizar afinador cromático: carga y escucha
+
+' Diagrama de secuencia de análisis (patrón Boundary-Control-Entity)
+' Fuentes: TunerScreen.tsx, useTunes.ts, useTuner.ts, microphone.utils.ts, pitch.utils.ts, tuner.utils.ts
+autonumber
+hide footbox
+skinparam sequenceMessageAlign center
+skinparam roundcorner 6
+
+actor "Músico" as musico
+boundary "AfinadorScreen" as pantalla
+control "GestorAfinaciones" as gestor
+entity "Afinacion" as afinacion
+control "ProcesadorAudio" as procesador
+boundary "Microfono" as microfono
+
+== Carga de las afinaciones ==
+
+musico -> pantalla : abrirAfinador()
+pantalla -> gestor : obtenerAfinaciones()
+gestor -> afinacion : obtenerTodas()
+afinacion --> gestor : afinaciones (instrumento, nombre, notas por cuerda)
+gestor -> gestor : seleccionarPorDefecto(instrumentos favoritos)
+note right of gestor : La primera afinación de un\ninstrumento favorito (si no, la primera)
+gestor --> pantalla : afinaciones ordenadas por instrumento + por defecto
+pantalla --> musico : mostrarCuerdas(), mostrarRuedaAfinaciones()
+
+alt No hay afinaciones (sin conexión ni caché)
+    pantalla --> musico : avisar("No hay afinaciones disponibles.\nComprueba tu conexión.")
+end
+
+== Escucha (empieza al abrir la pantalla) ==
+
+pantalla -> procesador : iniciarEscucha(notas de la afinación)
+procesador -> microfono : solicitarPermiso()
+
+alt Permiso de micrófono denegado
+    microfono --> procesador : denegado
+    procesador --> pantalla : permisoDenegado
+    pantalla --> musico : avisar("Sin acceso al micrófono")\nofrecer("Abrir ajustes")
+else El micrófono no arranca
+    microfono --> procesador : error
+    procesador --> pantalla : error
+    pantalla --> musico : avisar("No se pudo usar el micrófono")
+else Permiso concedido
+    microfono --> procesador : concedido
+    procesador -> microfono : grabar(44.1 kHz, bloques de 4096 muestras)
+    opt Expo Go: modo demostración
+        procesador -> procesador : usarMicrofonoSimulado()
+        note right of procesador : Sin módulo nativo: suena una cuerda\nsimulada que se va afinando y pasa por\nel mismo análisis
+        procesador --> pantalla : simulado
+        pantalla --> musico : avisar("Modo demostración: ...")
+    end
+
+    loop Cada bloque de audio (~10 por segundo) mientras se escucha
+        musico -> microfono : hacerSonarCuerda()
+        microfono --> procesador : bloque de audio
+        note left of procesador : Si analizar un bloque tarda X ms,\nse descartan los que llegan en los\nX ms siguientes (el análisis nunca\nocupa más de la mitad del hilo de JS)
+
+        alt Silencio o ruido (volumen bajo o sin periodicidad)
+            procesador -> procesador : descartarBloque()
+            note right of procesador : Se mantiene la última lectura
+        else Nota detectada
+            procesador -> procesador : extraerFrecuenciaFundamental() (YIN)
+            procesador -> procesador : suavizar(mediana de 3 bloques)
+            procesador -> procesador : compararCon(cuerda seleccionada)
+            note right of procesador : No se adivina qué cuerda suena:\nse compara siempre con la que ha\nseleccionado el músico (al abrir, la primera)
+            procesador -> procesador : calcularDesviacion(cents)
+            procesador --> pantalla : cuerda, frecuencia, desviación
+            pantalla --> musico : resaltarCuerda(), moverAguja(),\nmostrar(cents, Hz, Tensar/Destensar/Afinado)
+            note right of pantalla : Aguja vertical y verde: afinada (±5 cents)\nA la izquierda: baja (tensar)\nA la derecha: alta (destensar)
+        end
+    end
+end
+
+note over musico, pantalla : Acciones durante la escucha y salida en DS-CU-11 (2/2)
+
+@enduml

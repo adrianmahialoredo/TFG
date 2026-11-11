@@ -50,7 +50,7 @@ describe('LoginScreen', () => {
     await render(<LoginScreen />);
     await fireEvent.changeText(screen.getByPlaceholderText('Email o Usuario'), 'a@b.com');
     await fireEvent.press(screen.getByText('Iniciar Sesión'));
-    expect(mockShowAlert).toHaveBeenCalledWith({ title: 'Error', message: 'Por favor ingresa tu contrasena' });
+    expect(mockShowAlert).toHaveBeenCalledWith({ title: 'Error', message: 'Por favor ingresa tu contraseña' });
   });
 
   it('permite iniciar sesión con el nombre de usuario (sin @)', async () => {
@@ -86,7 +86,7 @@ describe('LoginScreen', () => {
     await fillForm('a@b.com', 'mal');
     await fireEvent.press(screen.getByText('Iniciar Sesión'));
     await waitFor(() =>
-      expect(mockShowAlert).toHaveBeenCalledWith({ title: 'Error de Inicio de Sesion', message: 'Credenciales inválidas' })
+      expect(mockShowAlert).toHaveBeenCalledWith({ title: 'Error de inicio de sesión', message: 'Credenciales inválidas' })
     );
     expect(mockNavigation.reset).not.toHaveBeenCalled();
     expect(screen.getByText('Iniciar Sesión')).toBeTruthy();
@@ -98,8 +98,21 @@ describe('LoginScreen', () => {
     await fillForm('a@b.com', 'mal');
     await fireEvent.press(screen.getByText('Iniciar Sesión'));
     await waitFor(() =>
-      expect(mockShowAlert).toHaveBeenCalledWith({ title: 'Error de Inicio de Sesion', message: 'Usuario, email o contraseña incorrectos' })
+      expect(mockShowAlert).toHaveBeenCalledWith({ title: 'Error de inicio de sesión', message: 'Usuario, email o contraseña incorrectos' })
     );
+  });
+
+  it('muestra "Olvidé mi contraseña" y abre la recuperación', async () => {
+    await render(<LoginScreen />);
+    await fireEvent.press(screen.getByText('Olvidé mi contraseña'));
+    expect(mockNavigation.navigate).toHaveBeenCalledWith('ForgotPasswordScreen', undefined);
+  });
+
+  it('si ya hay un email escrito, se lo pasa a la recuperación', async () => {
+    await render(<LoginScreen />);
+    await fireEvent.changeText(screen.getByPlaceholderText('Email o Usuario'), ' ana@correo.com ');
+    await fireEvent.press(screen.getByText('Olvidé mi contraseña'));
+    expect(mockNavigation.navigate).toHaveBeenCalledWith('ForgotPasswordScreen', { email: 'ana@correo.com' });
   });
 
   it('navega al registro', async () => {

@@ -17,7 +17,7 @@ import UserAvatar from "../components/UserAvatar";
 import SuggestionCard from "../components/SuggestionCard";
 import { SpotifyButton } from "../components/buttons/SpotifyButton";
 
-const SPOTIFY_TITLE = 'Según tus gustos de Spotify';
+const SPOTIFY_TITLE = 'Basado en tu Spotify';
 
 /** El Identificador aún no hace nada: se oculta (sin borrarlo) hasta que funcione. */
 const SHOW_IDENTIFIER = false;
@@ -150,9 +150,9 @@ export default function HomeScreen() {
             </View>
           )}
 
-          {/* Carrusel: Recomendaciones (sin items muestra una card invitando a explorar) */}
+          {/* Carrusel: Para ti (sin items muestra una card invitando a explorar) */}
           <HorizontalItemsCarousel
-            title="Recomendaciones"
+            title="Para ti"
             data={recommendations}
             onItemPress={handleItemPress}
             emptyMessage={loading ? undefined : 'Explora la app y empieza a aprender para que se muestren tus recomendaciones'}
@@ -170,7 +170,7 @@ export default function HomeScreen() {
               </View>
           )}
 
-          {/* Carrusel: Desde tu Spotify. Con la cuenta sin vincular se ofrece conectarla
+          {/* Carrusel: Basado en tu Spotify. Con la cuenta sin vincular se ofrece conectarla
               (mientras no se sabe, p. ej. usuario aún sin cargar, no se pinta nada) */}
           {spotifyConnected ? (
             <HorizontalItemsCarousel

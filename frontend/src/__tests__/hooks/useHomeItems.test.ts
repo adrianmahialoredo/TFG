@@ -224,7 +224,7 @@ describe('useHomeItems', () => {
       expect(result.current.popularFavouriteArtistSongs.map((i) => i.id)).toEqual(['n3']);
     });
 
-    it('la tarjeta evita una canción que ya sale en Recientes o Recomendaciones', async () => {
+    it('la tarjeta evita una canción que ya sale en Recientes o Para ti', async () => {
       // s2 está en Recientes
       mockedSong.getByFavouriteArtists.mockResolvedValue({ newSongs: ['s2', 'n2'], popularSongs: [] });
       const { result } = await renderHook(() => useHomeItems());

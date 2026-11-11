@@ -1,0 +1,100 @@
+@startuml DCD-05d
+title DCD-05d - Diagrama de clases de diseño: frontend (React Native),\nniveles 2 y 1 (local y services)
+
+' Continuación de DCD-05c: almacenamiento en disco (local) y acceso a la API (services)
+' del patrón de canciones y de autenticación.
+' Fuentes: local/{song,storage}.local.ts, services/{song,user,auth}.service.ts,
+'   services/apiClient.ts, config/apiConfig.ts.
+skinparam classAttributeIconSize 0
+skinparam roundcorner 6
+skinparam nodesep 12
+skinparam ranksep 55
+skinparam packageStyle rectangle
+skinparam class {
+    BackgroundColor<<store>> #F3EAFB
+    BorderColor<<store>> #7A4FA8
+    BackgroundColor<<repository>> #E6F5E6
+    BorderColor<<repository>> #3C8A3C
+    BackgroundColor<<local>> #FFF4E0
+    BorderColor<<local>> #B07A1F
+    BackgroundColor<<service>> #FDF7E3
+    BorderColor<<service>> #B07A1F
+    BackgroundColor<<utils>> #F3F3F3
+    BackgroundColor<<external>> #FFFFFF
+    BorderColor<<external>> #888888
+}
+hide empty members
+
+class "songRepository /\nauthRepository" as repos <<repository>> <<ver DCD-05c>>
+class "useAuthStore" as sessionStores <<store>> <<ver DCD-05b>>
+
+package "Nivel 2 - Local" {
+    class songLocal <<local>> {
+        + saveSingle(song : SongDTO) : Promise<void>
+        + getById(id : string) : Promise<SongDTO | null>
+        + saveBatch(songs : SongDTO[]) : Promise<void>
+        + getAllById(ids : string[]) : Promise<{cached, missing}>
+        + saveQueryIndex(key : string, ids : string[]) : Promise<void>
+        + getQueryIndex(key : string) : Promise<string[] | null>
+        + removeQueryIndexes(keys : string[]) : Promise<void>
+    }
+    class storageLocal <<local>> {
+        + storeData(key : string, value : T) : Promise<void>
+        + getData(key : string) : Promise<T | null>
+        + removeData(key : string) : Promise<void>
+    }
+}
+
+package "Nivel 1 - Services" {
+    class songService <<service>> {
+        + getById(id : string) : Promise<SongDTO>
+        + getAllById(ids : string[]) : Promise<SongDTO[]>
+        + getPopular(limit?) : Promise<SongDTO[]>
+        + getNewByGenreId(genreId : string) : Promise<SongDTO[]>
+        + getRecommendedFromSpotify(userId, limit) : Promise<SongDTO[]>
+        + getNewByArtists(artists : string[], limit) : Promise<SongDTO[]>
+        + getPopularByArtists(artists : string[], limit) : Promise<SongDTO[]>
+        {method} ...
+    }
+    class userService <<service>> {
+        + getTopArtists(userId, totalArtists : number) : Promise<string[]>
+        {method} ...
+    }
+    class authService <<service>> {
+        + login(identifier, password) : Promise<{token, user}>
+        + register(user : UserDTO, code : string) : Promise<{token, user}>
+        + requestVerificationCode(email : string) : Promise<void>
+        + requestPasswordResetCode(email : string) : Promise<void>
+        + verifyPasswordResetCode(email, code) : Promise<void>
+        + resetPassword(email, code, newPassword) : Promise<void>
+        + logout() : Promise<void>
+    }
+    class apiClient <<service>> {
+        + get / post / put / delete
+        --
+        interceptor petición: Authorization: Bearer <token>
+        interceptor respuesta: 401 con sesión -> clearAuth()
+    }
+    note left of apiClient : Instancia compartida de axios.\nTodas las URLs salen de\nconfig/apiConfig.ts (API_ENDPOINTS)
+}
+
+class AsyncStorage <<external>>
+class "Backend REST\n(/api/...)" as Backend <<external>>
+
+repos --> songLocal
+repos -----> songService
+repos -----> userService : getTopArtists
+repos -----> authService
+
+songLocal --> storageLocal
+songLocal --> AsyncStorage : multiGet / multiSet,\níndices
+storageLocal --> AsyncStorage
+
+songService --> apiClient
+userService --> apiClient
+authService --> apiClient
+authService .up.> sessionStores : clearAuth
+apiClient .up.> sessionStores : token / clearAuth
+apiClient ...> Backend : HTTP / JSON
+
+@enduml

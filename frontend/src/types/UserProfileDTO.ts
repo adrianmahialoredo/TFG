@@ -15,7 +15,7 @@ export interface UserProfileDTO {
   password?: string; // No incluir en respuestas de GET
   profileImageUrl?: string;
   role: UserRole;
-  difficultyLevel: number; // entre 0 y 100
+  difficultyLevel: number; // nivel del usuario, de 0 a 5 (User.difficultyLevel)
   favoriteGenreIds: string[];
   favoriteInstrumentIds: string[];
   itemListIds?: string[];

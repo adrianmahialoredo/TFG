@@ -143,20 +143,20 @@ describe('auth.service', () => {
     it('un 500 sin mensaje usa el mensaje por defecto del login', async () => {
       api.post.mockRejectedValue(httpError(500, null));
       const e = await catchError(login('a', 'b'));
-      expect(e.message).toBe('No se pudo iniciar sesion');
+      expect(e.message).toBe('No se pudo iniciar sesión');
     });
 
     it('un Error sin mensaje usa el mensaje por defecto', async () => {
       api.post.mockRejectedValue(new Error(''));
       const e = await catchError(login('a', 'b'));
-      expect(e.message).toBe('No se pudo iniciar sesion');
+      expect(e.message).toBe('No se pudo iniciar sesión');
     });
 
     it('un valor lanzado que no es Error usa el mensaje por defecto', async () => {
       api.post.mockRejectedValue('cadena');
       const e = await catchError(login('a', 'b'));
       expect(e).toBeInstanceOf(AuthServiceError);
-      expect(e.message).toBe('No se pudo iniciar sesion');
+      expect(e.message).toBe('No se pudo iniciar sesión');
     });
   });
 

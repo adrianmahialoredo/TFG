@@ -36,6 +36,8 @@ public class EmailServiceImpl implements EmailService {
 
     private static final String VERIFICATION_TEMPLATE = "templates/email/verification-code";
     private static final String VERIFICATION_SUBJECT = "Tu código de verificación de TOCO";
+    private static final String PASSWORD_RESET_TEMPLATE = "templates/email/password-reset";
+    private static final String PASSWORD_RESET_SUBJECT = "Recupera tu contraseña de TOCO";
 
     private final ObjectProvider<JavaMailSender> mailSender;
     private final String from;
@@ -48,9 +50,19 @@ public class EmailServiceImpl implements EmailService {
 
     @Override
     public void sendVerificationCode(String to, String code, long minutes) {
+        sendCode(to, code, minutes, VERIFICATION_TEMPLATE, VERIFICATION_SUBJECT, "verification code");
+    }
+
+    @Override
+    public void sendPasswordResetCode(String to, String code, long minutes) {
+        sendCode(to, code, minutes, PASSWORD_RESET_TEMPLATE, PASSWORD_RESET_SUBJECT, "password reset code");
+    }
+
+    /** Sends one of the code emails (HTML and plain text) or logs the code if there is no SMTP. */
+    private void sendCode(String to, String code, long minutes, String template, String subject, String what) {
         JavaMailSender sender = mailSender.getIfAvailable();
         if (sender == null) {
-            log.warn("No SMTP server configured (MAIL_HOST): verification code for {} is {}", to, code);
+            log.warn("No SMTP server configured (MAIL_HOST): {} for {} is {}", what, to, code);
             return;
         }
 
@@ -60,13 +72,13 @@ public class EmailServiceImpl implements EmailService {
             MimeMessageHelper helper = new MimeMessageHelper(message, true, StandardCharsets.UTF_8.name());
             helper.setFrom(from);
             helper.setTo(to);
-            helper.setSubject(VERIFICATION_SUBJECT);
-            helper.setText(fill(VERIFICATION_TEMPLATE + ".txt", values), fill(VERIFICATION_TEMPLATE + ".html", values));
+            helper.setSubject(subject);
+            helper.setText(fill(template + ".txt", values), fill(template + ".html", values));
             sender.send(message);
-            log.info("Verification code sent to {}", to);
+            log.info("Sent the {} to {}", what, to);
         } catch (MessagingException | MailException e) {
-            log.error("Could not send the verification code to {}: {}", to, e.getMessage(), e);
-            throw new IllegalStateException("Could not send the verification email", e);
+            log.error("Could not send the {} to {}: {}", what, to, e.getMessage(), e);
+            throw new IllegalStateException("Could not send the " + what + " email", e);
         }
     }
 

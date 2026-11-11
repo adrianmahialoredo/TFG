@@ -1,0 +1,49 @@
+@startuml DSD-CU-08-2
+title DSD-CU-08 (2/3) - Añadir/eliminar ítems en listas: 1a. quitar un ítem (app)
+
+' Fuentes: frontend/src/screens/ListScreen.tsx (handleRemoveItem), hooks/useItemListDetail.ts,
+' repositories/itemList.repository.ts, services/itemList.service.ts. Backend en DSD-CU-08 (3/3).
+' - La lista que se ve se deriva de la Store, así que basta con hidratarla con la respuesta.
+!include ../_estilo.iuml
+
+actor "Músico" as actor
+box "App (React Native)" #F3F8FF
+    participant "ListScreen\n<<Nivel 7>>" as listScreen
+    participant "useItemListDetail\n<<Nivel 6>>" as detailHook
+    participant "itemListRepository\n<<Nivel 3>>" as repo
+    participant "useItemListEntitiesStore\n<<Nivel 4>>" as store
+    participant "itemListService\n<<Nivel 1>>" as service
+end box
+participant "API REST\n(backend)" as api
+
+actor -> listScreen : pulsa quitar en un ítem
+listScreen -> listScreen : handleRemoveItem(item)
+listScreen --> actor : showAlert("Quitar de la lista", confirmación)
+
+alt El músico cancela
+    actor -> listScreen : Cancelar
+else El músico confirma
+    actor -> listScreen : Quitar
+    listScreen -> detailHook : removeItem(item.id)
+    detailHook -> repo : removeItemFromList(listId, itemId)
+    repo -> service : removeItemFromList(listId, itemId)
+    service -> api : DELETE /api/item-lists/{listId}/items/{itemId}
+    alt Éxito
+        api --> service : 200 OK ItemListDTO
+        service --> repo : ItemListDTO
+        repo -> repo : hydrateItemLists([updated])
+        repo -> store : setItemLists([updated])
+        repo --> detailHook : updated
+        store --> detailHook : list (suscripción Zustand)
+        detailHook --> listScreen : items (derivados de la Store)
+        listScreen --> actor : la lista se refresca sin el ítem
+    else Error: sin red, 401, 403 o lista inexistente (404)
+        api --> service : error
+        service --> repo : throw
+        repo --> detailHook : null
+        detailHook --> listScreen : throw Error
+        listScreen --> actor : showAlert("No se pudo quitar el item de la lista")
+    end
+end
+
+@enduml

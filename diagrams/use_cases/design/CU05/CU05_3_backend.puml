@@ -1,0 +1,49 @@
+@startuml DSD-CU-05-3
+title DSD-CU-05 (3/3) - Consultar detalle de canción y lección: endpoints del backend
+
+' Lo que hace el backend en cada petición de DSD-CU-05 (1/3).
+' Fuentes: SongController.java, SongLessonController.java, ChordController.java,
+' TabSectionController.java, SongServiceImpl.java, SongLessonServiceImpl.java, ChordServiceImpl.java,
+' TabSectionServiceImpl.java, utils/EntityResolver.java, utils/mapper/DtoMapper.java.
+!include ../_estilo.iuml
+
+participant "App\n(services)" as app
+box "Backend (Spring Boot)" #FFF9F0
+    participant "XController\n<<controller>>" as ctrl
+    participant "XServiceImpl\n<<service>>" as svc
+    participant "XRepository /\nEntityResolver" as repo
+    participant "DtoMapper\n<<mapper>>" as mapper
+end box
+database "PostgreSQL" as db
+
+group GET /api/songs/{id}
+    app -> ctrl : SongController.getById(id)
+    ctrl -> svc : SongServiceImpl.findById(id)
+    svc -> repo : EntityResolver.findSong(id)\n-> SongRepository.findById(id)
+    repo -> db : SELECT
+    repo --> svc : Optional<Song>
+    svc -> mapper : songToSongDto(song)
+    mapper --> svc : SongDTO (genreIds, instrumentIds, lessonIds)
+    ctrl --> app : 200 SongDTO / 404 (ResponseEntity.of)
+end
+
+group POST /api/songs/by-ids (revalidación)
+    app -> ctrl : SongController.getByIds(ids)
+    ctrl -> svc : SongServiceImpl.findByIds(ids)
+    svc -> repo : SongRepository.findAllById(ids)
+    repo -> db : SELECT ... WHERE id IN (...)
+    svc -> mapper : songToSongDto(song)
+    ctrl --> app : 200 List<SongDTO>
+end
+
+group POST /api/song-lessons/by-ids | /api/chords/by-ids | /api/tab-sections/by-ids
+    app -> ctrl : SongLessonController | ChordController |\nTabSectionController .getByIds(ids)
+    ctrl -> svc : SongLessonServiceImpl | ChordServiceImpl |\nTabSectionServiceImpl .findByIds(ids)
+    svc -> repo : findAllById(ids)
+    repo -> db : SELECT ... WHERE id IN (...)
+    svc -> mapper : songLessonToSongLessonDto | chordToChordDto |\ntabSectionToTabSectionDto
+    mapper --> svc : SongLessonDTO (difficulty, chordedLyrics, videoUrl,\ninstrumentId, chordIds, tabSectionsIds) | ChordDto | TabSectionDTO
+    ctrl --> app : 200 List<...DTO>
+end
+
+@enduml

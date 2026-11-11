@@ -25,11 +25,10 @@ class SimpleEntitiesTest {
         rock.setId(1L);
         Instrument guitar = new Instrument(2L, "https://example.com/g.png", "Guitar");
 
-        Preferences preferences = new Preferences(5L, user, 70, Set.of(rock), Set.of(guitar));
+        Preferences preferences = new Preferences(5L, user, Set.of(rock), Set.of(guitar));
 
         assertEquals(5L, preferences.getId());
         assertSame(user, preferences.getUser());
-        assertEquals(70, preferences.getDifficultyLevel());
         assertEquals(Set.of(rock), preferences.getFavoriteGenres());
         assertEquals(Set.of(guitar), preferences.getFavoriteInstruments());
     }

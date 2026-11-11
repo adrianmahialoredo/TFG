@@ -40,23 +40,6 @@ export const noteToFrequency = (note: string): number | null => {
  */
 export const centsBetween = (frequency: number, target: number): number => 1200 * Math.log2(frequency / target);
 
-/**
- * Índice de la cuerda cuya nota está más cerca de `frequency` (comparando en cents, no en Hz:
- * a 40 Hz un hercio es mucho más que a 400). -1 si no hay cuerdas.
- */
-export const closestStringIndex = (frequency: number, targets: number[]): number => {
-  let best = -1;
-  let bestDistance = Infinity;
-  targets.forEach((target, index) => {
-    const distance = Math.abs(centsBetween(frequency, target));
-    if (distance < bestDistance) {
-      best = index;
-      bestDistance = distance;
-    }
-  });
-  return best;
-};
-
 /** Qué tiene que hacer el músico con la clavija. */
 export const tuningAdvice = (cents: number): TuningAdvice => {
   if (Math.abs(cents) <= IN_TUNE_CENTS) return 'Afinado';

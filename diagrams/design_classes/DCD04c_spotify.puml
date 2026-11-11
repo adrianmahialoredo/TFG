@@ -1,0 +1,85 @@
+@startuml DCD-04c
+title DCD-04c - Diagrama de clases de diseño: seguridad (3/4) - vinculación con Spotify (OAuth2)
+
+' Vinculación de la cuenta de Spotify (OAuth2, Authorization Code). Continuación de DCD-04a/b;
+' las recomendaciones según los gustos de Spotify están en DCD-04d.
+' Fuentes: controller/SpotifyAuthController.java, service/SpotifyAuthService.java,
+'          SpotifyAuthServiceImpl.java, config/SpotifyProperties.java, config/AppConfig.java
+skinparam classAttributeIconSize 0
+skinparam roundcorner 6
+skinparam nodesep 40
+skinparam ranksep 55
+skinparam packageStyle rectangle
+skinparam class {
+    BackgroundColor<<RestController>> #E3F0FF
+    BorderColor<<RestController>> #3D6FA8
+    BackgroundColor<<Service>> #E6F5E6
+    BorderColor<<Service>> #3C8A3C
+    BackgroundColor<<interface>> #F4FBF4
+    BorderColor<<interface>> #3C8A3C
+    BackgroundColor<<Repository>> #FFF4E0
+    BorderColor<<Repository>> #B07A1F
+    BackgroundColor<<ConfigurationProperties>> #F3F3F3
+    BackgroundColor<<Configuration>> #F3F3F3
+    BackgroundColor<<external>> #FFFFFF
+    BorderColor<<external>> #888888
+}
+hide empty members
+
+package "controller" {
+    class SpotifyAuthController <<RestController>> {
+        - spotifyAuthService : SpotifyAuthService
+        + getLoginUrl() : ResponseEntity<Map<String, String>>
+        + callback(code : String, state : String, error : String) : ResponseEntity<String>
+        - {static} currentUserId() : Optional<Long>
+    }
+    note right of SpotifyAuthController : @RequestMapping("/api/spotify")\ngetLoginUrl lee el usuario del SecurityContext;\ncallback (público) lo identifica por el state
+}
+
+package "service" {
+    interface SpotifyAuthService <<interface>> {
+        + buildAuthorizationUrl(userId : Long) : String
+        + handleCallback(code : String, state : String) : void
+        + getValidAccessToken(userId : Long) : String
+    }
+    class SpotifyAuthServiceImpl <<Service>> {
+        - {static} STATE_TTL : Duration
+        - {static} TOKEN_REFRESH_MARGIN : Duration
+        - {static} SPOTIFY_TOKEN_URL : String
+        - restTemplate : RestTemplate
+        - spotifyUserRepository : SpotifyUserRepository
+        - userRepository : UserRepository
+        - spotifyProperties : SpotifyProperties
+        - pendingAuthorizations : Map<String, PendingAuthorization>
+        - unlinkFromOtherUser(spotifyUserId : String, user : User) : void
+        - refreshAccessToken(spotifyUser : SpotifyUser) : void
+    }
+    note right of SpotifyAuthServiceImpl : state: UUID de un solo uso (10 min).\ngetValidAccessToken renueva con el refreshToken\nsi caduca en < 1 min: @Transactional(REQUIRES_NEW)
+}
+
+package "config" {
+    class SpotifyProperties <<ConfigurationProperties>> {
+        - clientId : String
+        - clientSecret : String
+        - redirectUri : String
+    }
+    note bottom of SpotifyProperties : @ConfigurationProperties(prefix = "spotify")
+    class AppConfig <<Configuration>> <<ver DCD-04a>>
+}
+
+package "repository" {
+    interface SpotifyUserRepository <<Repository>>
+    interface UserRepository <<Repository>>
+}
+
+class "Spotify Accounts\n(accounts.spotify.com)" as SpotifyApi <<external>>
+
+SpotifyAuthController --> SpotifyAuthService
+SpotifyAuthService <|.. SpotifyAuthServiceImpl
+SpotifyAuthServiceImpl --> SpotifyUserRepository
+SpotifyAuthServiceImpl --> UserRepository : findById
+SpotifyAuthServiceImpl --> SpotifyProperties
+SpotifyAuthServiceImpl ..> SpotifyApi : RestTemplate
+AppConfig ..> SpotifyAuthServiceImpl : RestTemplate
+
+@enduml

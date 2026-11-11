@@ -1,0 +1,63 @@
+@startuml DSD-CU-09-1
+title DSD-CU-09 (1/8) - Consultar recomendaciones: "Para ti" al añadir ítems a una lista (app)
+
+' Diagrama de secuencia de diseño: realización de CU-09 (análisis en
+' diagrams/use_cases/description/CU09_1_recomendaciones_y_artistas.puml y CU09_2_spotify.puml). Parte de la app: el backend se dibuja
+' como una sola línea de vida ("API REST"); el endpoint está en DSD-CU-09 (3/8).
+' Fuentes: frontend/src/screens/AddItemScreen.tsx, hooks/useAddItemScreen.ts,
+' repositories/itemFeed.repository.ts, repositories/item.repository.ts, utils/entityCache.utils.ts,
+' services/item.service.ts, config/apiConfig.ts.
+' Diferencias con el guion:
+' - No existen "AddToListScreen" ni "recommendation.repository.ts": la pantalla es AddItemScreen
+'   (hook useAddItemScreen) y la cadena es itemFeedRepository -> itemRepository.getCustomFeed
+'   (cache.feed -> cacheFirst) -> itemService.getRecommendedByItemList.
+' - cacheFirst nunca rechaza: si la red falla devuelve la caché o [], así que el catch/setError
+'   ("Error al cargar recomendaciones") de useAddItemScreen no llega a ejecutarse.
+' - La app solo muestra 5 a la vez (VISIBLE_RECOMMENDATIONS); el resto espera su turno (DSD-CU-08 1/3).
+!include ../_estilo.iuml
+
+actor "Músico" as actor
+box "App (React Native)" #F3F8FF
+    participant "AddItemScreen\n<<Nivel 7>>" as screen
+    participant "useAddItemScreen\n<<Nivel 6>>" as hook
+    participant "itemFeedRepository /\nitemRepository\n<<Nivel 3>>" as feedRepo
+    participant "Entity Stores\n<<Nivel 4>>" as stores
+    participant "itemService\n<<Nivel 1>>" as service
+end box
+participant "API REST\n(backend)" as api
+
+actor -> screen : abre "Añadir" en una lista
+screen -> hook : useAddItemScreen(itemListId)
+hook -> feedRepo : getRecommendedByItemList(itemListId, onFresh)
+feedRepo -> feedRepo : getMixedFeed('items_recommended_list_{id}')\n-> getCustomFeed -> cacheFirst(cacheKey, ...)
+
+alt Hay índice guardado
+    feedRepo --> hook : ids de la caché (al instante)
+    note right of feedRepo : La red se lanza en segundo plano y avisa\ncon onFresh(ids) (se ignora si ya se añadió algo)
+else Sin caché
+    feedRepo -> service : getRecommendedByItemList(id)
+    service -> api : GET /api/recommendations/items/by-item-list/{id}
+    alt Éxito
+        api --> service : 200 List<ItemDTO>\n(polimórfica, DTOs completos, barajados)
+        service --> feedRepo : AnyItemDTO[]
+        feedRepo -> stores : hydrateMixed(dtos): song/lesson/genre/\ninstrumentGenreRepository.hydrate (por type)\n+ itemRepository.hydrateSummaries
+        feedRepo -> feedRepo : saveQueryIndex(cacheKey, ids)
+        feedRepo --> hook : ids (barajados por el backend)
+    else Error (sin red, 401, 403 lista ajena, 404)
+        api --> service : error
+        service --> feedRepo : throw
+        feedRepo -> feedRepo : cacheFirst captura el error
+        feedRepo --> hook : []
+    end
+end
+
+hook -> stores : useItemEntitiesStore(state => state.items)
+hook -> hook : useMemo: ids -> resúmenes, sin los que ya están\nen la lista; solo los 5 primeros (VISIBLE_RECOMMENDATIONS)
+hook --> screen : items
+alt items no vacío
+    screen --> actor : tarjetas "Para ti"
+else Sin recomendaciones (o la petición falló sin caché)
+    screen --> actor : "No hay recomendaciones disponibles"
+end
+
+@enduml

@@ -35,7 +35,7 @@ const formatCents = (cents: number) => {
  * - Empieza a escuchar al entrar en la pantalla y para al salir (los tabs no se desmontan).
  * - Elegir otra afinación en la rueda deja de escuchar; se vuelve a escuchar tocando el
  *   medidor o una cuerda.
- * - Las cuerdas se detectan solas (la más cercana a lo que suena); tocar una la fija.
+ * - Se afina la cuerda seleccionada (la primera al entrar); se toca otra para cambiarla.
  * - En Expo Go no hay micrófono: `useTuner` simula una cuerda que se va afinando y se avisa aquí.
  */
 export default function TunerScreen() {
@@ -45,7 +45,7 @@ export default function TunerScreen() {
     const selectedIndex = Math.max(0, tunes.findIndex((tune) => tune.id === (selectedTuneId ?? defaultTuneId)));
     const tune = tunes[selectedIndex];
 
-    const {status, isListening, simulated, reading, lockedString, start, stop, selectString} = useTuner(tune?.notes ?? []);
+    const {status, isListening, simulated, reading, selectedString, start, stop, selectString} = useTuner(tune?.notes ?? []);
 
     useFocusEffect(useCallback(() => {
         start();
@@ -61,9 +61,9 @@ export default function TunerScreen() {
     }, [tunes, stop]);
 
     const handleStringPress = useCallback((index: number) => {
-        selectString(lockedString === index ? null : index);
+        selectString(index);
         if (!isListening) start();
-    }, [selectString, lockedString, isListening, start]);
+    }, [selectString, isListening, start]);
 
     const handleGaugePress = () => (isListening ? stop() : start());
 
@@ -96,12 +96,14 @@ export default function TunerScreen() {
                                 </Text>
                             )}
 
-                            {/** CUERDAS DE LA AFINACIÓN */}
+                            {/** CUERDAS DE LA AFINACIÓN: se afina la seleccionada */}
                             <View className="pt-6">
+                                <Text style={{color: COLORS.artistName, fontSize: 13, textAlign: 'center', marginBottom: 8}}>
+                                    Toca la cuerda que vas a afinar
+                                </Text>
                                 <TunerStringSelector
                                     notes={tune.notes}
-                                    activeIndex={reading?.stringIndex ?? lockedString}
-                                    lockedIndex={lockedString}
+                                    selectedIndex={selectedString}
                                     onSelect={handleStringPress}
                                 />
                             </View>

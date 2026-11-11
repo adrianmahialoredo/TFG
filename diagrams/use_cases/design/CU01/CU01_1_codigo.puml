@@ -1,0 +1,71 @@
+@startuml DSD-CU-01-1
+title DSD-CU-01 (1/4) - Registrar usuario: formulario y envío del código (app)
+
+' Parte de la app de la realización de CU-01 (análisis en
+' diagrams/use_cases/description/CU01_1_codigo_verificacion.puml y CU01_2_registro.puml). El backend se dibuja como una
+' sola línea de vida ("API REST"); lo que hace cada endpoint está en DSD-CU-01 (3/4 y 4/4).
+' Fuentes: screens/RegisterScreen.tsx, components/EmailVerificationModal.tsx, hooks/useRegister.ts,
+' repositories/auth.repository.ts, services/auth.service.ts, services/apiClient.ts.
+' Diferencias con el análisis: no hay "sugerir iniciar sesión" cuando el email ya existe
+' (solo se muestra el error); el 429 reabre el modal del código en vez de solo pedir esperar.
+!include ../_estilo.iuml
+
+actor "Visitante" as actor
+box "App (React Native)" #F3F8FF
+    participant "RegisterScreen\n(+ EmailVerificationModal)\n<<Nivel 7>>" as screen
+    participant "useRegister\n<<Nivel 6>>" as hook
+    participant "authRepository\n<<Nivel 3>>" as repo
+    participant "authService\n<<Nivel 1>>" as service
+end box
+participant "API REST\n(backend)" as api
+
+actor -> screen : rellena nombre, email, usuario,\ncontraseña (x2) y favoritos
+note right of screen : GenrePicker / InstrumentPicker leen\nGET /api/genres y GET /api/instruments\n(públicos) con useGenres / useInstruments
+actor -> screen : pulsa "Crear cuenta"
+screen -> hook : handleRegister() -> requestCode(form)
+hook -> hook : validate(form)
+
+alt Formato inválido (nombre, email, usuario, contraseña,\nconfirmación o mínimo de favoritos)
+    hook --> screen : throw Error(mensaje)
+    screen --> actor : showAlert({ title: 'Error', message })
+else Formulario válido
+    hook -> repo : requestVerificationCode(email.trim())
+    repo -> service : requestVerificationCode(email)
+    service -> api : POST /api/auth/verification-code { email }
+    note right of service : /api/auth/** es público:\nla petición no lleva JWT
+
+    alt El email ya está registrado
+        api --> service : 400 { message: "Email already registered" }
+        service --> repo : AuthServiceError("Ya existe una cuenta\ncon ese email", 400)
+        repo --> screen : throw (vía hook)
+        screen --> actor : showAlert({ title: 'Error', message })
+    else Se pidió otro código hace menos de 60 s
+        api --> service : 429 Too Many Requests
+        service --> repo : AuthServiceError("Espera un minuto\nantes de pedir otro código", 429)
+        repo --> screen : throw (vía hook)
+        screen -> screen : setCodeError('Ya te enviamos un código\nhace poco, revisa tu email')\nsetVerifying(true)
+        screen --> actor : reabre EmailVerificationModal\n(el código anterior sigue siendo válido)
+    else Email libre
+        api --> service : 204 No Content (inmediato)
+        note right of api : El email se envía en segundo plano:\nsi falla, la app no recibe ningún error\n(el código se descarta y se puede\npedir otro sin esperar)
+        service --> repo : void
+        repo --> screen : void (vía hook)
+        screen -> screen : setCodeError(null)\nsetVerifying(true)
+        screen --> actor : muestra EmailVerificationModal(email)
+        api ->> actor : email con el código (si el envío va bien)
+
+        opt El visitante no recibe el código (tras la cuenta atrás de 60 s)
+            actor -> screen : pulsa "Reenviar código"
+            screen -> hook : handleResend() -> onResend()\n-> resendCode(email)
+            hook -> repo : requestVerificationCode(email.trim())
+            repo -> service : requestVerificationCode(email)
+            service -> api : POST /api/auth/verification-code
+            api --> service : 204 (o 400 / 429)
+            service --> screen : void (vía repo y hook)
+            screen -> screen : setCode('')\nsetSecondsLeft(60)
+            note right of screen : Un error se muestra en el modal\n(setResendError(e.message))
+        end
+    end
+end
+
+@enduml

@@ -1,0 +1,72 @@
+@startuml DSD-CU-06-4
+title DSD-CU-06 (4/4) - Consultar espacio de género: endpoints del backend
+
+' Lo que hace el backend en cada petición de DSD-CU-06 (1/4 a 3/4).
+' Fuentes: GenreController, SongController, InstrumentGenreController, LessonController,
+' LessonSectionController; Genre/Song/InstrumentGenre/Lesson/LessonSectionServiceImpl;
+' utils/EntityResolver.java, utils/mapper/DtoMapper.java, model/InstrumentGenre.java.
+' InstrumentGenre.lessons lleva @OrderBy("indexInInstrumentGenre ASC"), y DtoMapper lo vuelca
+' en lessonIds: el cliente no ordena.
+!include ../_estilo.iuml
+
+participant "App\n(services)" as app
+box "Backend (Spring Boot)" #FFF9F0
+    participant "XController\n<<controller>>" as ctrl
+    participant "XServiceImpl\n<<service>>" as svc
+    participant "XRepository /\nEntityResolver" as repo
+    participant "DtoMapper\n<<mapper>>" as mapper
+end box
+database "PostgreSQL" as db
+
+group GET /api/genres/{id}
+    app -> ctrl : GenreController.getById(id)
+    ctrl -> svc : GenreServiceImpl.findById(id)
+    svc -> repo : EntityResolver.findGenre(id)
+    repo -> db : GenreRepository.findById(id)
+    db --> repo : Genre
+    repo --> svc : Optional<Genre>
+    svc -> mapper : genreToGenreDto(genre)
+    mapper --> svc : GenreDTO (description, bannerUrl,\nwelcomeIntroVideoId, welcomeSongVideoId)
+    ctrl --> app : 200 GenreDTO / 404 (ResponseEntity.of)
+end
+
+group GET /api/instrument-genres/by-genre/{genreId}
+    app -> ctrl : InstrumentGenreController.getForGenre(genreId)
+    ctrl -> svc : InstrumentGenreServiceImpl.findForGenre(genreId)
+    svc -> repo : InstrumentGenreRepository.findByGenreId(genreId)
+    repo -> db : SELECT
+    db --> repo : List<InstrumentGenre>
+    svc -> mapper : instrumentGenreToInstrumentGenreDto(ig)
+    mapper --> svc : InstrumentGenreDTO (instrumentId, genreId,\nlessonIds por indexInInstrumentGenre)
+    ctrl --> app : 200 List<InstrumentGenreDTO>
+end
+
+group GET /api/lessons/by-genre/{genreId}
+    app -> ctrl : LessonController.getForGenre(genreId)
+    ctrl -> svc : LessonServiceImpl.findForGenre(genreId)
+    svc -> repo : LessonRepository.findByGenreIdAndBelongsToGenreTrue(genreId)
+    repo -> db : SELECT
+    svc -> mapper : lessonToLessonDto(lesson)
+    ctrl --> app : 200 List<LessonDTO>
+end
+
+group GET /api/songs/by-genre/{genreId}/popular|classic|new
+    app -> ctrl : SongController
+    ctrl -> svc : SongServiceImpl.findPopularForGenre |\nfindClassicForGenre | findNewForGenre(genreId)
+    svc -> repo : SongRepository.findByGenresIdAndGenrePopularTrue |\n...GenreClassicTrue | ...GenreNewTrue(genreId)
+    repo -> db : SELECT
+    svc -> mapper : songToSongDto(song)
+    ctrl --> app : 200 List<SongDTO>
+end
+
+group POST /api/lessons/by-ids | POST /api/lesson-sections/by-ids
+    app -> ctrl : LessonController.getByIds(ids) |\nLessonSectionController.getByIds(ids)
+    ctrl -> svc : LessonServiceImpl.findByIds(ids) |\nLessonSectionServiceImpl.findByIds(ids)
+    svc -> repo : findAllById(ids)
+    repo -> db : SELECT ... WHERE id IN (...)
+    svc -> mapper : lessonToLessonDto | lessonSectionToLessonSectionDto
+    mapper --> svc : LessonDTO (sectionIds...) |\nLessonSectionDTO (title, htmlContent, videoUrl, orderIndex)
+    ctrl --> app : 200 List<...DTO>
+end
+
+@enduml

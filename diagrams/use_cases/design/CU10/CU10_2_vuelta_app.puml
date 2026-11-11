@@ -1,0 +1,69 @@
+@startuml DSD-CU-10-2
+title DSD-CU-10 (2/4) - Vincular cuenta de Spotify: vuelta a la app (app)
+
+' Parte de la app de la realización de CU-10: lo que pasa al volver del navegador.
+' Fuentes: hooks/useSpotifyConnect.ts, components/buttons/SpotifyButton.tsx,
+' repositories/spotify.repository.ts, repositories/user.repository.ts (refresh, hydrateUsers),
+' hooks/useHomeItems.ts, hooks/useFeedSongs.ts, repositories/itemFeed.repository.ts,
+' repositories/song.repository.ts, screens/HomeScreen.tsx, screens/SongsScreen.tsx.
+' Notas de diseño:
+'  - La app no recibe nada del callback: recarga el usuario (GET /api/users/{id}) y mira
+'    UserDTO.spotifyConnected.
+'  - useHomeItems y useFeedSongs leen spotifyConnected de UserEntitiesStore: al cambiar,
+'    vuelven a pedir su carrusel de Spotify (si falla solo se queda vacío ese carrusel).
+!include ../_estilo.iuml
+
+actor "Músico" as actor
+box "App (React Native)" #F3F8FF
+    participant "SpotifyButton /\nHomeScreen /\nSongsScreen <<Nivel 7>>" as screen
+    participant "useSpotifyConnect\nuseHomeItems\nuseFeedSongs <<Nivel 6>>" as hooks
+    participant "spotify / user / itemFeed /\nsong Repository\n<<Nivel 3>>" as repos
+    participant "Entity Stores\n<<Nivel 4>>" as stores
+    participant "user / item / song\nService <<Nivel 1>>" as services
+    participant "WebBrowser\n<<expo-web-browser>>" as browser
+end box
+participant "API REST\n(backend)" as api
+
+actor -> browser : cierra el navegador / vuelve a la app
+browser --> hooks : result (iOS: 'cancel' | 'dismiss' al cerrarse;\nAndroid: 'opened' al abrirse -> await appActive.promise)
+hooks -> repos : spotifyRepository.refreshLinkedUser(currentUserId)
+repos -> services : userRepository.refresh(userId)\n-> userService.getById(userId)
+services -> api : GET /api/users/{id}
+api --> services : 200 UserDTO { spotifyConnected }
+services --> repos : UserDTO
+repos -> stores : hydrateUsers([user])\n(UserEntitiesStore + disco)
+repos --> hooks : UserDTO
+hooks -> hooks : finally: appActive.cancel();\nsetConnecting(false)
+
+alt connect() lanza (error de red, 401, URL vacía...)
+    hooks --> screen : Error
+    screen --> actor : showAlert("No se pudo iniciar sesion con Spotify.")
+else spotifyConnected = false (rechazó o falló el callback)
+    screen --> actor : sigue el botón "Conectar con Spotify"
+else spotifyConnected = true
+    stores --> hooks : users[currentUserId].spotifyConnected cambia
+    group Inicio: useHomeItems
+        hooks -> repos : itemFeedRepository.getFromSpotifyForUser(userId, apply)
+        repos -> services : itemService.getRecommendedFromSpotify(userId)
+        services -> api : GET /api/spotify/recommendations/items/{userId}
+        api --> services : 200 List<ItemDTO>
+        services --> repos : items
+        repos -> stores : hidrata items + índice 'items_spotify_user'
+        repos --> hooks : ids
+        hooks --> screen : spotify
+        screen --> actor : carrusel "Basado en tu Spotify"
+    end
+    group Canciones: useFeedSongs
+        hooks -> repos : songRepository.getFromSpotify(userId, apply)
+        repos -> services : songService.getRecommendedFromSpotify(userId, limit)
+        services -> api : GET /api/spotify/recommendations/songs/{userId}?limit
+        api --> services : 200 List<SongDTO>
+        services --> repos : songs
+        repos -> stores : setSongs + índice 'spotify'
+        repos --> hooks : ids
+        hooks --> screen : spotify
+        screen --> actor : carrusel "Basado en tu Spotify"
+    end
+end
+
+@enduml

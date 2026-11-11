@@ -1,0 +1,437 @@
+<title>Cuestionario SUS de TOCO</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Inter:wght@400;500;600&display=swap">
+<style>
+/* Layout: una sola columna estrecha, como un formulario en papel; cada afirmación es una fila con una escala 1–5 de botones grandes para el dedo. */
+:root {
+  --bg: #FBF8F3;
+  --surface: #FFFFFF;
+  --ink: #1F1A14;
+  --muted: #6E6457;
+  --line: #E6DED2;
+  --gold: #A86A22;
+  --gold-soft: #F3E6D3;
+  --on-gold: #FFFFFF;
+  --ok: #2F7A4B;
+  --warn: #A3401E;
+  --display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --body: "Inter", "Segoe UI", system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0B0906; --surface: #17130E; --ink: #F1ECE4; --muted: #A69B8C; --line: #2E271F;
+    --gold: #C1853C; --gold-soft: #2A1F12; --on-gold: #0B0906; --ok: #6CC08E; --warn: #E58A68;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0B0906; --surface: #17130E; --ink: #F1ECE4; --muted: #A69B8C; --line: #2E271F;
+  --gold: #C1853C; --gold-soft: #2A1F12; --on-gold: #0B0906; --ok: #6CC08E; --warn: #E58A68;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--ink); font-family: var(--body); font-size: 16px; line-height: 1.5;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 24px 48px;
+}
+main { max-width: 720px; margin: 0 auto; display: flex; flex-direction: column; gap: 28px; }
+h1, h2 { font-family: var(--display); text-wrap: balance; margin: 0; letter-spacing: -0.01em; }
+h1 { font-size: clamp(1.8rem, 5vw, 2.4rem); line-height: 1.1; }
+h2 { font-size: 1.25rem; }
+p { margin: 0; }
+.eyebrow { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.12em; color: var(--gold); font-weight: 600; }
+.muted { color: var(--muted); }
+header { display: flex; flex-direction: column; gap: 10px; }
+nav { display: flex; gap: 8px; flex-wrap: wrap; }
+nav a { color: var(--muted); text-decoration: none; font-weight: 500; padding: 6px 12px; border-radius: 999px; border: 1px solid var(--line); }
+nav a[aria-current="page"] { color: var(--on-gold); background: var(--gold); border-color: var(--gold); }
+.notice { padding: 12px 14px; border-radius: 10px; background: var(--gold-soft); color: var(--ink); font-size: 0.92rem; }
+.notice.warn { border-left: 3px solid var(--warn); }
+label.field { display: flex; flex-direction: column; gap: 6px; font-weight: 600; }
+input[type="text"], textarea {
+  font: inherit; color: var(--ink); background: var(--surface); border: 1px solid var(--line);
+  border-radius: 10px; padding: 10px 12px; width: 100%;
+}
+textarea { min-height: 84px; resize: vertical; }
+input:focus-visible, textarea:focus-visible, button:focus-visible, .scale label:focus-within { outline: 2px solid var(--gold); outline-offset: 2px; }
+.code-row { display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-end; }
+.code-row .field { flex: 0 1 180px; }
+.legend { display: flex; justify-content: space-between; font-size: 0.8rem; color: var(--muted); gap: 12px; }
+ol.items { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+ol.items li { padding: 18px 0; border-top: 1px solid var(--line); display: flex; flex-direction: column; gap: 12px; }
+ol.items li:last-child { border-bottom: 1px solid var(--line); }
+.stmt { display: flex; gap: 12px; }
+.stmt .n { font-family: var(--display); font-weight: 700; color: var(--gold); min-width: 1.6em; font-variant-numeric: tabular-nums; }
+.stmt p { min-width: 0; }
+li.missing .stmt p { color: var(--warn); }
+.scale { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; padding-left: calc(1.6em + 12px); }
+.scale label { position: relative; display: flex; align-items: center; justify-content: center; height: 48px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); cursor: pointer; font-weight: 600; font-variant-numeric: tabular-nums; }
+.scale input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
+.scale label:has(input:checked) { background: var(--gold); border-color: var(--gold); color: var(--on-gold); }
+.scale-ends { display: flex; justify-content: space-between; font-size: 0.75rem; color: var(--muted); padding-left: calc(1.6em + 12px); }
+.open { display: flex; flex-direction: column; gap: 16px; }
+.actions { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+button { font: inherit; font-weight: 600; border-radius: 10px; padding: 12px 18px; cursor: pointer; border: 1px solid var(--gold); background: var(--gold); color: var(--on-gold); }
+button.ghost { background: transparent; color: var(--ink); border-color: var(--line); }
+button.danger { background: transparent; color: var(--warn); border-color: var(--warn); }
+button:disabled { opacity: 0.5; cursor: not-allowed; }
+.progress { font-size: 0.9rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+.status { font-size: 0.92rem; }
+.status.ok { color: var(--ok); }
+.status.err { color: var(--warn); }
+.done { display: flex; flex-direction: column; gap: 14px; padding: 28px 0; }
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; }
+.stat { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 14px; display: flex; flex-direction: column; gap: 4px; }
+.stat b { font-family: var(--display); font-size: 1.6rem; font-variant-numeric: tabular-nums; }
+.stat span { font-size: 0.8rem; color: var(--muted); }
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: 0.9rem; font-variant-numeric: tabular-nums; }
+th, td { padding: 8px 10px; text-align: center; border-bottom: 1px solid var(--line); white-space: nowrap; }
+th:first-child, td:first-child { text-align: left; }
+tbody tr:last-child td { border-bottom: 0; }
+td.score { font-weight: 700; color: var(--gold); }
+.small { font-size: 0.85rem; }
+.comments { display: flex; flex-direction: column; gap: 10px; }
+.comment { border-left: 3px solid var(--gold); padding: 4px 0 4px 12px; font-size: 0.92rem; }
+.comment b { display: block; font-size: 0.8rem; color: var(--muted); font-weight: 600; }
+@media (prefers-reduced-motion: no-preference) { .scale label { transition: background-color .12s, border-color .12s; } }
+</style>
+
+<main>
+  <header>
+    <p class="eyebrow">TFG · Prueba de usabilidad de TOCO</p>
+    <h1 id="title">Cuestionario de usabilidad (SUS)</h1>
+    <nav aria-label="Secciones">
+      <a href="#cuestionario" id="nav-form" aria-current="page">Cuestionario</a>
+      <a href="#resultados" id="nav-results" hidden>Resultados</a>
+    </nav>
+  </header>
+
+  <!-- ===================== CUESTIONARIO ===================== -->
+  <section id="view-form" aria-labelledby="title">
+    <form id="sus-form" novalidate>
+      <div style="display:flex;flex-direction:column;gap:24px">
+        <p class="muted">Marca para cada frase cuánto estás de acuerdo, de <b>1</b> (totalmente en desacuerdo) a <b>5</b> (totalmente de acuerdo). Responde rápido, sin pensarlo demasiado; si no sabes qué contestar, marca 3. Tus respuestas son anónimas.</p>
+
+        <div id="db-notice" class="notice warn" hidden></div>
+
+        <div class="code-row">
+          <label class="field" for="code">Código de participante
+            <input type="text" id="code" name="code" autocomplete="off" placeholder="P1" maxlength="12" required>
+          </label>
+          <p class="small muted" style="flex:1 1 220px">Lo pone el moderador (P1, P2…), el mismo que en la hoja de observación.</p>
+        </div>
+
+        <ol class="items" id="items"></ol>
+
+        <div class="open">
+          <h2>Para terminar</h2>
+          <label class="field" for="q-like">¿Qué es lo que más te ha gustado de la aplicación?
+            <textarea id="q-like" name="like"></textarea></label>
+          <label class="field" for="q-hard">¿Qué te ha resultado más difícil o confuso?
+            <textarea id="q-hard" name="hard"></textarea></label>
+          <label class="field" for="q-missing">¿Echas en falta algo que usarías para aprender o practicar?
+            <textarea id="q-missing" name="missing"></textarea></label>
+          <label class="field" for="q-switch">¿La usarías en lugar de las aplicaciones que usas ahora? ¿Por qué?
+            <textarea id="q-switch" name="switch"></textarea></label>
+        </div>
+
+        <div class="actions">
+          <button type="submit" id="submit">Enviar respuestas</button>
+          <span class="progress" id="progress">0 de 10 respondidas</span>
+        </div>
+        <div class="actions" id="overwrite" hidden>
+          <span class="status err" id="overwrite-text"></span>
+          <button type="button" class="danger" id="overwrite-yes">Sustituir</button>
+          <button type="button" class="ghost" id="overwrite-no">Cancelar</button>
+        </div>
+        <p class="status" id="form-status" role="status"></p>
+      </div>
+    </form>
+
+    <div class="done" id="done" hidden>
+      <h2>¡Gracias!</h2>
+      <p>Tus respuestas se han guardado. Ya puedes devolver el móvil al moderador.</p>
+      <div class="actions"><button type="button" id="next">Nuevo participante</button></div>
+    </div>
+  </section>
+
+  <!-- ===================== RESULTADOS (solo moderador) ===================== -->
+  <section id="view-results" hidden aria-label="Resultados">
+    <div style="display:flex;flex-direction:column;gap:20px">
+      <p class="muted" id="results-intro">Respuestas guardadas. Solo las ve quien puede editar este formulario.</p>
+      <div class="stats" id="stats"></div>
+      <div class="table-wrap"><table>
+        <thead><tr><th scope="col">Participante</th><th scope="col">A1</th><th scope="col">A2</th><th scope="col">A3</th><th scope="col">A4</th><th scope="col">A5</th><th scope="col">A6</th><th scope="col">A7</th><th scope="col">A8</th><th scope="col">A9</th><th scope="col">A10</th><th scope="col">SUS</th><th scope="col"><span class="small">Borrar</span></th></tr></thead>
+        <tbody id="rows"><tr><td colspan="13" class="muted">Cargando respuestas…</td></tr></tbody>
+      </table></div>
+      <div class="actions">
+        <button type="button" id="copy-csv">Copiar CSV</button>
+        <button type="button" class="ghost" id="save-csv" hidden>Descargar CSV</button>
+        <span class="status" id="csv-status" role="status"></span>
+      </div>
+      <p class="small muted">El CSV tiene el formato de <code>respuestas_sus.csv</code> (separador «;»): se analiza con <code>python tests/usability/analyze_usability.py --sus respuestas.csv</code>.</p>
+      <textarea id="csv-fallback" readonly hidden aria-label="CSV para copiar"></textarea>
+      <h2>Comentarios</h2>
+      <div class="comments" id="comments"><p class="muted">Sin comentarios todavía.</p></div>
+    </div>
+  </section>
+</main>
+
+<script>
+(() => {
+  // Las 10 afirmaciones del SUS (Brooke, 1996), en español, como en protocolo_usabilidad.md
+  const ITEMS = [
+    'Creo que me gustaría usar esta aplicación con frecuencia.',
+    'Encontré la aplicación innecesariamente compleja.',
+    'Pensé que la aplicación era fácil de usar.',
+    'Creo que necesitaría la ayuda de una persona con conocimientos técnicos para poder usar esta aplicación.',
+    'Encontré que las distintas funciones de la aplicación estaban bien integradas.',
+    'Pensé que había demasiada incoherencia en la aplicación.',
+    'Imagino que la mayoría de la gente aprendería a usar esta aplicación muy rápidamente.',
+    'Encontré la aplicación muy engorrosa de usar.',
+    'Me sentí muy seguro/a usando la aplicación.',
+    'Necesité aprender muchas cosas antes de poder manejarme con la aplicación.',
+  ];
+  const OPEN = [['like', 'Lo que más le gustó'], ['hard', 'Lo más difícil o confuso'], ['missing', 'Echa en falta'], ['switch', '¿La usaría en lugar de otras?']];
+  // Escala curvada de Sauro y Lewis (2016) y adjetivos de Bangor, Kortum y Miller (2009)
+  const GRADES = [[84.1, 'A+'], [80.8, 'A'], [78.9, 'A-'], [77.2, 'B+'], [74.1, 'B'], [72.6, 'B-'], [71.1, 'C+'], [65.0, 'C'], [62.7, 'C-'], [51.7, 'D'], [0, 'F']];
+  const ADJ = [[12.5, 'Lo peor imaginable'], [20.3, 'Horrible'], [35.7, 'Pobre'], [50.9, 'Aceptable'], [71.4, 'Buena'], [85.5, 'Excelente'], [90.9, 'La mejor imaginable']];
+
+  const $ = (id) => document.getElementById(id);
+  const form = $('sus-form');
+  let db = null;
+  let canWrite = null;   // null = aún no se sabe
+  let rows = [];         // respuestas (solo moderador)
+  let pendingSave = null;
+
+  // ---------- formulario ----------
+  const list = $('items');
+  ITEMS.forEach((text, i) => {
+    const n = i + 1;
+    const li = document.createElement('li');
+    li.id = 'item-' + n;
+    li.innerHTML = `<div class="stmt"><span class="n">${n}</span><p id="stmt-${n}"></p></div>
+      <div class="scale" role="radiogroup" aria-labelledby="stmt-${n}">
+        ${[1, 2, 3, 4, 5].map((v) => `<label><input type="radio" name="p${n}" id="p${n}-${v}" value="${v}" aria-label="${v}">${v}</label>`).join('')}
+      </div>
+      <div class="scale-ends" aria-hidden="true"><span>Totalmente en desacuerdo</span><span>Totalmente de acuerdo</span></div>`;
+    li.querySelector('p').textContent = text;
+    list.appendChild(li);
+  });
+
+  const answers = () => ITEMS.map((_, i) => {
+    const el = form.querySelector(`input[name="p${i + 1}"]:checked`);
+    return el ? Number(el.value) : null;
+  });
+  const updateProgress = () => {
+    const done = answers().filter((a) => a !== null).length;
+    $('progress').textContent = `${done} de 10 respondidas`;
+  };
+  form.addEventListener('change', (e) => {
+    if (e.target.name && /^p\d+$/.test(e.target.name)) {
+      e.target.closest('li').classList.remove('missing');
+      updateProgress();
+    }
+  });
+
+  const susScore = (a) => a.reduce((s, v, i) => s + (i % 2 === 0 ? v - 1 : 5 - v), 0) * 2.5;
+  const normCode = (c) => c.trim().toUpperCase().replace(/\s+/g, '').replace(/[^A-Z0-9_\-.]/g, '');
+  const setStatus = (el, text, kind) => { el.textContent = text; el.className = 'status' + (kind ? ' ' + kind : ''); };
+
+  async function save(code, data) {
+    $('submit').disabled = true;
+    setStatus($('form-status'), 'Guardando…');
+    try {
+      await db.doc('sus/' + code).set(data);
+      form.hidden = true;
+      $('done').hidden = false;
+      window.scrollTo({ top: 0 });
+    } catch (err) {
+      const msg = err && err.code === 'invalid_argument'
+        ? 'Esta cuenta no puede guardar respuestas. Ábrelo con la cuenta del moderador.'
+        : 'No se han podido guardar las respuestas. Comprueba la conexión y vuelve a pulsar «Enviar».';
+      setStatus($('form-status'), msg, 'err');
+    } finally {
+      $('submit').disabled = false;
+    }
+  }
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    $('overwrite').hidden = true;
+    const code = normCode($('code').value);
+    const a = answers();
+    form.querySelectorAll('li.missing').forEach((li) => li.classList.remove('missing'));
+    if (!code) { setStatus($('form-status'), 'Falta el código de participante (P1, P2…).', 'err'); $('code').focus(); return; }
+    const missing = a.map((v, i) => (v === null ? i + 1 : null)).filter(Boolean);
+    if (missing.length) {
+      missing.forEach((n) => $('item-' + n).classList.add('missing'));
+      setStatus($('form-status'), `Faltan por responder: ${missing.join(', ')}.`, 'err');
+      $('item-' + missing[0]).scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return;
+    }
+    if (!db) { setStatus($('form-status'), 'No se puede guardar desde aquí: abre el formulario con la cuenta del moderador.', 'err'); return; }
+    const data = {
+      participante: code,
+      answers: a,
+      sus: susScore(a),
+      comentarios: Object.fromEntries(OPEN.map(([k]) => [k, $('q-' + k).value.trim()])),
+      fecha: new Date().toISOString(),
+    };
+    for (let i = 0; i < 10; i++) data['p' + (i + 1)] = a[i];
+    try {
+      const prev = await db.doc('sus/' + code).get();
+      if (prev.exists) {
+        pendingSave = { code, data };
+        $('overwrite-text').textContent = `Ya hay respuestas guardadas para ${code}.`;
+        $('overwrite').hidden = false;
+        setStatus($('form-status'), '');
+        return;
+      }
+    } catch { /* si falla la lectura, se intenta guardar igualmente */ }
+    save(code, data);
+  });
+  $('overwrite-yes').addEventListener('click', () => { $('overwrite').hidden = true; if (pendingSave) save(pendingSave.code, pendingSave.data); pendingSave = null; });
+  $('overwrite-no').addEventListener('click', () => { $('overwrite').hidden = true; pendingSave = null; $('code').focus(); });
+
+  $('next').addEventListener('click', () => {
+    form.reset();
+    form.hidden = false;
+    $('done').hidden = true;
+    setStatus($('form-status'), '');
+    updateProgress();
+    suggestCode();
+    window.scrollTo({ top: 0 });
+  });
+
+  function suggestCode() {
+    if (!rows.length || $('code').value.trim()) return;
+    const max = rows.reduce((m, r) => { const k = /^P(\d+)$/.exec(r.participante || ''); return k ? Math.max(m, Number(k[1])) : m; }, 0);
+    $('code').value = 'P' + (max + 1);
+  }
+
+  // ---------- resultados ----------
+  const fmt = (x, d = 1) => x.toFixed(d).replace('.', ',');
+  const csvCell = (v) => { const s = String(v ?? ''); return /[;"\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
+  function buildCsv() {
+    const head = ['participante', ...ITEMS.map((_, i) => 'p' + (i + 1)), 'comentarios'];
+    const lines = rows.map((r) => {
+      const c = r.comentarios || {};
+      const comment = OPEN.map(([k, label]) => (c[k] ? `${label}: ${c[k]}` : '')).filter(Boolean).join(' | ');
+      return [r.participante, ...r.answers, comment].map(csvCell).join(';');
+    });
+    return '﻿' + [head.join(';'), ...lines].join('\r\n') + '\r\n';
+  }
+
+  function renderResults() {
+    const tbody = $('rows');
+    tbody.replaceChildren();
+    if (!rows.length) {
+      tbody.innerHTML = '<tr><td colspan="13" class="muted">Aún no hay respuestas. Aparecerán aquí al enviar el primer cuestionario.</td></tr>';
+    }
+    rows.forEach((r) => {
+      const tr = document.createElement('tr');
+      const cells = [r.participante, ...r.answers, fmt(r.sus)];
+      cells.forEach((v, i) => {
+        const td = document.createElement('td');
+        td.textContent = v;
+        if (i === cells.length - 1) td.className = 'score';
+        tr.appendChild(td);
+      });
+      const td = document.createElement('td');
+      const del = document.createElement('button');
+      del.type = 'button'; del.className = 'danger small'; del.style.padding = '4px 10px'; del.textContent = 'Borrar';
+      del.setAttribute('aria-label', 'Borrar las respuestas de ' + r.participante);
+      del.addEventListener('click', async () => {
+        if (del.dataset.confirm !== '1') { del.dataset.confirm = '1'; del.textContent = '¿Seguro?'; return; }
+        del.disabled = true;
+        try { await db.doc('sus/' + r.participante).delete(); }
+        catch { del.disabled = false; del.textContent = 'Error'; }
+      });
+      td.appendChild(del);
+      tr.appendChild(td);
+      tbody.appendChild(tr);
+    });
+
+    const scores = rows.map((r) => r.sus);
+    const stats = $('stats');
+    if (!scores.length) { stats.innerHTML = ''; }
+    else {
+      const n = scores.length;
+      const mean = scores.reduce((s, x) => s + x, 0) / n;
+      const sd = n > 1 ? Math.sqrt(scores.reduce((s, x) => s + (x - mean) ** 2, 0) / (n - 1)) : null;
+      const grade = GRADES.find(([min]) => mean >= min)[1];
+      const adj = ADJ.reduce((b, cur) => (Math.abs(cur[0] - mean) < Math.abs(b[0] - mean) ? cur : b))[1];
+      const tiles = [[String(n), 'participantes'], [fmt(mean), 'media SUS (sobre 100)'], [sd === null ? '—' : fmt(sd), 'desviación típica'], [grade, 'nota (Sauro y Lewis)'], [adj, 'adjetivo (Bangor et al.)']];
+      stats.replaceChildren(...tiles.map(([v, l]) => { const d = document.createElement('div'); d.className = 'stat'; const b = document.createElement('b'); b.textContent = v; const s = document.createElement('span'); s.textContent = l; d.append(b, s); return d; }));
+    }
+
+    const box = $('comments');
+    const items = [];
+    rows.forEach((r) => OPEN.forEach(([k, label]) => {
+      const t = r.comentarios && r.comentarios[k];
+      if (t) { const d = document.createElement('div'); d.className = 'comment'; const b = document.createElement('b'); b.textContent = `${r.participante} · ${label}`; d.append(b, document.createTextNode(t)); items.push(d); }
+    }));
+    if (items.length) box.replaceChildren(...items); else box.innerHTML = '<p class="muted">Sin comentarios todavía.</p>';
+  }
+
+  $('copy-csv').addEventListener('click', async () => {
+    const csv = buildCsv();
+    try { await navigator.clipboard.writeText(csv); setStatus($('csv-status'), 'CSV copiado. Pégalo en un fichero .csv.', 'ok'); }
+    catch { const t = $('csv-fallback'); t.value = csv; t.hidden = false; t.select(); setStatus($('csv-status'), 'Selecciona el texto de abajo y cópialo.'); }
+  });
+
+  // ---------- navegación ----------
+  let isModerator = false;
+  function route() {
+    const results = location.hash === '#resultados' && isModerator;
+    $('view-form').hidden = results;
+    $('view-results').hidden = !results;
+    $('nav-form').toggleAttribute('aria-current', !results);
+    if (!results) $('nav-form').setAttribute('aria-current', 'page');
+    if (results) $('nav-results').setAttribute('aria-current', 'page'); else $('nav-results').removeAttribute('aria-current');
+  }
+  window.addEventListener('hashchange', route);
+  route();
+
+  // ---------- capacidades ----------
+  (async () => {
+    const [dbNs, user, downloads] = await Promise.all([
+      window.claude ? claude.use('db') : null,
+      window.claude ? claude.use('user') : null,
+      window.claude ? claude.use('downloads') : null,
+    ]);
+    db = dbNs;
+    isModerator = Boolean(user && user.canEdit && user.canEdit());
+    if (!db || !isModerator) {
+      const n = $('db-notice');
+      n.textContent = 'Este formulario guarda las respuestas solo cuando lo abre la cuenta del moderador. Pide al moderador su móvil para rellenarlo.';
+      n.hidden = false;
+      if (!isModerator) return;
+    }
+    if (!db) return;
+    $('nav-results').hidden = false;
+    if (downloads) {
+      const b = $('save-csv');
+      b.hidden = false;
+      b.addEventListener('click', async () => {
+        try { await downloads.save({ filename: 'respuestas_sus.csv', data: buildCsv() }); setStatus($('csv-status'), 'CSV descargado.', 'ok'); }
+        catch (err) { if (err && err.code !== 'declined') setStatus($('csv-status'), 'No se pudo descargar; usa «Copiar CSV».', 'err'); }
+      });
+    }
+    route();
+    const timer = setTimeout(() => { $('results-intro').textContent = 'No se pueden cargar las respuestas todavía. Comprueba la conexión.'; }, 10000);
+    db.collection('sus').onSnapshot((snap) => {
+      if (!snap.metadata.fromCache) clearTimeout(timer);
+      rows = snap.docs.map((d) => d.data()).filter((r) => r && Array.isArray(r.answers))
+        .sort((x, y) => (x.participante || '').localeCompare(y.participante || '', 'es', { numeric: true }));
+      renderResults();
+      suggestCode();
+    }, () => { clearTimeout(timer); $('results-intro').textContent = 'No se pueden cargar las respuestas.'; });
+  })();
+})();
+</script>

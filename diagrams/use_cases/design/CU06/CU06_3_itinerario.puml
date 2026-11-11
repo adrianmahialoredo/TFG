@@ -1,0 +1,84 @@
+@startuml DSD-CU-06-3
+title DSD-CU-06 (3/4) - Consultar espacio de género: pestaña "Instrumentos" e itinerario (app)
+
+' Fuentes: screens/GenreInstrumentsScreen.tsx, InstrumentGenreLessonScreen.tsx; components/EdgePanel.tsx,
+' LessonSectionViewer.tsx; hooks/useGenreInstruments.ts, useInstrumentGenreLesson.ts, useLesson.ts;
+' repositories/instrumentGenre, lesson, lessonSection, item .repository.ts. Backend en DSD-CU-06 (4/4).
+' El orden del itinerario lo da el backend (lessonIds ordenados por indexInInstrumentGenre).
+' LessonScreen (ruta propia) solo se usa desde el carrusel "Recomendaciones", con el mismo useLesson.
+!include ../_estilo.iuml
+
+actor "Músico" as actor
+box "App (React Native)" #F3F8FF
+    participant "GenreMainScreen\n(GenreInstrumentsScreen)\n<<Nivel 7>>" as screen
+    participant "InstrumentGenre\nLessonScreen\n<<Nivel 7>>" as igScreen
+    participant "useGenreInstruments\nuseInstrumentGenreLesson\nuseLesson <<Nivel 6>>" as hooks
+    participant "instrumentGenre / lesson /\nlessonSection / item\nRepository <<Nivel 3>>" as repos
+    participant "Entity Stores\n<<Nivel 4>>" as stores
+end box
+participant "API REST\n(backend)" as api
+
+actor -> screen : pulsa "Instrumentos" (changeTab)
+screen -> hooks : useGenreInstruments(genreId)
+hooks -> stores : instrumentGenres
+hooks -> hooks : filter(ig.genreId === genreId)\n.sort(por title)
+note right of hooks : Sin peticiones: se cargaron\nal entrar al género (1/4)
+hooks --> screen : instrumentGenres
+alt sin InstrumentGenres
+    screen --> actor : "No hay instrumentos configurados para este género."
+else
+    screen --> actor : un botón por instrumento + carrusel "Recomendaciones"\n(GET /api/recommendations/lessons/by-genre/{genreId})
+end
+
+actor -> screen : selecciona un instrumento
+screen -> igScreen : <InstrumentGenreLessonScreen instrumentGenreId />
+igScreen -> hooks : useInstrumentGenreLesson(instrumentGenreId)
+hooks ->> repos : itemRepository.markAsAccessed(igId)
+hooks -> repos : instrumentGenreRepository.getById(igId)
+note right of repos : RAM -> disco -> GET /api/instrument-genres/{id}\n(normalmente ya en RAM)
+repos --> hooks : InstrumentGenreDTO
+hooks -> repos : lessonRepository.getAllById(lessonIds)
+opt faltan lecciones en caché
+    repos -> api : POST /api/lessons/by-ids [ids]
+    api --> repos : 200 List<LessonDTO>
+    repos -> stores : setLessons(lessons)
+end
+hooks -> hooks : lecciones en el orden de lessonIds;\nactiveLesson = la primera
+
+igScreen -> hooks : useLesson(activeLesson?.id ?? '', { markAccessed: false })
+group useLesson
+    hooks -> repos : lessonRepository.getById(lessonId)
+    repos -> repos : lessonSectionRepository.getAllById(sectionIds)
+    opt faltan secciones en caché
+        repos -> api : POST /api/lesson-sections/by-ids [ids]
+        api --> repos : 200 List<LessonSectionDTO>
+        repos -> stores : setLessonSections(sections)
+    end
+    repos --> hooks : LessonDTO
+    hooks -> hooks : secciones por orderIndex;\ncurrentSection = sections[0]
+end
+hooks --> igScreen : useInstrumentGenreLesson: { lessons, activeLesson }\nuseLesson: { sections, currentSection, goToNext, goToPrevious }
+
+alt el itinerario no tiene lecciones
+    igScreen --> actor : "Este itinerario aún no tiene lecciones"
+else no se pudo cargar la lección
+    igScreen --> actor : "No se pudo cargar el contenido"
+else
+    igScreen --> actor : lección activa (imagen, título, estrellas),\nLessonSectionViewer y EdgePanel con el itinerario
+end
+
+opt 6a. Selecciona otra lección del itinerario
+    actor -> igScreen : elige una lección en el EdgePanel
+    igScreen -> hooks : setActiveLessonId(id)
+    hooks -> repos : useLesson(id) (lección + secciones)
+    repos --> hooks : LessonDTO
+    hooks --> igScreen : nueva activeLesson, sections, primera sección
+    loop navega entre secciones
+        actor -> igScreen : siguiente / anterior
+        igScreen -> hooks : goToNext() / goToPrevious()
+        hooks --> igScreen : currentSection
+        igScreen --> actor : vídeo de YouTube (si tiene) y contenido HTML
+    end
+end
+
+@enduml

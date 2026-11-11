@@ -17,6 +17,8 @@ const autoComplete = Platform.select<TextInputProps['autoComplete']>({
 
 type EmailVerificationModalProps = {
   email: string;
+  /** Título del modal; por defecto el del registro */
+  title?: string;
   /** Registro en curso con el código: se bloquea el campo y se muestra el spinner */
   submitting: boolean;
   /** Error del último intento (código incorrecto, caducado...) */
@@ -27,12 +29,14 @@ type EmailVerificationModalProps = {
 };
 
 /**
- * Paso final del registro: el usuario escribe el código de 6 dígitos que le llegó por email.
+ * Paso final del registro (y de "Olvidé mi contraseña"): el usuario escribe el código de 6
+ * dígitos que le llegó por email.
  * Al completar las 6 cifras se envía solo. El padre lo monta solo mientras está abierto,
  * así que cada apertura empieza con el campo vacío y la cuenta atrás del reenvío a cero.
  */
 export default function EmailVerificationModal({
   email,
+  title = 'Verifica tu email',
   submitting,
   error,
   onSubmit,
@@ -83,7 +87,7 @@ export default function EmailVerificationModal({
 
   return (
     <BaseModal visible onClose={submitting ? () => {} : onClose} maxWidth={340}>
-      <Text className="text-primary text-xl font-bold text-center mb-2">Verifica tu email</Text>
+      <Text className="text-primary text-xl font-bold text-center mb-2">{title}</Text>
       <Text className="text-secondary text-center mb-5">
         Hemos enviado un código de {CELL_COUNT} dígitos a{'\n'}
         <Text className="font-semibold">{email}</Text>

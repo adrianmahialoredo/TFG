@@ -1,0 +1,78 @@
+@startuml DSD-CU-13-1
+title DSD-CU-13 (1/2) - Recuperar contraseña (app)
+
+' Parte de la app de la realización de CU-13 (análisis en
+' diagrams/use_cases/description/CU13_recuperar_contrasena.puml). El backend es una sola línea
+' de vida ("API REST"); lo que hace cada endpoint está en DSD-CU-13 (2/2).
+' Fuentes: screens/LoginScreen.tsx, screens/ForgotPasswordScreen.tsx,
+' components/EmailVerificationModal.tsx, hooks/useForgotPassword.ts, utils/password.utils.ts,
+' repositories/auth.repository.ts, services/auth.service.ts.
+' No se toca ninguna store: no hay sesión hasta que el usuario inicia sesión (CU-02).
+!include ../_estilo.iuml
+
+actor "Visitante" as actor
+box "App (React Native)" #F3F8FF
+    participant "LoginScreen\n<<Nivel 7>>" as login
+    participant "ForgotPasswordScreen\n(+ EmailVerificationModal)\n<<Nivel 7>>" as screen
+    participant "useForgotPassword\n<<Nivel 6>>" as hook
+    participant "authRepository\n<<Nivel 3>>" as repo
+    participant "authService\n<<Nivel 1>>" as service
+end box
+participant "API REST\n(backend)" as api
+
+actor -> login : pulsa "Olvidé mi contraseña"
+login -> screen : navigate('ForgotPasswordScreen',\n{ email } si el campo tiene un email)
+screen -> hook : useForgotPassword(email) (step = 'email')
+actor -> screen : escribe el email, pulsa "Enviar código"
+screen -> hook : requestCode()
+alt !EMAIL_REGEX.test(email)
+    hook --> screen : throw Error('Email no válido')
+    screen --> actor : showAlert({ title: 'Error', message })
+else
+    hook -> repo : requestPasswordResetCode(email.trim())
+    repo -> service : requestPasswordResetCode(email)
+    service -> api : POST /api/auth/password-reset/code { email }
+    alt 429
+        api --> service : 429
+        service --> hook : AuthServiceError(status 429)
+        hook -> hook : codeError = 'Ya te enviamos un código hace poco…'
+    else 204
+        api --> service : 204 No Content
+    end
+    hook -> hook : step = 'code'
+    screen --> actor : EmailVerificationModal\n(title "Recupera tu contraseña", reenviar tras 60 s)
+
+    actor -> screen : escribe las 6 cifras
+    screen -> hook : submitCode(code)
+    hook -> service : verifyPasswordResetCode(email, code) (vía repo)
+    service -> api : POST /api/auth/password-reset/verify { email, code }
+    alt 400 (incorrecto, caducado, sin pedir, 5 fallos)
+        api --> service : 400 { message }
+        service --> hook : AuthServiceError(mensaje en español)
+        hook -> hook : codeError = mensaje (el modal sigue abierto)
+    else 204
+        api --> service : 204
+        hook -> hook : code = código; step = 'password'
+        screen --> actor : campos "Nueva contraseña" y "Repetir contraseña"
+        actor -> screen : pulsa "Cambiar contraseña"
+        screen -> hook : resetPassword(password, confirm)
+        hook -> hook : coinciden y passwordError(password) === null
+        alt Inválida
+            hook --> screen : throw Error(primera regla incumplida)
+            screen --> actor : showAlert({ title: 'Error', message })
+        else Válida
+            hook -> service : resetPassword(email, code, password) (vía repo)
+            service -> api : POST /api/auth/password-reset\n{ email, code, newPassword }
+            alt 400 por el código (caducó mientras tanto)
+                api --> service : 400
+                hook -> hook : step = 'email' (pedir otro código)
+                screen --> actor : showAlert(error)
+            else 204
+                api --> service : 204 No Content
+                screen --> actor : showAlert('Contraseña cambiada',\n'Ya puedes iniciar sesión con tu nueva contraseña')
+                screen -> login : navigation.goBack()
+            end
+        end
+    end
+end
+@enduml

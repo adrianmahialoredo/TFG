@@ -7,11 +7,13 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { render } from '@react-email/components';
 import VerificationCodeEmail from '../emails/verification-code';
+import PasswordResetEmail from '../emails/password-reset';
 
 const OUT_DIR = join(dirname(fileURLToPath(import.meta.url)), '../../src/main/resources/templates/email');
 
 const templates = {
   'verification-code': <VerificationCodeEmail code="{{code}}" minutes="{{minutes}}" />,
+  'password-reset': <PasswordResetEmail code="{{code}}" minutes="{{minutes}}" />,
 };
 
 await mkdir(OUT_DIR, { recursive: true });

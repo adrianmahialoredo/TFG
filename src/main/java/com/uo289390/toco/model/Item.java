@@ -71,12 +71,12 @@ public abstract class Item implements Identifiable<Long> {
     protected String imageUrl;
 
     /**
-     * Level of the item, represented as a rating between 1 and 5 stars.
+     * Level of the item, represented as a rating between 0 and 5 stars (validated in ItemDTO).
      * This field is optional and can be null.
      */
     //@Min(value = 1, message = "Level must be at least 1")
     //@Max(value = 5, message = "Level must be at most 5")
-    protected int level;  // between 1 and 5 stars
+    protected int level;  // between 0 and 5 stars
 
     /**
      * Timestamp indicating when the item was created.

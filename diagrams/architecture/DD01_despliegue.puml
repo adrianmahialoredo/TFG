@@ -1,25 +1,26 @@
 @startuml DD-01
 title DD-01 - Diagrama de despliegue del sistema (producción)
 
-' Despliegue objetivo de la aplicación publicada. Datos tomados del proyecto:
-'   - pom.xml: artefacto TOCO-0.0.1-SNAPSHOT.jar, Java 23, Spring Boot 3.4.
-'   - application.properties: Tomcat embebido en el puerto 8080, base de datos
-'     PostgreSQL "demo" en el 5432, pool HikariCP (máx. 10 conexiones), Spring Mail.
-'   - frontend/package.json y app.json: Expo SDK 57, React Native 0.86.
-'
-' Diferencias con el entorno de desarrollo actual (no se dibujan):
-'   - El backend y PostgreSQL corren en el PC de desarrollo (localhost:5432) y
-'     la app llama por HTTP a la IP de la red local (BASE_URL en apiConfig.ts).
-'   - La app se instala como development build (expo-dev-client) y el JS lo
-'     sirve Metro; en producción va empaquetado en la build de release.
-'   - La redirect_uri de Spotify es http://127.0.0.1:8080/...; en producción
-'     es la URL HTTPS pública del servidor (SPOTIFY_REDIRECT_URI).
-' Al publicar hay que cambiar BASE_URL a la URL HTTPS del servidor y dar a la
-' API un certificado TLS (proxy inverso o server.ssl de Spring Boot).
-' El servidor de base de datos puede compartir máquina con el de aplicaciones.
+' Despliegue real de la aplicación publicada. Datos tomados del proyecto:
+'   - frontend/package.json, app.json y eas.json: Expo SDK 58, React Native 0.88.1,
+'     paquete com.uo289390.toco, APK generado con EAS Build (perfil "preview",
+'     distribution internal, buildType apk). La URL del backend se fija con
+'     EXPO_PUBLIC_API_URL (https://<servicio>.onrender.com).
+'   - render.yaml: servicio web "toco-backend", runtime docker, plan free, región
+'     frankfurt, health check /actuator/health.
+'   - Dockerfile: imagen eclipse-temurin:23-jre con app.jar (TOCO-0.0.1-SNAPSHOT.jar,
+'     Spring Boot 3.4.3); Tomcat embebido en server.port=${PORT}.
+'   - application.properties: PostgreSQL de Neon (DB_URL con sslmode=require),
+'     HikariCP máx. 10 conexiones, Spring Mail con STARTTLS.
+'   - README (Despliegue): Brevo smtp-relay.brevo.com:2525, porque el plan gratuito
+'     de Render bloquea los puertos SMTP 25, 465 y 587.
+'   - EmailVerificationServiceImpl: el correo se envía en segundo plano
+'     (applicationTaskExecutor).
+' El entorno de desarrollo (backend y PostgreSQL en localhost, development build
+' con Metro) no se dibuja.
 skinparam roundcorner 6
-skinparam nodesep 70
-skinparam ranksep 80
+skinparam nodesep 50
+skinparam ranksep 70
 skinparam defaultTextAlignment center
 skinparam node {
     BackgroundColor<<device>> #F3F8FF
@@ -44,56 +45,48 @@ skinparam ArrowColor #555555
 ' Cliente
 ' ---------------------------------------------------------------------
 
-node "Smartphone" <<device>> as phone {
-    node "Android / iOS" <<os>> as os {
-        node "React Native Runtime\n(Expo SDK 57, Hermes)" <<executionEnvironment>> as rn {
-            artifact "TOCO app\n(build de release .aab / .ipa)" as app
-            component "Zustand\n(stores en RAM)" as zustand
-        }
-        database "AsyncStorage\n(SQLite en Android,\nficheros en iOS)" as async
-        node "Navegador del sistema\n(expo-web-browser)" <<executionEnvironment>> as browser
-        component "Micrófono" <<hardware>> as mic
+node "Móvil Android" <<device>> as phone {
+    node "React Native\n(Expo SDK 58, RN 0.88.1)" <<executionEnvironment>> as rn {
+        artifact "TOCO app\n(APK com.uo289390.toco)" as app
     }
+    database "AsyncStorage\n(caché en disco)" as async
+    node "Navegador del móvil\n(expo-web-browser)" <<executionEnvironment>> as browser
+    component "Micrófono" <<hardware>> as mic
 }
 
-app --> zustand
-app --> async : caché en disco
+app --> async
 app --> mic : react-native-audio-api\n(afinador)
-app ..> browser : abre authUrl
+app ..> browser : abre la URL de\nautorización de Spotify
+
+cloud "Expo EAS Build" as eas {
+    artifact "APK\n(perfil preview)" as apk
+}
+apk ..> app : <<deploy>>\ninstalación
 
 ' ---------------------------------------------------------------------
-' Servidor de aplicaciones
+' Backend en Render
 ' ---------------------------------------------------------------------
 
-node "Application Server" <<device>> as appserver {
-    node "OpenJDK 23 (JRE)" <<executionEnvironment>> as jre {
-        node "Apache Tomcat embebido\n:8080" <<executionEnvironment>> as tomcat {
-            artifact "TOCO-0.0.1-SNAPSHOT.jar\n(Spring Boot 3.4)" as jar
+cloud "Render (plan free, frankfurt)" as render {
+    node "Proxy HTTPS :443\n(terminación TLS)" <<executionEnvironment>> as proxy
+    node "Contenedor Docker\n(eclipse-temurin:23-jre)" <<executionEnvironment>> as docker {
+        node "Tomcat embebido\n:${PORT}" <<executionEnvironment>> as tomcat {
+            artifact "app.jar\n(TOCO-0.0.1-SNAPSHOT.jar,\nSpring Boot 3.4.3)" as jar
         }
     }
 }
-
-' ---------------------------------------------------------------------
-' Servidor de base de datos
-' ---------------------------------------------------------------------
-
-node "Database Server" <<device>> as dbserver {
-    node "PostgreSQL 14+\n:5432" <<executionEnvironment>> as postgres {
-        database "demo" as demo
-    }
-}
+proxy --> tomcat : HTTP
 
 ' ---------------------------------------------------------------------
 ' Servicios externos
 ' ---------------------------------------------------------------------
 
-cloud "Spotify Platform" as spotify {
-    component "Spotify Accounts\n(accounts.spotify.com)" as spotify_accounts
-    component "Spotify Web API\n(api.spotify.com)" as spotify_api
+cloud "Neon" as neon {
+    database "PostgreSQL" as pg
 }
 
-cloud "Gmail" as gmail {
-    component "Servidor SMTP\n:587 (STARTTLS)" as smtp
+cloud "Brevo" as brevo {
+    component "SMTP\nsmtp-relay.brevo.com:2525" as smtp
 }
 
 cloud "Cloudinary" as cloudinary {
@@ -101,21 +94,26 @@ cloud "Cloudinary" as cloudinary {
 }
 
 cloud "YouTube" as youtube {
-    component "Reproductor embebido\n(iframe)" as youtube_player
+    component "Reproductor embebido" as youtube_player
+}
+
+cloud "Spotify" as spotify {
+    component "Spotify Accounts\n(accounts.spotify.com)" as spotify_accounts
+    component "Spotify Web API\n(api.spotify.com)" as spotify_api
 }
 
 ' ---------------------------------------------------------------------
 ' Comunicaciones
 ' ---------------------------------------------------------------------
 
-app --> jar : HTTPS / JSON REST\nAuthorization: Bearer <JWT>
-jar --> demo : JDBC / TCP :5432\n(pool HikariCP)
-jar --> spotify_accounts : HTTPS :443\nOAuth2 (intercambio y renovación de tokens)
+app --> proxy : HTTPS :443 / JSON REST\nAuthorization: Bearer <JWT>
+jar --> pg : JDBC sobre TLS\n(sslmode=require, HikariCP máx. 10)
+jar --> smtp : SMTP STARTTLS\n(código de verificación, asíncrono)
+jar --> spotify_accounts : HTTPS :443\nOAuth2 (tokens)
 jar --> spotify_api : HTTPS :443\nREST (Bearer de Spotify)
 browser --> spotify_accounts : HTTPS :443\nAuthorization Code Flow
-browser --> jar : HTTPS (redirect_uri)\nGET /api/spotify/callback
-jar --> smtp : SMTP\n(código de verificación)
-app --> cloudinary_api : HTTPS :443\n(imagen de perfil)
-app --> youtube_player : HTTPS :443\n(vídeos de lecciones)
+browser --> proxy : HTTPS (redirect_uri)\nGET /api/spotify/callback
+app --> cloudinary_api : HTTPS :443\n(subida directa de imágenes\nde perfil y de listas)
+app --> youtube_player : HTTPS :443\n(vídeos de canciones,\nlecciones y géneros)
 
 @enduml

@@ -1,0 +1,50 @@
+@startuml DSD-CU-02-2
+title DSD-CU-02 (2/2) - Iniciar sesión: endpoints del backend
+
+' Lo que hace el backend en las peticiones de DSD-CU-02 (1/2).
+' Fuentes: AuthController.java, LoginRequestDto.java, LoginResponse.java, UserServiceImpl.java,
+' UserRepository.java, JwtUtil.java, GlobalExceptionHandler.java, SecurityConfig.java,
+' ItemController.java, GenreController.java.
+' No hay AuthService en el backend: AuthController delega en UserServiceImpl.login.
+' Se busca primero por email (un username es texto libre y podría parecer un email) y el
+' mensaje es el mismo para usuario inexistente y contraseña errónea: no revela qué cuentas existen.
+!include ../_estilo.iuml
+
+participant "App\n(services)" as app
+box "Backend (Spring Boot)" #FFF9F0
+    participant "AuthController\n<<controller>>" as ctrl
+    participant "UserServiceImpl\n<<service>>" as userService
+    participant "UserRepository\n<<repository>>" as userRepo
+    participant "JwtUtil\n<<security>>" as jwt
+end box
+database "PostgreSQL" as db
+
+group POST /api/auth/login
+    app -> ctrl : login(@Valid LoginRequestDto)
+    ctrl -> userService : login(dto.getIdentifier(), dto.getPassword())
+    userService -> userRepo : findByEmail(login)
+    userRepo -> db : SELECT
+    userRepo --> userService : Optional<User>
+    opt No hay ningún usuario con ese email
+        userService -> userRepo : findByUsername(login)
+        userRepo --> userService : Optional<User>
+    end
+    alt Usuario inexistente o contraseña errónea
+        userService -> userService : passwordEncoder.matches(password, hash)\n(solo si hay usuario)
+        userService --> ctrl : BadCredentialsException("Invalid credentials")
+        ctrl --> app : 401 Unauthorized { message }\n(handleBadCredentials)
+    else Credenciales válidas
+        userService -> jwt : generateToken(user.getId(), user.getRole())
+        jwt --> userService : token (subject = id, claim role)
+        userService --> ctrl : LoginResponse(token,\ndtoMapper.userToUserResponseDto(user))
+        ctrl --> app : 200 OK LoginResponse { token, user }
+    end
+end
+
+group GET /api/items | GET /api/genres (precarga)
+    app -> ctrl : ItemController.getAll() | GenreController.getAll()
+    note right of ctrl : ItemServiceImpl / GenreServiceImpl ->\nItemRepository / GenreRepository.findAll()\n-> DtoMapper
+    ctrl --> app : 200 List<ItemSummaryDTO> | List<GenreDTO>
+end
+
+@enduml

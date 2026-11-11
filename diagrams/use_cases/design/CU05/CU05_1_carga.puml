@@ -1,0 +1,102 @@
+@startuml DSD-CU-05-1
+title DSD-CU-05 (1/3) - Consultar detalle de canción y lección: carga (app)
+
+' Parte de la app de la realización de CU-05 (análisis en
+' diagrams/use_cases/description/CU05_consultar_cancion.puml). El backend se dibuja como una
+' sola línea de vida ("API REST"); lo que hace cada endpoint está en DSD-CU-05 (3/3).
+' Fuentes: screens/SongScreen.tsx, hooks/useSong.ts, stores/ui/songScreen.store.ts,
+' repositories/song.repository.ts, songLesson.repository.ts, chord.repository.ts,
+' tabSection.repository.ts, item.repository.ts, utils/entityCache.utils.ts,
+' stores/entities/recentItems.entities.store.ts, services/song, songLesson, chord,
+' tabSection .service.ts.
+' Diferencias con el guion:
+' - La pantalla es SongScreen (no SongDetailScreen) y el hook useSong(songId).
+' - songRepository.getById no usa la caché genérica para la canción: mira RAM (useSongEntitiesStore),
+'   luego disco (songLocal.getById) y solo después songService.getById. Si la sirve de caché,
+'   cache.revalidate([id]) la vuelve a pedir en segundo plano.
+' - Las lecciones NO se piden con GET /api/song-lessons/by-song/{songId} (existe, SongLessonController.
+'   getForSong, pero la app no lo usa): se cargan desde song.lessonIds con
+'   songLessonRepository.getAllById -> POST /api/song-lessons/by-ids.
+' - Acordes y tablaturas de TODAS las lecciones se piden a la vez, así que cambiar de dificultad
+'   o de instrumento no hace peticiones (DSD-CU-05 2/3).
+' - La pantalla no llama a ningún repositorio (Nivel 7): todo lo hace useSong.
+' - markAsAccessed lo llama useSong (no la pantalla) sin esperar, y escribe en useRecentItemsStore
+'   (zustand persist sobre AsyncStorage), sin backend.
+!include ../_estilo.iuml
+
+actor "Músico" as actor
+box "App (React Native)" #F3F8FF
+    participant "SongScreen\n<<Nivel 7>>" as screen
+    participant "useSong\n<<Nivel 6>>" as hook
+    participant "useSongScreenStore\n<<Nivel 5>>" as uiStore
+    participant "song / songLesson /\nchord / tabSection / item\nRepository <<Nivel 3>>" as repos
+    participant "Entity Stores\n<<Nivel 4>>" as stores
+    participant "song / songLesson /\nchord / tabSection\nService <<Nivel 1>>" as services
+end box
+participant "API REST\n(backend)" as api
+
+actor -> screen : abre una canción\nnavigate('SongScreen', { songId })
+screen -> hook : useSong(songId)
+hook -> uiStore : reset()
+hook -> uiStore : setLoading(true)
+hook -> repos : songRepository.getById(songId) (loadData)
+hook ->> repos : itemRepository.markAsAccessed(songId)\n(sin esperar)
+repos ->> stores : useRecentItemsStore.markAsAccessed(userId, id)
+note right of stores : "Recientes" del Home: solo frontend,\nhasta MAX_RECENT_ITEMS (12),\npersistido en AsyncStorage
+
+group songRepository.getById(songId)
+    repos -> stores : useSongEntitiesStore.songs[id]
+    alt canción en RAM o en disco (songLocal.getById)
+        stores --> repos : SongDTO
+        repos ->> services : cache.revalidate([id])
+        services ->> api : POST /api/songs/by-ids\n(segundo plano, una vez por sesión)
+    else cache-miss
+        repos -> services : songService.getById(id)
+        services -> api : GET /api/songs/{id}
+        alt la canción existe
+            api --> services : 200 SongDTO
+            services --> repos : SongDTO
+            repos -> repos : cache.markFresh([id])\nsongLocal.saveSingle(song)
+        else no existe
+            api --> services : 404 Not Found
+            services --> repos : AxiosError 404
+            repos --> hook : null
+            hook -> uiStore : setLoading(false)
+            screen --> actor : "Canción no encontrada"
+        end
+    end
+    repos -> stores : useSongEntitiesStore.setSongs([song])
+
+    opt song.lessonIds no vacío
+        repos -> repos : songLessonRepository.getAllById(song.lessonIds)
+        note right of repos : createEntityCache.getAllById:\nRAM -> disco -> API (solo los que falten)
+        opt faltan lecciones en caché
+            repos -> services : songLessonService.getAllById(missing)
+            services -> api : POST /api/song-lessons/by-ids [ids]
+            api --> services : 200 List<SongLessonDTO>
+            services --> repos : SongLessonDTO[]
+            repos -> stores : setSongLessons(lessons)
+        end
+        par acordes y tablaturas de todas las lecciones (Promise.allSettled)
+            repos -> repos : chordRepository.getAllById(chordIds)
+            opt faltan acordes en caché
+                repos -> services : chordService.getAllById(missing)
+                services -> api : POST /api/chords/by-ids [ids]
+                api --> services : 200 List<ChordDto>
+                repos -> stores : setChords(chords)
+            end
+        else
+            repos -> repos : tabSectionRepository.getAllById(tabIds)
+            opt faltan tablaturas en caché
+                repos -> services : tabSectionService.getAllById(missing)
+                services -> api : POST /api/tab-sections/by-ids [ids]
+                api --> services : 200 List<TabSectionDTO>
+                repos -> stores : setTabSections(tabs)
+            end
+        end
+    end
+    repos --> hook : SongDTO
+end
+hook -> uiStore : setLoading(false)
+
+@enduml

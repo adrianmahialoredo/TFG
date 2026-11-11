@@ -14,7 +14,7 @@ La arquitectura interna del frontend está detallada en [`frontend/bible.md`](fr
 | Base de datos | PostgreSQL. Esquema gestionado por Hibernate (`spring.jpa.hibernate.ddl-auto=update`) |
 | Frontend | React Native (Expo), Axios, Zustand, AsyncStorage |
 | Carga de datos | Scripts Python en `scripts/` que llaman a la API (`load_all_data.py`) |
-| Emails | Spring Mail (SMTP, Gmail) con plantillas hechas en React Email (`emails/`) y exportadas a `templates/email` |
+| Emails | Spring Mail (SMTP: Brevo en producción, cualquier SMTP en local) con plantillas hechas en React Email (`emails/`) y exportadas a `templates/email` |
 
 ### Capas del backend
 
@@ -94,6 +94,7 @@ En el código de servicios se aplica lo mismo: resultados como `Set`/`LinkedHash
 
 - Hibernate añade columnas y tablas, pero nunca borra ni relaja columnas existentes.
 - Campos primitivos nuevos en tablas con datos: añadir `@ColumnDefault` (PostgreSQL rechaza añadir una columna `NOT NULL` sin valor por defecto si la tabla ya tiene filas).
+- Quitar un campo de una entidad no borra su columna. Si era `NOT NULL`, los `insert` nuevos fallan: hay que borrarla con un script (p. ej. `preferences.difficulty_level`, que se quitó de `Preferences` y borra `migrate_preferences_table.py`).
 - Cambios que requieren mover datos se hacen con un script idempotente en `scripts/migrate_*.py` (ejemplos: `migrate_preferences_table.py`, `migrate_instrument_genre_lessons.py`, `migrate_song_chords_join_column.py`, `migrate_chord_instrument.py`).
 - Hibernate tampoco renombra columnas: si cambia el nombre de una columna o de una columna de unión, hace falta un script de migración (si no, intenta añadir la nueva y falla si es `NOT NULL`).
 
@@ -101,7 +102,7 @@ En el código de servicios se aplica lo mismo: resultados como `Set`/`LinkedHash
 
 ## 3. Resolución de entidades: `EntityResolver`
 
-Nadie llama a `repository.findById` fuera de `utils/EntityResolver`. Es un `@Component` que recibe los repositorios por constructor y los guarda en campos estáticos, para que los servicios hagan `import static ...EntityResolver.resolveX`.
+Nadie llama a `repository.findById` fuera de `utils/EntityResolver`. Es un `@Component` que recibe los repositorios por constructor y los guarda en campos estáticos, para que los servicios hagan `import static ...EntityResolver.resolveX`. Lleva `@Lazy(false)`: en Render el arranque es perezoso (`LAZY_INIT=true`) y, como ningún bean lo inyecta, nunca se crearía y los campos estáticos seguirían a `null` (500 en todas las altas con relaciones). `EntityResolverTest` comprueba la anotación.
 
 | Método | Devuelve | Si el id es `null` | Si no existe | Uso |
 |---|---|---|---|---|
@@ -252,7 +253,7 @@ Detalle del lado cliente en [`frontend/bible.md`](frontend/bible.md), sección *
 - Los controladores siempre devuelven `ResponseEntity`.
 - `200 OK`; `201 Created` al crear (`ResponseEntity.status(HttpStatus.CREATED).body(...)`); `204 No Content` al borrar; `404 Not Found` con `ResponseEntity.of(optional)` o con `delete(id) == false`.
 - `GlobalExceptionHandler`: `IllegalArgumentException` → 400, `BadCredentialsException` → 401, `EntityNotFoundException` → 404, errores de validación → 400 con el detalle por campo.
-- Validación de los bodies: los `create` usan `@Validated(OnCreate.class)` y los `update` `@Valid`, en todos los recursos. En auth, `verification-code` y `login` usan `@Valid` y `register` `@Validated(OnCreate.class)`. Una restricción nueva en un DTO hay que comprobarla antes contra los datos de `data/`, porque los scripts de carga pasan por los mismos endpoints.
+- Validación de los bodies: los `create` usan `@Validated(OnCreate.class)` y los `update` `@Valid`, en todos los recursos. En auth, `verification-code`, `login` y los tres de `password-reset` usan `@Valid` y `register` `@Validated(OnCreate.class)`. Una restricción nueva en un DTO hay que comprobarla antes contra los datos de `data/`, porque los scripts de carga pasan por los mismos endpoints.
 
 ### Estructura de un controlador
 
@@ -295,8 +296,8 @@ Cada método lleva Javadoc con `@param` y `@return` indicando los códigos de re
 - Parámetros en `RecommendationConstants`.
 - Dónde se usa cada una:
   - `GET /api/recommendations/items/by-item-list/{id}`: "Para ti" en la pantalla de añadir a una lista (10 canciones, 1 género, 3 instrument-genres y 6 lecciones). La app muestra solo 5 a la vez (`VISIBLE_RECOMMENDATIONS` en `useAddItemScreen`): al añadir una, cuando termina su tic entra la siguiente que estaba en espera. Para que esas 5 mezclen tipos, `ItemRecommendationServiceImpl.findForItemList` baraja el resultado (`Collections.shuffle`, como mucho 20 entidades, antes de mapearlas): es la excepción al "orden de prioridad", y cada petición da un orden distinto. La búsqueda no tiene este límite.
-  - `GET /api/recommendations/items/by-user/{id}`: sección "Recomendaciones" del Home (6, 1, 2 y 3).
-  - `GET /api/recommendations/songs/by-user/{id}`: sección "Según tus gustos" de la pantalla de canciones.
+  - `GET /api/recommendations/items/by-user/{id}`: sección "Para ti" del Home (6, 1, 2 y 3).
+  - `GET /api/recommendations/songs/by-user/{id}`: sección "Para ti" de la pantalla de canciones.
 
 ---
 
@@ -325,9 +326,19 @@ Reglas: el código caduca a los 10 minutos, se descarta tras 5 intentos fallidos
 
 Envío (`EmailServiceImpl`): SMTP configurado con `MAIL_*` en `.env`. Lee la plantilla HTML y la de texto plano de `templates/email` (generadas desde `emails/` con React Email) y sustituye sus marcadores `{{...}}`. Si no hay `JavaMailSender`, escribe el código en el log. Un fallo de SMTP lanza `IllegalStateException`; como el envío va en segundo plano, la app no se entera (ya tiene su 204), pero `EmailVerificationServiceImpl` descarta ese código para que se pueda pedir otro al momento sin esperar los 60 s. El SMTP tiene timeouts (5 s al conectar, 10 s al leer/escribir) para que un servidor lento no deje el envío colgado.
 
+### Recuperación de contraseña ("Olvidé mi contraseña")
+
+Enlace "Olvidé mi contraseña" bajo la contraseña del login (como en el mockup) → `ForgotPasswordScreen` (en el stack de acceso, junto a login y registro). Si el campo del login tenía un email, se lleva.
+
+1. `POST /api/auth/password-reset/code` con el email. `EmailVerificationServiceImpl.sendPasswordResetCode` aplica el mismo límite de 60 s (429) y, solo si hay una cuenta con ese email, genera el código y lo envía en segundo plano con la plantilla `password-reset`. Responde 204 exista o no la cuenta: no revela qué emails están registrados.
+2. La app abre el mismo `EmailVerificationModal` del registro (con otro título) y, al completar las 6 cifras, llama a `POST /api/auth/password-reset/verify`, que comprueba el código **sin gastarlo** (204 / 400). Así solo se pide la contraseña nueva con un código bueno.
+3. `POST /api/auth/password-reset` con email, código y `newPassword` (misma política que el registro, validada en `PasswordResetDto` y antes en la app con `utils/password.utils.ts`). `AuthController` comprueba el código, `UserServiceImpl.resetPassword` guarda el hash nuevo (`findByEmailIgnoreCase`) y el código se consume. 204; la app vuelve al login y el usuario entra con la contraseña nueva.
+
+Los códigos de recuperación tienen las mismas reglas que los del registro (10 min, 5 intentos, 60 s), pero van en otro mapa (`resetCodes`): un código de registro no cambia una contraseña ni al revés. No se cierra ninguna sesión abierta: los JWT no se revocan (son sin estado) y caducan solos.
+
 El email no se puede cambiar después del registro: el perfil de la app lo muestra como solo lectura y `PUT /api/users/{id}` ignora el que llegue en el body (`UserServiceImpl.update` conserva el guardado y solo comprueba que el nombre de usuario esté libre).
 
-Nivel musical: el usuario lo elige en el perfil con un slider de 0 a 5 (la escala de las estrellas) y se guarda con `PUT /api/users/{id}` (`difficultyLevel`). Es opcional en el body: si no llega se conserva el actual, y fuera de 0-5 se responde 400 (`@Min`/`@Max` de `UserDto` con `@Valid`; `UserServiceImpl` lo vuelve a comprobar). El registro no lo admite: todo usuario empieza en el nivel por defecto (1). Lo usan las recomendaciones y la dificultad por defecto de las canciones.
+Nivel musical: el usuario lo elige en el perfil con un slider de 0 a 5 (la escala de las estrellas) y se guarda con `PUT /api/users/{id}` (`difficultyLevel`). Es `User.difficultyLevel`; `Preferences` solo guarda los favoritos (su antiguo `difficultyLevel` de 0 a 100 no se usaba y se quitó). Es opcional en el body: si no llega se conserva el actual, y fuera de 0-5 se responde 400 (`@Min`/`@Max` de `UserDto` con `@Valid`; `UserServiceImpl` lo vuelve a comprobar). El registro no lo admite: todo usuario empieza en el nivel por defecto (1). Lo usan las recomendaciones y la dificultad por defecto de las canciones.
 
 ### Flujo OAuth2 de Spotify
 
@@ -454,18 +465,18 @@ cambia algo nativo (dependencias, plugins o permisos de `app.json`). Pasos en el
 **En Expo Go el afinador funciona en modo demostración.** `utils/microphone.utils.ts` define una interfaz `Microphone`
 con dos implementaciones, y `useTuner` elige una con `isRunningInExpoGo()`:
 - Nativa (`createNativeMicrophone`): carga `react-native-audio-api` con `require` al crearse, nunca al importar el fichero. Un `import` arriba haría que la app entera fallase al arrancar en Expo Go, porque la navegación importa la pantalla del afinador. Nadie más debe importar la librería directamente.
-- Simulada (`createSimulatedMicrophone`): genera bloques con el sonido de una cuerda (fundamental más débil que el 2.º armónico, como una cuerda grave real). Cada cuerda empieza desafinada y se va afinando durante 4 s; sin cuerda fijada las recorre una a una. Pasa por el mismo YIN y el mismo hook, así que sirve para probar la pantalla, la aguja y la rueda. No pide permiso. La pantalla muestra un aviso de "Modo demostración".
+- Simulada (`createSimulatedMicrophone`): genera bloques con el sonido de una cuerda (fundamental más débil que el 2.º armónico, como una cuerda grave real). Simula la cuerda seleccionada, que empieza desafinada y se va afinando durante 4 s. Pasa por el mismo YIN y el mismo hook, así que sirve para probar la pantalla, la aguja y la rueda. No pide permiso. La pantalla muestra un aviso de "Modo demostración".
 
 Con `expo-dev-client` instalado, `npx expo start` abre por defecto la development build. Para abrir en Expo Go se usa `npx expo start --go` (o se pulsa `s` en la consola para cambiar de modo). El plugin de `app.json` añade solo el permiso de micrófono
 (`RECORD_AUDIO` en Android, `NSMicrophoneUsageDescription` en iOS), sin modo en segundo plano ni servicio en primer plano.
 
 Flujo y reparto por capas:
 - `utils/pitch.utils.ts`: detección de la fundamental con **YIN** en JS puro. Un bloque por debajo de `MIN_RMS` (silencio) o sin periodicidad clara (ruido) devuelve `null`. Se usa YIN y no el pico de una FFT porque en las cuerdas graves el 2.º armónico suele ser más fuerte que la fundamental.
-- `utils/tuner.utils.ts`: nota ↔ frecuencia (La4 = 440 Hz, temperamento igual), desviación en cents, cuerda más cercana (comparando en cents) y consejo (`Afinado` dentro de ±5 cents, `Tensar` si está baja, `Destensar` si está alta).
+- `utils/tuner.utils.ts`: nota ↔ frecuencia (La4 = 440 Hz, temperamento igual), desviación en cents y consejo (`Afinado` dentro de ±5 cents, `Tensar` si está baja, `Destensar` si está alta).
 - `utils/microphone.utils.ts`: fuente de audio (real o simulada, ver arriba). La real configura la sesión de audio de iOS (`record` + `measurement`, sin el procesado de voz) y entrega bloques de 4096 muestras.
-- `hooks/useTuner.ts` (Nivel 6, como `useMetronome` con `expo-audio`): permiso de micrófono, arranque/parada (con cancelación si se para mientras se pide el permiso) y lectura suavizada (mediana de 3 bloques). Sin cuerda fijada compara con la más cercana; `selectString` fija una.
+- `hooks/useTuner.ts` (Nivel 6, como `useMetronome` con `expo-audio`): permiso de micrófono, arranque/parada (con cancelación si se para mientras se pide el permiso) y lectura suavizada (mediana de 3 bloques). Compara siempre con la **cuerda seleccionada** (`selectedString`; la primera al abrir y al cambiar de afinación) y `selectString(i)` elige otra. No hay detección automática de la cuerda: comparar con la más cercana daba saltos entre cuerdas (los armónicos de una cuerda grave caen cerca de las agudas), así que se quitó y el músico elige qué cuerda afina.
 - `hooks/useTunes.ts`: afinaciones del catálogo (`tuneRepository.getAll`, Cache-First) con su etiqueta "Instrumento (Afinación)", ordenadas por instrumento y por id. La afinación por defecto es la primera de un instrumento favorito del usuario.
-- `components/tuner/`: `TunerStringSelector` (botón por cuerda), `TunerGauge` (semicírculo SVG y aguja con Reanimated; verde si está afinada) y `TuneWheel` (rueda vertical de 3 filas).
+- `components/tuner/`: `TunerStringSelector` (botón por cuerda; la seleccionada va rellena en dorado), `TunerGauge` (semicírculo SVG y aguja con Reanimated; verde si está afinada) y `TuneWheel` (rueda vertical de 3 filas).
 
 Comportamiento: escucha al entrar en la pantalla y para al salir (los tabs no se desmontan). Cambiar de afinación
 deja de escuchar; se vuelve a escuchar tocando el medidor o una cuerda. Sin permiso se ofrece abrir los ajustes.

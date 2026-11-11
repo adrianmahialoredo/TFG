@@ -2,6 +2,7 @@
 title DS-CU-02 - Iniciar sesión
 
 ' Diagrama de secuencia de análisis (patrón Boundary-Control-Entity)
+' Fuentes: LoginScreen.tsx, AuthContext.tsx, auth.service.ts, AuthController.java, UserServiceImpl.java
 autonumber
 hide footbox
 skinparam sequenceMessageAlign center
@@ -11,31 +12,38 @@ actor "Visitante" as visitante
 boundary "LoginScreen" as pantalla
 control "GestorAutenticacion" as gestor
 entity "Usuario" as usuario
-entity "CatalogoItems" as catalogo
+entity "DatosGlobales\n(catálogo, géneros)" as datos
 
 visitante -> pantalla : abrirFormularioLogin()
 visitante -> pantalla : introducirCredenciales(email o usuario, pass)
-pantalla -> gestor : autenticar(identificador, pass)
-note right of gestor : POST /api/auth/login
-gestor -> usuario : buscarPorEmail(identificador)
-alt No hay ningún usuario con ese email
-    gestor -> usuario : buscarPorNombreUsuario(identificador)
-end
-usuario --> gestor : usuario
-gestor -> gestor : validarHashPassword(pass)
 
-alt Credenciales inválidas o usuario inexistente
-    gestor --> pantalla : 401 Unauthorized
-    pantalla --> visitante : mostrarError("Usuario, email o contraseña incorrectos")
-else Credenciales válidas
-    gestor -> gestor : generarToken(id, rol)
-    gestor --> pantalla : LoginResponse(token, perfil)
-    pantalla -> pantalla : guardarTokenLocal(token)
-    note right of pantalla : AuthStore + UserEntitiesStore\n(el interceptor HTTP añade el token\na las peticiones siguientes)
-    pantalla -> catalogo : precargarCatalogoItems()
-    note right of catalogo : GET /api/items
-    catalogo --> pantalla : ItemSummaryDTO[]
-    pantalla --> visitante : redirigirInicio()
+alt Campo vacío
+    pantalla --> visitante : mostrarError("Por favor ingresa tu email o tu usuario"\no "Por favor ingresa tu contraseña")
+else Campos rellenos
+    pantalla -> gestor : autenticar(identificador, pass)
+    note right of gestor : POST /api/auth/login
+    gestor -> usuario : buscarPorEmail(identificador)
+    alt No hay ningún usuario con ese email
+        gestor -> usuario : buscarPorNombreUsuario(identificador)
+    end
+    usuario --> gestor : usuario
+    gestor -> gestor : validarHashPassword(pass)
+
+    alt Credenciales inválidas o usuario inexistente
+        gestor --> pantalla : 401 Unauthorized
+        pantalla --> visitante : mostrarError("Usuario, email o contraseña incorrectos")
+    else Credenciales válidas
+        gestor -> gestor : generarToken(id, rol)
+        gestor --> pantalla : 200 OK + LoginResponse(token, perfil)
+        pantalla -> pantalla : guardarTokenLocal(token)
+        note right of pantalla : AuthStore + UserEntitiesStore\n(el interceptor HTTP añade el token\na las peticiones siguientes)
+        note over gestor, datos : AuthProvider detecta la sesión y precarga los datos globales
+        gestor ->> datos : precargarCatalogoItems()
+        note right of datos : GET /api/items\n(en segundo plano, no bloquea)
+        gestor -> datos : precargarGeneros()
+        datos --> gestor : géneros
+        pantalla --> visitante : redirigirInicio()
+    end
 end
 
 @enduml

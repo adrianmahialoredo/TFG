@@ -1,0 +1,58 @@
+@startuml DSD-CU-11-2
+title DSD-CU-11 (2/5) - Utilizar afinador cromático: arranque del micrófono (app)
+
+' Parte de la app de la realización de CU-11: start() de useTuner (sin backend).
+' Fuentes: screens/TunerScreen.tsx (useFocusEffect), hooks/useTuner.ts,
+' utils/microphone.utils.ts, utils/tuner.utils.ts; architecture.md §12 "Afinador".
+' Notas de diseño:
+'  - simulated = isMicrophoneSimulated() (isRunningInExpoGo()) se calcula una vez al montar
+'    useTuner. getMicrophone() es interna de useTuner y crea el micrófono una sola vez:
+'    microphoneRef ??= simulated ? createSimulatedMicrophone(...) : createNativeMicrophone().
+'  - En Expo Go el micrófono simulado (setInterval) genera bloques de una cuerda que se va
+'    afinando, sin pedir permiso; en una development build se usa react-native-audio-api.
+!include ../_estilo.iuml
+
+actor "Músico" as actor
+box "App (React Native)" #F3F8FF
+    participant "TunerScreen\n<<Nivel 7>>" as screen
+    participant "useTuner\n<<Nivel 6>>" as tuner
+    participant "Microphone\n(microphone.utils)" as mic
+end box
+participant "react-native-audio-api\n<<librería nativa>>" as lib
+
+== Arranque del micrófono (useFocusEffect al entrar en la pantalla) ==
+
+screen -> tuner : useTuner(tune.notes)\n(noteToFrequency por cuerda; simulated al montar)
+screen -> tuner : start()
+tuner -> tuner : si ya graba, return;\nsession = ++sessionRef; status = 'starting'
+tuner -> tuner : microphone = getMicrophone()
+tuner -> mic : requestPermission()
+mic -> lib : AudioManager.requestRecordingPermissions()\n(el simulado devuelve 'Granted' sin pedir nada)
+mic --> tuner : 'Granted' | 'Denied' | 'Undetermined'
+note right of tuner : si session !== sessionRef (se paró\nmientras esperaba), return
+
+alt Permiso no concedido
+    tuner -> tuner : status = 'denied'
+    tuner --> screen : status
+    screen --> actor : "El afinador necesita el micrófono..."\n+ "Abrir ajustes" (Linking.openSettings())
+else Permiso concedido
+    tuner -> mic : start(handleBlock, onError)
+    mic -> lib : [iOS] setAudioSessionOptions(record, measurement)\nsetAudioSessionActivity(true)
+    mic -> lib : recorder ??= new AudioRecorder(); onError(...)\nonAudioReady({ 44100 Hz, 4096 muestras, 1 canal })
+    mic -> lib : recorder.start()
+    alt No arranca (status 'error' de la librería)
+        mic -> mic : release()
+        mic --> tuner : throw Error
+        tuner -> tuner : status = 'error' (si es la sesión actual)\nreleaseMicrophone()
+        tuner --> screen : status
+        screen --> actor : "No se pudo usar el micrófono"
+    else Grabando
+        mic --> tuner : ok
+        tuner -> tuner : si se paró mientras arrancaba:\nreleaseMicrophone(); si no, status = 'listening'
+        tuner --> screen : status
+        screen --> actor : "Toca una cuerda"
+        note over tuner, lib : Sigue en DSD-CU-11 (3/5). Si la librería avisa\nluego por onError, status = 'error'
+    end
+end
+
+@enduml

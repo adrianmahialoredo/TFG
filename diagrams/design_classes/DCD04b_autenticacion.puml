@@ -1,0 +1,124 @@
+@startuml DCD-04b
+title DCD-04b - Diagrama de clases de diseño: seguridad (2/4) - autenticación
+
+' Login, registro con verificación de email y recuperación de contraseña. Continuación de DCD-04a.
+' Fuentes: controller/AuthController.java, service/UserService.java, UserServiceImpl.java,
+'          EmailVerificationService.java, EmailVerificationServiceImpl.java, EmailService.java,
+'          EmailServiceImpl.java, repository/UserRepository.java
+skinparam classAttributeIconSize 0
+skinparam roundcorner 6
+skinparam nodesep 40
+skinparam ranksep 55
+skinparam packageStyle rectangle
+skinparam class {
+    BackgroundColor<<RestController>> #E3F0FF
+    BorderColor<<RestController>> #3D6FA8
+    BackgroundColor<<Service>> #E6F5E6
+    BorderColor<<Service>> #3C8A3C
+    BackgroundColor<<interface>> #F4FBF4
+    BorderColor<<interface>> #3C8A3C
+    BackgroundColor<<Repository>> #FFF4E0
+    BorderColor<<Repository>> #B07A1F
+    BackgroundColor<<Component>> #F3F3F3
+    BackgroundColor<<external>> #FFFFFF
+    BorderColor<<external>> #888888
+}
+hide empty members
+
+package "controller" {
+    class AuthController <<RestController>> {
+        - userService : UserService
+        - emailVerificationService : EmailVerificationService
+        + sendVerificationCode(dto : VerificationCodeRequestDto) : ResponseEntity<Void>
+        + register(dto : UserDto) : ResponseEntity<LoginResponse>
+        + login(dto : LoginRequestDto) : ResponseEntity<LoginResponse>
+        + sendPasswordResetCode(dto : VerificationCodeRequestDto) : ResponseEntity<Void>
+        + verifyPasswordResetCode(dto : PasswordResetCodeDto) : ResponseEntity<Void>
+        + resetPassword(dto : PasswordResetDto) : ResponseEntity<Void>
+    }
+    note top of AuthController : @RequestMapping("/api/auth")\nregister: checkCode -> register -> consume\n-> login (201 + LoginResponse)\npassword-reset: checkPasswordResetCode ->\nresetPassword -> consumePasswordResetCode (204)
+}
+
+package "service" {
+    interface UserService <<interface>> {
+        + register(dto : UserDto) : UserDto
+        + login(identifier : String, password : String) : LoginResponse
+        + resetPassword(email : String, newPassword : String) : void
+        + findById(id : Long) : Optional<UserDto>
+        + update(id : Long, dto : UserDto) : Optional<UserDto>
+        + addFavoriteGenre(userId : Long, genreId : Long) : Optional<UserDto>
+        + findTopArtistsForUser(userId : Long, totalArtists : int) : Optional<List<String>>
+        {method} ...
+    }
+    class UserServiceImpl <<Service>> {
+        ~ {static} INVALID_CREDENTIALS : String = "Invalid credentials"
+        - userRepository : UserRepository
+        - passwordEncoder : BCryptPasswordEncoder
+        - jwtUtil : JwtUtil
+        - dtoMapper : DtoMapper
+        - entityMapper : EntityMapper
+    }
+    note bottom of UserServiceImpl : login: findByEmail, si no findByUsername;\nmismo 401 para usuario inexistente\ny contraseña errónea
+
+    interface EmailVerificationService <<interface>> {
+        + sendCode(email : String) : void
+        + checkCode(email : String, code : String) : void
+        + consume(email : String) : void
+        + sendPasswordResetCode(email : String) : void
+        + checkPasswordResetCode(email : String, code : String) : void
+        + consumePasswordResetCode(email : String) : void
+    }
+    class EmailVerificationServiceImpl <<Service>> {
+        - {static} CODE_DIGITS : int = 6
+        - random : SecureRandom
+        - pendingCodes : Map<String, PendingCode>
+        - resetCodes : Map<String, PendingCode>
+        - userRepository : UserRepository
+        - emailService : EmailService
+        - emailExecutor : Executor
+        - clock : Clock
+    }
+    note bottom of EmailVerificationServiceImpl
+        Códigos en memoria (registro y recuperación
+        en mapas separados): caducan a los 10 min,
+        5 intentos, reenvío tras 60 s (429).
+        Envío asíncrono (emailExecutor =
+        applicationTaskExecutor); si falla
+        se descarta el código. Recuperación de un
+        email sin cuenta: 204 sin enviar nada.
+    end note
+
+    interface EmailService <<interface>> {
+        + sendVerificationCode(to : String, code : String, minutes : long) : void
+        + sendPasswordResetCode(to : String, code : String, minutes : long) : void
+    }
+    class EmailServiceImpl <<Service>> {
+        - mailSender : ObjectProvider<JavaMailSender>
+        - from : String
+    }
+}
+
+package "repository" {
+    interface UserRepository <<Repository>> {
+        + findByEmail(email : String) : Optional<User>
+        + findByUsername(username : String) : Optional<User>
+        + existsByEmailIgnoreCase(email : String) : boolean
+        + findByEmailIgnoreCase(email : String) : Optional<User>
+    }
+}
+
+class "security.JwtUtil" as JwtUtil <<Component>> <<ver DCD-04a>>
+class "Servidor SMTP\n(Brevo)" as Smtp <<external>>
+
+AuthController --> UserService
+AuthController --> EmailVerificationService
+UserService <|.. UserServiceImpl
+UserServiceImpl ---> UserRepository
+UserServiceImpl --> JwtUtil
+EmailVerificationService <|.. EmailVerificationServiceImpl
+EmailVerificationServiceImpl --> EmailService
+EmailVerificationServiceImpl ---> UserRepository
+EmailService <|.. EmailServiceImpl
+EmailServiceImpl ..> Smtp : JavaMailSender
+
+@enduml

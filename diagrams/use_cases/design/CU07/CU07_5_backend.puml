@@ -1,0 +1,94 @@
+@startuml DSD-CU-07-5
+title DSD-CU-07 (5/5) - Gestionar listas de estudio: endpoints del backend
+
+' Lo que hace el backend en cada petición de DSD-CU-07 (1/5 a 4/5).
+' Fuentes: JwtAuthenticationFilter.java, SecurityConfig.java, OwnershipChecker.java, ItemListController.java,
+' ItemListServiceImpl.java, utils/EntityResolver.java, utils/mapper/DtoMapper.java, EntityMapper.java,
+' GlobalExceptionHandler.java.
+' - Todas las peticiones llevan Authorization: Bearer <token> (apiClient). Sin token válido: 401
+'   (SecurityConfig). La propiedad la comprueba @PreAuthorize("hasRole('ADMIN') or @ownership...") con
+'   OwnershipChecker (bean "ownership"), no el servicio; si falla: AccessDeniedException -> 403.
+' - ownsItemList deja pasar una lista inexistente para que el controlador responda 404 y no un 403 engañoso.
+!include ../_estilo.iuml
+
+participant "App\n(services)" as app
+box "Backend (Spring Boot)" #FFF9F0
+    participant "JwtAuthenticationFilter\n@PreAuthorize\n(OwnershipChecker)" as sec
+    participant "ItemListController\n<<controller>>" as ctrl
+    participant "ItemListServiceImpl\n<<service>>" as svc
+    participant "ItemListRepository /\nEntityResolver" as repo
+    participant "DtoMapper /\nEntityMapper" as mapper
+end box
+database "PostgreSQL" as db
+
+group GET /api/item-lists/by-user/{userId}/ids
+    app -> sec : @ownership.isSelf(#userId)
+    sec -> ctrl : getIdsForUser(userId)
+    ctrl -> svc : findIdsForUser(userId)
+    svc -> repo : EntityResolver.findUser(userId)
+    repo -> db : SELECT
+    svc -> svc : user.getItemLists() -> ids\n([] si el usuario no existe)
+    ctrl --> app : 200 List<Long>
+end
+
+group POST /api/item-lists/by-ids [ids]
+    app -> sec : @ownership.ownsAllItemLists(#ids)
+    sec -> ctrl : getByIds(ids)
+    ctrl -> svc : findByIds(ids)
+    svc -> repo : ItemListRepository.findAllById(ids)
+    repo -> db : SELECT ... WHERE id IN (...)
+    svc -> mapper : itemListToItemListDto(list)
+    ctrl --> app : 200 List<ItemListDTO>
+end
+
+group POST /api/item-lists
+    app -> sec : @ownership.isSelf(#dto.userId)
+    sec -> ctrl : create(dto) (@Validated(OnCreate))
+    ctrl -> svc : create(dto)
+    svc -> repo : EntityResolver.resolveUser(userId),\nresolveItems(itemIds)
+    svc -> mapper : EntityMapper.itemListDtoToItemList(dto, user, items)
+    svc -> repo : save(list)
+    repo -> db : INSERT
+    svc -> mapper : DtoMapper.itemListToItemListDto(list)
+    ctrl --> app : 201 Created ItemListDTO
+end
+
+group PUT /api/item-lists/{id}
+    app -> sec : @ownership.ownsItemList(#id)\nand @ownership.isSelf(#dto.userId)
+    sec -> ctrl : update(id, dto)
+    ctrl -> svc : update(id, dto)
+    svc -> repo : EntityResolver.findItemList(id)
+    alt La lista no existe
+        svc --> ctrl : Optional.empty()
+        ctrl --> app : 404 Not Found
+    else Existe
+        svc -> svc : updateItemListFromDto(existing, dto)\n(setName, setImageUrl, resolveUser, resolveItems)
+        svc -> repo : save(existing)
+        repo -> db : UPDATE
+        svc -> mapper : itemListToItemListDto(list)
+        svc --> ctrl : Optional<ItemListDTO>
+        ctrl --> app : 200 OK ItemListDTO
+    end
+end
+
+group DELETE /api/item-lists/{id}
+    app -> sec : @ownership.ownsItemList(#id)
+    sec -> ctrl : delete(id)
+    ctrl -> svc : delete(id)
+    svc -> repo : existsById(id)
+    alt No existe
+        svc --> ctrl : false
+        ctrl --> app : 404 Not Found
+    else Existe
+        svc -> repo : deleteById(id)
+        repo -> db : DELETE
+        svc --> ctrl : true
+        ctrl --> app : 204 No Content
+    end
+end
+
+opt En cualquier endpoint: la lista o el usuario es de otro
+    sec --> app : 403 Forbidden (AccessDeniedException)
+end
+
+@enduml

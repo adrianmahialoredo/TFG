@@ -39,6 +39,19 @@ export const login = async (identifier: string, password: string): Promise<{ tok
 export const requestVerificationCode = (email: string): Promise<void> =>
   authService.requestVerificationCode(email);
 
+/**
+ * Recuperación de contraseña: no toca ninguna store (no hay sesión). Tras cambiarla,
+ * el usuario inicia sesión con la contraseña nueva.
+ */
+export const requestPasswordResetCode = (email: string): Promise<void> =>
+  authService.requestPasswordResetCode(email);
+
+export const verifyPasswordResetCode = (email: string, code: string): Promise<void> =>
+  authService.verifyPasswordResetCode(email, code);
+
+export const resetPassword = (email: string, code: string, newPassword: string): Promise<void> =>
+  authService.resetPassword(email, code, newPassword);
+
 export const register = async (formData: any, verificationCode: string): Promise<{ token: string; user: UserDTO }> => {
   try {
     // 1. Limpiamos el objeto: mandamos solo lo que el service espera

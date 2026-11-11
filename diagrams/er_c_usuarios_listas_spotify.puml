@@ -1,0 +1,136 @@
+@startuml ER-c
+title ER-c - Diagrama entidad-relación: usuarios, listas y Spotify
+
+' =====================================================================
+' Esquema físico de la base de datos PostgreSQL (3/3).
+' Generado por Hibernate (spring.jpa.hibernate.ddl-auto=update) a partir
+' de las entidades de com.uo289390.toco.model (camelCase -> snake_case).
+' Partes: ER-a jerarquía Item y lecciones; ER-b canciones y contenido;
+'         ER-c usuarios, listas y Spotify.
+'
+' Leyenda:
+'   PK  clave primaria        FK  clave foránea
+'   NN  NOT NULL explícito    UQ  UNIQUE
+'   Los campos primitivos (int, boolean) son siempre NOT NULL.
+'   Tablas con <<ver ER-x>>: se detallan en otra parte.
+' =====================================================================
+
+hide circle
+hide empty members
+skinparam linetype ortho
+skinparam roundcorner 6
+skinparam class {
+    BackgroundColor<<join>> #F3F3F3
+    BackgroundColor<<ver ER-a>> #FFF4E0
+    BorderColor<<ver ER-a>> #999999
+    BackgroundColor<<ver ER-b>> #FFFFFF
+    BorderColor<<ver ER-b>> #999999
+}
+
+entity "users" as users {
+    * id : bigserial <<PK>>
+    --
+    * email : varchar <<NN, UQ>>
+    * username : varchar <<NN, UQ>>
+    * password : varchar <<NN>>
+    * name : varchar <<NN>>
+    profile_image_url : varchar
+    * role : varchar <<NN>> {ADMIN, USER}
+    * difficulty_level : int <<NN>>
+    spotify_user_id : bigint <<FK, UQ>>
+    created_at : timestamp
+    updated_at : timestamp
+}
+
+entity "preferences" as preferences {
+    * user_id : bigint <<PK, FK>>
+}
+
+entity "spotify_users" as spotify_users {
+    * id : bigserial <<PK>>
+    --
+    * spotify_user_id : varchar <<NN, UQ>>
+    access_token : varchar
+    refresh_token : varchar
+    token_expiration : timestamptz
+}
+
+entity "settings" as settings {
+    * id : bigserial <<PK>>
+    --
+    * notifications : boolean
+    * sound : boolean
+}
+
+entity "user_favorite_genres" as user_favorite_genres <<join>> {
+    * user_id : bigint <<PK, FK>>
+    * genre_id : bigint <<PK, FK>>
+}
+
+entity "user_favorite_instruments" as user_favorite_instruments <<join>> {
+    * user_id : bigint <<PK, FK>>
+    * instrument_id : bigint <<PK, FK>>
+}
+
+entity "item_lists" as item_lists {
+    * id : bigserial <<PK>>
+    --
+    * name : varchar <<NN>>
+    image_url : varchar
+    * user_id : bigint <<FK, NN>>
+}
+
+entity "itemlist_items" as itemlist_items <<join>> {
+    * itemlist_id : bigint <<FK>>
+    * item_id : bigint <<FK>>
+}
+
+entity "item" as item <<ver ER-a>> {
+    * id : bigint <<PK>>
+}
+
+entity "genres" as genres <<ver ER-a>> {
+    * id : bigint <<PK, FK>>
+}
+
+entity "instruments" as instruments <<ver ER-b>> {
+    * id : bigint <<PK>>
+}
+
+' ---------------------------------------------------------------------
+' Relaciones
+' ---------------------------------------------------------------------
+
+users |o--o| spotify_users : spotify_user_id -> id
+users ||--|| preferences : user_id
+users ||--o{ item_lists : user_id
+
+preferences ||--o{ user_favorite_genres : user_id
+user_favorite_genres }o--|| genres
+preferences ||--o{ user_favorite_instruments : user_id
+user_favorite_instruments }o--|| instruments
+
+item_lists ||--o{ itemlist_items : itemlist_id
+itemlist_items }o--|| item : item_id
+
+' ---------------------------------------------------------------------
+' Notas
+' ---------------------------------------------------------------------
+
+note bottom of preferences
+    PK compartida con users.id (@MapsId).
+    Las tablas de favoritos referencian
+    preferences.user_id.
+end note
+
+note bottom of itemlist_items
+    Sin PK: ItemList.items es una List
+    (conserva el orden de inserción).
+end note
+
+note bottom of settings
+    Entidad sin relaciones
+    con el resto del modelo.
+end note
+
+@enduml

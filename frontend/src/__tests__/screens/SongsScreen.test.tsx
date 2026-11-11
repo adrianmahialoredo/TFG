@@ -61,8 +61,8 @@ describe('SongsScreen', () => {
     await render(<SongsScreen />);
     expect(screen.getByText('Canciones')).toBeTruthy();
     expect(screen.getByText('Carrusel Populares (1)')).toBeTruthy();
-    expect(screen.getByText('Carrusel Nuevas (1)')).toBeTruthy();
-    expect(screen.queryByText(/Según tus gustos/)).toBeNull();
+    expect(screen.getByText('Carrusel Novedades (1)')).toBeTruthy();
+    expect(screen.queryByText(/Para ti/)).toBeNull();
     expect(screen.queryByText('Conectar Spotify')).toBeNull();
   });
 
@@ -88,14 +88,14 @@ describe('SongsScreen', () => {
   it('ofrece conectar Spotify si la cuenta no está vinculada', async () => {
     mockFeedState.spotifyConnected = false;
     await render(<SongsScreen />);
-    expect(screen.getByText('Según tu Spotify')).toBeTruthy();
+    expect(screen.getByText('Basado en tu Spotify')).toBeTruthy();
     expect(screen.getByText('Conectar Spotify')).toBeTruthy();
   });
 
   it('muestra el carrusel de Spotify si tiene canciones', async () => {
     mockFeedState.spotify = [song('9')];
     await render(<SongsScreen />);
-    expect(screen.getByText('Carrusel Según tu Spotify (1)')).toBeTruthy();
+    expect(screen.getByText('Carrusel Basado en tu Spotify (1)')).toBeTruthy();
   });
 
   it('muestra el carrusel del género favorito con su nombre o uno genérico', async () => {

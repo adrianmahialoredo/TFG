@@ -18,4 +18,14 @@ public interface EmailService {
      * @throws IllegalStateException if the email could not be sent.
      */
     void sendVerificationCode(String to, String code, long minutes);
+
+    /**
+     * Sends the code to reset a forgotten password.
+     *
+     * @param to      The email of the account.
+     * @param code    The password reset code.
+     * @param minutes Minutes until the code expires, shown in the email.
+     * @throws IllegalStateException if the email could not be sent.
+     */
+    void sendPasswordResetCode(String to, String code, long minutes);
 }

@@ -1,12 +1,7 @@
 import { useState } from 'react';
 import * as authRepository from '../repositories/auth.repository';
 import { MIN_FAVOURITE_GENRES, MIN_FAVOURITE_INSTRUMENTS } from '../constants/Preferences';
-
-/**
- * Comprobación de formato antes de pedir el código: algo@dominio.tld, sin espacios.
- * Que el buzón existe y es del usuario lo demuestra el código de verificación.
- */
-const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+import { EMAIL_REGEX, passwordError } from '../utils/password.utils';
 
 export const useRegister = () => {
     const [isLoading, setIsLoading] = useState(false);
@@ -20,13 +15,8 @@ export const useRegister = () => {
         if (username.length < 3 || username.length > 20) throw new Error('El usuario debe tener entre 3 y 20 caracteres');
         if (data.password !== data.confirmPassword) throw new Error('Las contraseñas no coinciden');
 
-        // Cualquier carácter que no sea letra, número o espacio cuenta como símbolo
-        const password: string = data.password ?? '';
-        if (password.length < 8) throw new Error('La contraseña debe tener al menos 8 caracteres');
-        if (/\s/.test(password)) throw new Error('La contraseña no puede contener espacios');
-        if (!/[A-Z]/.test(password)) throw new Error('La contraseña necesita al menos una mayúscula');
-        if (!/[0-9]/.test(password)) throw new Error('La contraseña necesita al menos un número');
-        if (!/[^A-Za-z0-9\s]/.test(password)) throw new Error('La contraseña necesita al menos un símbolo');
+        const invalidPassword = passwordError(data.password ?? '');
+        if (invalidPassword) throw new Error(invalidPassword);
 
         if ((data.favouriteGenresIds?.length ?? 0) < MIN_FAVOURITE_GENRES) {
             throw new Error(`Elige al menos ${MIN_FAVOURITE_GENRES} géneros favoritos`);

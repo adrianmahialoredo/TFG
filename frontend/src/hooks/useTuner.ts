@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { detectPitch } from '../utils/pitch.utils';
-import { centsBetween, closestStringIndex, median, noteToFrequency } from '../utils/tuner.utils';
+import { centsBetween, median, noteToFrequency } from '../utils/tuner.utils';
 import {
   AudioBlock,
   createNativeMicrophone,
@@ -24,7 +24,7 @@ export type TunerStatus = 'idle' | 'starting' | 'listening' | 'denied' | 'error'
 export type TunerReading = {
   /** Frecuencia detectada (Hz). */
   frequency: number;
-  /** Cuerda con la que se compara (la elegida a mano o la más cercana). */
+  /** Cuerda con la que se compara: la que ha seleccionado el usuario. */
   stringIndex: number;
   /** Desviación respecto a la nota de esa cuerda (negativa: hay que tensar). */
   cents: number;
@@ -32,9 +32,11 @@ export type TunerReading = {
 
 /**
  * Afinador: escucha el micrófono, detecta la nota de cada bloque (YIN, en `utils/pitch.utils`)
- * y la compara con las cuerdas de la afinación (`notes`).
+ * y la compara con la cuerda seleccionada de la afinación (`notes`).
  *
- * - Sin cuerda fijada se compara con la cuerda más cercana; `selectString(i)` fija una.
+ * - Siempre hay una cuerda seleccionada: la primera (la más grave) al abrir el afinador o al
+ *   cambiar de afinación; `selectString(i)` elige otra. No se adivina qué cuerda suena: la
+ *   detección automática daba saltos entre cuerdas (armónicos) y se quitó.
  * - El permiso de micrófono se pide al empezar (`start`); si se deniega, `status` es 'denied'.
  * - El micrófono real (`react-native-audio-api`) necesita una development build. En Expo Go se
  *   usa un micrófono simulado (`simulated`: true) que pasa por el mismo análisis.
@@ -42,7 +44,7 @@ export type TunerReading = {
 export const useTuner = (notes: string[]) => {
   const [status, setStatus] = useState<TunerStatus>('idle');
   const [reading, setReading] = useState<TunerReading | null>(null);
-  const [lockedString, setLockedString] = useState<number | null>(null);
+  const [selectedString, setSelectedString] = useState(0);
 
   const notesKey = notes.join(',');
   const frequencies = useMemo(
@@ -53,15 +55,15 @@ export const useTuner = (notes: string[]) => {
 
   // Refs que lee el callback del micrófono (va fuera del ciclo de render)
   const frequenciesRef = useRef(frequencies);
-  const lockedStringRef = useRef(lockedString);
+  const selectedStringRef = useRef(selectedString);
   frequenciesRef.current = frequencies;
-  lockedStringRef.current = lockedString;
+  selectedStringRef.current = selectedString;
 
   const simulated = useMemo(() => isMicrophoneSimulated(), []);
   const microphoneRef = useRef<Microphone | null>(null);
   const getMicrophone = useCallback(() => {
     microphoneRef.current ??= simulated
-      ? createSimulatedMicrophone(() => frequenciesRef.current, () => lockedStringRef.current)
+      ? createSimulatedMicrophone(() => frequenciesRef.current, () => selectedStringRef.current)
       : createNativeMicrophone();
     return microphoneRef.current;
   }, [simulated]);
@@ -70,11 +72,11 @@ export const useTuner = (notes: string[]) => {
   // Cada start/stop incrementa la sesión: un start que aún espera al permiso sabe si lo han cancelado
   const sessionRef = useRef(0);
 
-  // Otra afinación: las lecturas y la cuerda fijada eran de las cuerdas anteriores
+  // Otra afinación: las lecturas y la cuerda seleccionada eran de las cuerdas anteriores
   useEffect(() => {
     recentPitchesRef.current = [];
     setReading(null);
-    setLockedString(null);
+    setSelectedString(0);
   }, [notesKey]);
 
   // Hasta cuándo se descartan bloques (ver handleBlock)
@@ -102,7 +104,7 @@ export const useTuner = (notes: string[]) => {
     const frequency = median(recent);
 
     const targets = frequenciesRef.current;
-    const stringIndex = lockedStringRef.current ?? closestStringIndex(frequency, targets);
+    const stringIndex = selectedStringRef.current;
     const target = targets[stringIndex];
     if (target === undefined || Number.isNaN(target)) return;
 
@@ -162,11 +164,11 @@ export const useTuner = (notes: string[]) => {
     releaseMicrophone().catch(() => {});
   }, [releaseMicrophone]);
 
-  /** Fija la cuerda con la que se compara (null: la más cercana a lo que suena). */
-  const selectString = useCallback((index: number | null) => {
+  /** Selecciona la cuerda que se va a afinar (la lectura anterior era de otra cuerda). */
+  const selectString = useCallback((index: number) => {
     recentPitchesRef.current = [];
     setReading(null);
-    setLockedString(index);
+    setSelectedString(index);
   }, []);
 
   return {
@@ -174,7 +176,7 @@ export const useTuner = (notes: string[]) => {
     isListening: status === 'listening',
     simulated,
     reading,
-    lockedString,
+    selectedString,
     start,
     stop,
     selectString,

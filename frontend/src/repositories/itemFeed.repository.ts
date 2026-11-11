@@ -33,11 +33,11 @@ const hydrateMixed = (dtos: AnyItemDTO[]): string[] => {
 const getMixedFeed = (cacheKey: string, fetchDtos: () => Promise<AnyItemDTO[]>, onFresh?: OnFresh): Promise<string[]> =>
     itemRepository.getCustomFeed(cacheKey, async () => hydrateMixed(await fetchDtos()), onFresh);
 
-/** Items recomendados al usuario (Home "Recomendaciones"). Personalizado: se borra en el logout. */
+/** Items recomendados al usuario (Home "Para ti"). Personalizado: se borra en el logout. */
 export const getRecommendedForUser = (userId: string, onFresh?: OnFresh): Promise<string[]> =>
     getMixedFeed('items_recommended_user', () => itemService.getRecommendedByUser(userId), onFresh);
 
-/** Items recomendados a partir del Spotify del usuario (Home "Desde tu Spotify"). Personalizado: se borra en el logout. */
+/** Items recomendados a partir del Spotify del usuario (Home "Basado en tu Spotify"). Personalizado: se borra en el logout. */
 export const getFromSpotifyForUser = (userId: string, onFresh?: OnFresh): Promise<string[]> =>
     getMixedFeed('items_spotify_user', () => itemService.getRecommendedFromSpotify(userId), onFresh);
 

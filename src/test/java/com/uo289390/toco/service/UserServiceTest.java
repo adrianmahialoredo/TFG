@@ -274,6 +274,31 @@ class UserServiceTest {
         assertEquals("db down", ex.getMessage());
     }
 
+    // -------- Password reset --------
+
+    @Test
+    void resetPassword_encodesAndSavesTheNewPassword() {
+        when(userRepository.findByEmailIgnoreCase("john@example.com")).thenReturn(Optional.of(user));
+        when(passwordEncoder.encode("NewSecret1!")).thenReturn("$2a$new");
+
+        userService.resetPassword("  john@example.com ", "NewSecret1!");
+
+        assertEquals("$2a$new", user.getPassword());
+        verify(userRepository).save(user);
+    }
+
+    @Test
+    void resetPassword_unknownEmail_throwsIllegalArgumentWithoutSaving() {
+        when(userRepository.findByEmailIgnoreCase("nobody@example.com")).thenReturn(Optional.empty());
+
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+                () -> userService.resetPassword("nobody@example.com", "NewSecret1!"));
+
+        assertEquals("Email not registered", ex.getMessage());
+        verify(userRepository, never()).save(any());
+        verifyNoInteractions(passwordEncoder);
+    }
+
     // -------- Login --------
 
     @Test

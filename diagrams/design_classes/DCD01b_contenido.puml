@@ -1,0 +1,109 @@
+@startuml DCD-01b
+title DCD-01b - Diagrama de clases de diseño: modelo (2/3) - contenido de canciones y lecciones
+
+' Continuación de DCD-01a (Song, Lesson e Instrument se detallan allí).
+' Fuentes: model/SongLesson.java, Chord.java, TabSection.java, LessonSection.java, Tune.java,
+'          utils/EntityResolver.java (resolveChords)
+'
+' Notas de diseño:
+'   - IDs asignados a mano (data/*.json) en Chord, SongLesson y Tune; IDENTITY en
+'     LessonSection y TabSection.
+'   - List solo cuando el orden es parte del dato (Lesson.sections, SongLesson.tabSections,
+'     Chord.notes, Tune.notes); el resto, Set.
+skinparam classAttributeIconSize 0
+skinparam roundcorner 6
+skinparam nodesep 40
+skinparam ranksep 50
+skinparam class {
+    BackgroundColor<<entity>> #FFF4E0
+    BorderColor<<entity>> #B07A1F
+    BackgroundColor<<enum>> #F3F3F3
+    BackgroundColor<<interface>> #E3F0FF
+    BorderColor<<interface>> #3D6FA8
+}
+hide empty members
+
+interface "Identifiable<ID>" as Identifiable <<interface>>
+class Song <<entity>> <<ver DCD-01a>>
+class Lesson <<entity>> <<ver DCD-01a>>
+class Instrument <<entity>> <<ver DCD-01a>>
+
+class SongLesson <<entity>> {
+    - id : Long {PK, asignado}
+    - difficulty : SongLesson.DifficultyLevel
+    - chordedLyrics : String
+    - videoUrl : String
+    --
+    + equals(o : Object) : boolean
+    + hashCode() : int
+}
+
+enum "SongLesson.DifficultyLevel" as DifficultyLevel <<enum>> {
+    EASY
+    MEDIUM
+    ORIGINAL
+    --
+    + {static} from(value : String) : DifficultyLevel
+}
+
+class Chord <<entity>> {
+    - id : Long {PK, asignado}
+    - name : String {unique (name, instrument)}
+    - notes : List<String>
+    - imageUrl : String
+    - open : boolean
+    - barre : boolean
+    - powerChord : boolean
+    - minor : boolean
+    - major : boolean
+    - seventh : boolean
+    - capo : boolean
+    - capoFret : int
+    --
+    + equals(o : Object) : boolean
+    + hashCode() : int
+}
+
+class TabSection <<entity>> {
+    - id : Long {PK}
+    - identifier : String
+    - content : String
+}
+
+class LessonSection <<entity>> {
+    - id : Long {PK}
+    - title : String
+    - htmlContent : String {TEXT}
+    - videoUrl : String
+    - orderIndex : int
+}
+
+class Tune <<entity>> {
+    + {static} NOTE_PATTERN : String = "^[A-G]#?[0-8]$"
+    - id : Long {PK, asignado}
+    - title : String
+    - notes : List<String> {@OrderColumn string_index}
+    --
+    + equals(o : Object) : boolean
+    + hashCode() : int
+}
+
+Identifiable <|.. Chord
+Identifiable <|.. SongLesson
+Identifiable <|.. Tune
+SongLesson --> DifficultyLevel
+
+Song "1" *-- "*" SongLesson : lessons\n{Set, @OrderBy id}
+SongLesson "*" --> "*" Chord : chords\n{Set, @OrderBy id}
+SongLesson "1" *-- "*" TabSection : tabSections\n{List}
+SongLesson "*" --> "1" Instrument : instrument\n{@NotNull}
+Chord "*" --> "1" Instrument : instrument
+note bottom of Chord
+  Los chords de una SongLesson deben ser de su
+  instrument (EntityResolver.resolveChords(ids, instrument),
+  400 si no).
+end note
+Lesson "1" *-- "*" LessonSection : sections\n{List, @OrderBy orderIndex}
+Tune "*" --> "1" Instrument : instrument
+
+@enduml

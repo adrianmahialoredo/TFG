@@ -5,9 +5,12 @@ title DP-01 - Diagrama de paquetes del backend
 ' imports del código. Una flecha A ..> B significa "A importa algo de B".
 ' Se omiten:
 '   - los imports que solo sirven para un {@link} del Javadoc
-'     (controller y utils -> exception);
-'   - dos atajos puntuales de controller hacia model / utils.mapper
-'     (RecommendationController, UserController).
+'     (controller y utils -> exception, SpotifyAuthController -> security,
+'     UserController -> model.Preferences);
+'   - el atajo puntual de controller hacia model y utils.mapper en
+'     RecommendationController (Genre, InstrumentGenre, DtoMapper).
+' controller -> security no es un import: es la expresión SpEL @ownership
+' (OwnershipChecker) de los @PreAuthorize.
 ' Capas y reglas: architecture.md (§1). Frontend en DP02_paquetes_frontend.puml.
 skinparam roundcorner 6
 skinparam packageStyle folder
@@ -60,7 +63,8 @@ b_controller ..> b_service
 b_controller ..> b_recommendation
 b_controller ..> b_dto
 b_controller ..> b_validation
-b_controller ..> b_security
+b_controller ..> b_security : <<SpEL @ownership>>
+b_controller ..> b_utils : <<RecommendationConstants>>
 
 b_service ..> b_repository
 b_service ..> b_model
@@ -71,15 +75,20 @@ b_service ..> b_security
 b_service ..> b_config
 
 b_recommendation ..> b_repository
+b_recommendation ..> b_model
+b_recommendation ..> b_dto
+b_recommendation ..> b_utils
 b_recommendation ..> b_mapper
+b_recommendation ..> b_service : <<SpotifyAuthService>>
 
 b_repository ..> b_model
 b_dto ..> b_model
+b_dto ..> b_validation : <<OnCreate>>
 b_mapper ..> b_model
 b_mapper ..> b_dto
 b_utils ..> b_repository
 b_utils ..> b_model
-b_model ..> b_utils : <<Identifiable>>
+b_model ..> b_utils : «Identifiable, Utils,\nRecommendationConstants»
 
 b_security ..> b_model
 b_security ..> b_utils
