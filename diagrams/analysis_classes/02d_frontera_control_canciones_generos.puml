@@ -1,0 +1,56 @@
+@startuml DCA-02d
+title DCA-02d - Diagrama de clases de análisis: fronteras\ny controles (canciones y géneros)
+
+' Vista BCE en cinco partes: DCA-02a cuenta y perfil; DCA-02b listas y catálogo;
+' DCA-02c recomendaciones y Spotify; DCA-02d canciones y géneros; DCA-02e afinador
+' y metrónomo. Los controles de otra parte aparecen vacíos con <<ver DCA-02x>>.
+' Las operaciones de los controles salen de los diagramas de secuencia de los casos de uso
+' (diagrams/use_cases); entre corchetes, las entidades de DCA-01a/01b/01c que maneja cada uno.
+' Fuentes: frontend/src/screens (SongScreen, Genre*Screen), hooks/useSong.ts.
+skinparam roundcorner 6
+skinparam classAttributeIconSize 0
+skinparam nodesep 20
+skinparam ranksep 40
+skinparam class {
+    BackgroundColor<<boundary>> #E3F0FF
+    BorderColor<<boundary>> #3D6FA8
+    BackgroundColor<<control>> #E6F5E6
+    BorderColor<<control>> #3C8A3C
+}
+hide empty members
+left to right direction
+
+package "Fronteras con el músico" {
+    class SongScreen <<boundary>>
+    class ModalAcorde <<boundary>>
+    class GenreScreen <<boundary>>
+    class ItinerarioInstrumentoScreen <<boundary>>
+}
+
+package "Controles" {
+    class GestorCanciones <<control>> {
+        [Song, SongLesson, Chord, TabSection]
+        --
+        solicitarCancion(id)
+        seleccionarLeccion(instrumento, dificultad)
+        cambiarInstrumento(id)
+        marcarRecienteLocal(id)
+    }
+    class GestorGeneros <<control>> {
+        [Genre, Song, InstrumentGenre, Lesson]
+        --
+        obtenerDetalleGenero(id)
+        cargarCarruselesCanciones(id)
+        obtenerInstrumentGenres(genreId)
+        cargarLeccionesItinerario(instrumentGenreId)
+        obtenerLeccion(lessonId)
+    }
+}
+
+' Frontera -> control
+SongScreen --> GestorCanciones
+SongScreen --> ModalAcorde : al pulsar\nun acorde
+GenreScreen --> GestorGeneros
+ItinerarioInstrumentoScreen --> GestorGeneros
+
+@enduml

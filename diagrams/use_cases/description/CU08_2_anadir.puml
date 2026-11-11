@@ -1,0 +1,63 @@
+@startuml DS-CU-08-2
+title DS-CU-08 (2/4) - Añadir/eliminar ítems en listas:\nañadir el ítem elegido
+
+' Diagrama de secuencia de análisis (patrón Boundary-Control-Entity)
+' Fuentes: ListScreen.tsx, AddItemScreen.tsx, useAddItemScreen.ts, itemList.repository.ts,
+' ItemListController.java, ItemListServiceImpl.java, ItemRecommendationServiceImpl.java
+' Partes: (1/4) recomendaciones y búsqueda en "Añadir" (CU08_1_recomendaciones.puml); (2/4) añadir
+' el ítem elegido (CU08_2_anadir.puml); (3/4) añadir desde el buscador (CU08_3_buscador.puml);
+' (4/4) quitar un ítem de la lista (CU08_4_quitar.puml).
+autonumber
+hide footbox
+skinparam sequenceMessageAlign center
+skinparam roundcorner 6
+skinparam maxMessageSize 130
+skinparam wrapWidth 170
+skinparam ParticipantPadding 2
+skinparam BoxPadding 2
+skinparam defaultFontSize 12
+
+actor "Músico" as musico
+boundary "ListaScreen" as listaScreen
+boundary "AnadirItems\nScreen" as anadirScreen
+control "GestorListas" as gestor
+entity "ItemList" as lista
+entity "Item\n(polimórfico)" as item
+
+note over musico, anadirScreen : Viene de DS-CU-08 (1/4): pantalla\n"Añadir" con recomendaciones o resultados
+
+musico -> anadirScreen : seleccionarItem(itemId)
+anadirScreen --> musico : marcarComoAnadido()
+note right of anadirScreen : Respuesta optimista:\ntic inmediato y el ítem\ndesaparece de la vista
+anadirScreen -> gestor : anadirItem(listId, itemId)
+note right of gestor : POST /api/item-lists/\n{listId}/items/{itemId}
+gestor -> lista : comprobarPropiedad(listId, userId)
+
+alt 6a. El músico no es el propietario de la lista
+    gestor --> anadirScreen : 403 Forbidden
+else Es el propietario
+    gestor -> item : obtener(itemId)
+    item --> gestor : item
+    gestor -> lista : validarDuplicado(item)
+    alt 7a. El ítem ya estaba en la lista
+        lista --> gestor : se ignora (se mantiene la posición original)
+    else Ítem nuevo
+        gestor -> lista : asociarItemALista(item)
+        note left of lista : Se añade al final,\nconservando el orden
+    end
+    lista --> gestor : ItemListDTO
+    gestor --> anadirScreen : 200 OK + ItemListDTO
+    anadirScreen -> anadirScreen : actualizarEstadoLocal(lista)
+    note right of anadirScreen : RAM y disco
+end
+
+opt 8a. La petición falla
+    anadirScreen -> anadirScreen : revertirMarcaAnadido(itemId)
+    anadirScreen --> musico : mostrarError("No se pudo añadir el item a la lista")
+end
+
+musico -> anadirScreen : volver()
+anadirScreen -> listaScreen : volver()
+listaScreen --> musico : mostrarListaActualizada()
+
+@enduml

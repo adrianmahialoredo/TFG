@@ -1,0 +1,58 @@
+@startuml DSD-CU-09-6
+title DSD-CU-09 (6/12) - Recomendaciones:\nartistas favoritos, petición (app)
+
+' Bloque "Artistas favoritos" de CU-09 (análisis en
+' diagrams/use_cases/description/CU09_*.puml, DS-CU-09 (3/5)).
+' Sigue en DSD-CU-09 (7/12). Endpoints en DSD-CU-09 (8/12) y (9/12).
+' Fuentes: frontend/src/screens/HomeScreen.tsx, hooks/useHomeItems.ts, repositories/song.repository.ts,
+' utils/entityCache.utils.ts, services/user.service.ts, services/song.service.ts, config/apiConfig.ts.
+' - useEffect([currentUserId, itemListsKey]): se repite si cambia el contenido de las listas.
+' - Los artistas se piden una sola vez para los dos carruseles (FAVOURITE_ARTISTS_COUNT = 5) y cada
+'   carrusel trae hasta SONGS_BY_FAVOURITE_ARTISTS_LIMIT = 12 canciones (song.repository.ts).
+' - getByFavouriteArtists(userId, { newSongs, popularSongs: onFresh }) hace Promise.all de dos
+'   cacheFirst: cache.list('new_favourite_artists') y cache.list('popular_favourite_artists'),
+'   personalizados (se borran en el logout). Con índice guardado devuelven sus IDs al instante
+'   y la red avisa con onFresh. Devuelven DTO completo (excepción de negocio).
+' - Peticiones: GET /api/users/{id}/top-artists?total_artists=5,
+'   GET /api/songs/by-artists/new?limit=12&artist1=.. y GET /api/songs/by-artists/popular?...
+' - Si una petición falla (sin red, 401, 403, 404), cacheFirst captura el error y ese carrusel
+'   recibe la caché o [].
+!include ../_estilo.iuml
+
+actor "Músico" as actor
+box "App" #F3F8FF
+    participant "Home\nScreen\n<<Nivel 7>>" as screen
+    participant "useHome\nItems\n<<Nivel 6>>" as hook
+    participant "song\nRepository\n<<Nivel 3>>" as songRepo
+    participant "user /\nsong\nService" as services
+end box
+participant "API\nREST" as api
+
+actor -> screen : abre Inicio
+screen -> hook : useHomeItems()
+hook -> songRepo : getByFavourite\nArtists(userId)
+songRepo -> songRepo : dos cacheFirst\n(novedades y\npopulares)
+songRepo -> services : getTopArtists\n(userId, 5)
+services -> api : GET .../top-\nartists?total\n_artists=5
+api --> services : 200 [artistas]
+services --> songRepo : artistas
+
+alt 4a. Sin artistas\n(listas sin canciones)
+    songRepo --> hook : { newSongs: [],\npopularSongs: [] }
+else Hay artistas
+    par Novedades
+        songRepo -> services : getNewBy\nArtists(art., 12)
+        services -> api : GET /api/songs/\nby-artists/new
+        api --> services : 200 List\n<SongDTO>
+    else Populares
+        songRepo -> services : getPopularBy\nArtists(art., 12)
+        services -> api : GET /api/songs/\nby-artists/popular
+        api --> services : 200 List\n<SongDTO>
+    end
+    services --> songRepo : SongDTO[]
+    songRepo -> songRepo : hydrate +\nsaveQueryIndex
+    songRepo --> hook : { newSongs,\npopularSongs }
+end
+note over hook, songRepo : Sigue en DSD-CU-09 (7/12)
+
+@enduml

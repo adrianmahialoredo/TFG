@@ -1,0 +1,81 @@
+@startuml DCA-02e
+title DCA-02e - Diagrama de clases de análisis: fronteras y controles (afinador y metrónomo)
+
+' Vista BCE (parte 5/5): herramientas que funcionan solo en el dispositivo.
+' Vista BCE en cinco partes: DCA-02a cuenta y perfil; DCA-02b listas y catálogo;
+' DCA-02c recomendaciones y Spotify; DCA-02d canciones y géneros; DCA-02e afinador
+' y metrónomo. Los controles de otra parte aparecen vacíos con <<ver DCA-02x>>.
+' Las operaciones de los controles salen de los diagramas de secuencia de los casos de uso
+' (diagrams/use_cases); entre corchetes, las entidades de DCA-01a/01b/01c que maneja cada uno.
+' Fuentes: frontend/src/hooks/useTuner.ts, useTunes.ts, useMetronome.ts.
+skinparam roundcorner 6
+skinparam classAttributeIconSize 0
+skinparam nodesep 20
+skinparam ranksep 40
+skinparam class {
+    BackgroundColor<<boundary>> #E3F0FF
+    BorderColor<<boundary>> #3D6FA8
+    BackgroundColor<<control>> #E6F5E6
+    BorderColor<<control>> #3C8A3C
+}
+hide empty members
+top to bottom direction
+
+package "Fronteras con el músico" {
+    class AfinadorScreen <<boundary>>
+    class MetronomoScreen <<boundary>>
+}
+
+package "Controles" {
+    class GestorAfinaciones <<control>> {
+        [Tune, Instrument]
+        --
+        obtenerAfinaciones()
+        seleccionarPorDefecto(favoritos)
+    }
+    class ProcesadorAudio <<control>> {
+        iniciarEscucha(notas)
+        detenerEscucha()
+        seleccionarCuerda(indice)
+        extraerFrecuenciaFundamental()
+        suavizar()
+        descartarBloque()
+        calcularDesviacion()
+    }
+    class MotorRitmo <<control>> {
+        fijarBPM(bpm)
+        registrarPulsacion(instante)
+        cambiarSonido(click | hihat)
+        iniciar()
+        detener()
+    }
+}
+
+package "Fronteras con\nsistemas externos" {
+    class Microfono <<boundary>>
+}
+
+AfinadorScreen --> GestorAfinaciones
+AfinadorScreen --> ProcesadorAudio
+MetronomoScreen --> MotorRitmo
+ProcesadorAudio --> Microfono : permiso y\nbloques de audio
+
+note left of AfinadorScreen
+    CU-11. El audio se
+    analiza en el
+    dispositivo (YIN):
+    no se envía al
+    servidor.
+end note
+
+note bottom of ProcesadorAudio
+    suavizar(): mediana de los
+    3 últimos bloques con nota.
+    descartarBloque(): si un
+    bloque tarda X ms en
+    analizarse, se descartan
+    los que lleguen en los
+    X ms siguientes.
+end note
+
+@enduml

@@ -1,0 +1,49 @@
+@startuml DSD-CU-04-1
+title DSD-CU-04 (1/4) - Explorar catálogo de ítems:\ncarga del catálogo (app)
+
+' Parte de la app de la realización de CU-04 (análisis en
+' diagrams/use_cases/description/CU04_*.puml, DS-CU-04 (1/2) y (2/2)). El backend se dibuja como una
+' sola línea de vida ("API REST"); lo que hace el endpoint está en DSD-CU-04 (4/4).
+' Fuentes: screens/SongsScreen.tsx, LearnScreen.tsx, hooks/useCatalogSearch.ts,
+' context/AuthContext.tsx, repositories/item.repository.ts, utils/entityCache.utils.ts,
+' stores/entities/item.entities.store.ts, services/item.service.ts.
+' itemRepository (nivel 3) e itemService (nivel 1) se dibujan juntos.
+' Notas de diseño:
+' - El buscador del catálogo está en SongsScreen (ItemType.SONG) y en LearnScreen
+'   (ItemType.LESSON). Se dibuja SongsScreen; LearnScreen sigue exactamente la misma secuencia.
+' - Al arrancar con sesión, AuthContext.loadInitialData() ya lanza itemRepository.getCatalog()
+'   en segundo plano. useCatalogSearch lo vuelve a pedir "por si aún no está", junto con
+'   genreRepository.getAll() e instrumentRepository.getAll() (nombres para buscar por
+'   género/instrumento).
+' - "Ya sincronizado": catalogSynced en esta sesión y con índice guardado.
+' - Cache-First (cache.list): si hay índice en disco, sus IDs se devuelven al instante y la
+'   petición sigue en segundo plano; si no, se espera. hydrate() guarda en RAM + disco
+'   (itemLocal.saveBatch) + índice 'items_catalog' y marca catalogSynced = true.
+' - La búsqueda sigue en DSD-CU-04 (2/4).
+!include ../_estilo.iuml
+
+actor "Músico" as actor
+box "App (React Native)" #F3F8FF
+    participant "SongsScreen\n<<Nivel 7>>" as screen
+    participant "useCatalogSearch\n<<Nivel 6>>" as hook
+    participant "useItemEntitiesStore\n<<Nivel 4>>" as store
+    participant "itemRepository\n→ itemService\n<<Niveles 3 y 1>>" as repo
+end box
+participant "API REST\n(backend)" as api
+
+actor -> screen : abre la pestaña "Canciones"
+screen -> hook : useCatalogSearch(query = '', ItemType.SONG, SEARCH_FIELDS)
+hook ->> repo : getCatalog() (useEffect)
+
+alt Ya sincronizado (catalogSynced)
+    repo -> repo : cache.readIndex ('items_catalog') (sin red)
+else Primera vez
+    repo -> repo : cache.list ('items_catalog', fetch, onFresh)
+    repo -> api : GET /api/items (Authorization: Bearer <token>)
+    api --> repo : 200 List<ItemSummaryDTO>
+    repo -> store : setItems(items) (hydrate: RAM + disco + índice)
+end
+repo -->> hook : ids del catálogo
+hook --> screen : sin texto: [] (la pantalla muestra sus carruseles)
+
+@enduml

@@ -1,0 +1,54 @@
+@startuml DSD-CU-13-1
+title DSD-CU-13 (1/5) - Recuperar contraseña:\npedir el código (app)
+
+' Parte de la app de la realización de CU-13 (análisis en
+' diagrams/use_cases/description/CU13_*.puml, DS-CU-13 (1/4) a (4/4)). Partes: (1/5) pedir el
+' código, (2/5) comprobar el código, (3/5) contraseña nueva (app); (4/5) y (5/5) backend.
+' El backend es una sola línea de vida ("API REST"); lo que hace cada endpoint está en
+' DSD-CU-13 (4/5) y (5/5).
+' Fuentes: screens/LoginScreen.tsx, screens/ForgotPasswordScreen.tsx,
+' components/EmailVerificationModal.tsx, hooks/useForgotPassword.ts, utils/password.utils.ts,
+' repositories/auth.repository.ts, services/auth.service.ts.
+' No se toca ninguna store: no hay sesión hasta que el usuario inicia sesión (CU-02).
+' Notas:
+'  - LoginScreen pasa { email } solo si el campo de usuario tiene un email.
+'  - ForgotPasswordScreen incluye EmailVerificationModal (title "Recupera tu contraseña",
+'    reenviar tras 60 s).
+'  - Con 429 el modal se abre igual, con codeError = 'Ya te enviamos un código hace poco,
+'    revisa tu email'.
+!include ../_estilo.iuml
+
+actor "Visitante" as actor
+box "App" #F3F8FF
+    participant "Login\nScreen\n<<Nivel 7>>" as login
+    participant "Forgot\nPassword\nScreen\n<<Nivel 7>>" as screen
+    participant "useForgot\nPassword\n<<Nivel 6>>" as hook
+    participant "auth\nRepository\n<<Nivel 3>>" as repo
+    participant "auth\nService\n<<Nivel 1>>" as service
+end box
+participant "API\nREST" as api
+
+actor -> login : pulsa "Olvidé\nmi contraseña"
+login -> screen : navigate\n('ForgotPass\nwordScreen',\n{ email })
+screen -> hook : useForgot\nPassword(email)\n(step = 'email')
+actor -> screen : escribe el email,\n"Enviar código"
+screen -> hook : requestCode()
+alt Email no válido
+    hook --> screen : throw Error\n('Email no válido')
+    screen --> actor : showAlert\n({ title: 'Error',\nmessage })
+else
+    hook -> repo : requestPassword\nResetCode\n(email.trim())
+    repo -> service : requestPassword\nResetCode(email)
+    service -> api : POST /api/auth/\npassword-reset\n/code { email }
+    alt 429
+        api --> service : 429
+        service --> hook : AuthServiceError\n(status 429)
+        hook -> hook : codeError =\n'Ya te enviamos\nun código…'
+    else 204
+        api --> service : 204
+    end
+    hook -> hook : step = 'code'
+    screen --> actor : EmailVerification\nModal ("Recupera\ntu contraseña")
+    note over screen, hook : Sigue en DSD-CU-13 (2/5)
+end
+@enduml

@@ -1,0 +1,50 @@
+@startuml DCD-04g
+title DCD-04g - Diagrama de clases de diseño: seguridad (7/7) -\nrecomendaciones de Spotify: dependencias
+
+' Dependencias de SpotifyRecommendationServiceImpl (detallado en DCD-04f).
+' Fuentes: service/recommendation/SpotifyRecommendationServiceImpl.java
+skinparam classAttributeIconSize 0
+skinparam roundcorner 6
+skinparam nodesep 20
+skinparam ranksep 55
+skinparam packageStyle rectangle
+skinparam class {
+    BackgroundColor<<RestController>> #E3F0FF
+    BorderColor<<RestController>> #3D6FA8
+    BackgroundColor<<Service>> #E6F5E6
+    BorderColor<<Service>> #3C8A3C
+    BackgroundColor<<interface>> #F4FBF4
+    BorderColor<<interface>> #3C8A3C
+    BackgroundColor<<Repository>> #FFF4E0
+    BorderColor<<Repository>> #B07A1F
+    BackgroundColor<<Configuration>> #F3F3F3
+    BackgroundColor<<Component>> #F3F3F3
+    BackgroundColor<<external>> #FFFFFF
+    BorderColor<<external>> #888888
+}
+hide empty members
+
+class "service.recommendation.\nSpotifyRecommendationServiceImpl" as SpotifyRecommendationServiceImpl <<Service>> <<ver DCD-04f>>
+
+interface "service.SpotifyAuthService" as SpotifyAuthService <<interface>> <<ver DCD-04e>>
+class "utils.EntityResolver" as EntityResolver <<Component>> <<ver DCD-02e>>
+
+package "repository" {
+    interface SongRepository <<Repository>>
+    interface LessonRepository <<Repository>>
+    interface InstrumentGenreRepository <<Repository>>
+}
+
+class "Spotify Web API\n(api.spotify.com)" as SpotifyApi <<external>>
+
+SpotifyRecommendationServiceImpl --> SpotifyAuthService : getValidAccessToken
+SpotifyRecommendationServiceImpl --> SongRepository
+SpotifyRecommendationServiceImpl --> LessonRepository
+SpotifyRecommendationServiceImpl --> InstrumentGenreRepository
+SpotifyRecommendationServiceImpl ..> EntityResolver : resolveUser
+SpotifyRecommendationServiceImpl ..> SpotifyApi : RestTemplate\n(top tracks / artists)
+
+' Solo para colocar los repositorios debajo del resto (si no, el diagrama es demasiado ancho)
+EntityResolver -[hidden]down- LessonRepository
+
+@enduml

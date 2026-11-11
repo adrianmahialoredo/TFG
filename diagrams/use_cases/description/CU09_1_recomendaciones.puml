@@ -1,0 +1,55 @@
+@startuml DS-CU-09-1
+title DS-CU-09 (1/5) - Consultar recomendaciones adaptativas:\npetición y nivel del algoritmo
+
+' Diagrama de secuencia de análisis (patrón Boundary-Control-Entity)
+' Fuentes: HomeScreen.tsx, useHomeItems.ts, useAddItemScreen.ts, song.repository.ts,
+' ItemRecommendationServiceImpl.java, Song/Lesson/Genre/InstrumentGenreRecommendationServiceImpl.java,
+' User.getIdsExcludedFromRecommendationsOfType, RecommendationConstants.java
+' Partes: (1/5) petición y nivel del algoritmo (CU09_1_recomendaciones.puml); (2/5) cupo por
+' tipo y resultado (CU09_2_cupo.puml); (3/5) artistas favoritos (CU09_3_artistas.puml);
+' (4/5) "Basado en tu Spotify": token y tops (CU09_4_spotify.puml); (5/5) "Basado en tu
+' Spotify": ítems del carrusel (CU09_5_spotify_items.puml).
+autonumber
+hide footbox
+skinparam sequenceMessageAlign center
+skinparam roundcorner 6
+skinparam maxMessageSize 130
+skinparam wrapWidth 170
+skinparam ParticipantPadding 2
+skinparam BoxPadding 2
+skinparam defaultFontSize 12
+
+actor "Músico" as musico
+boundary "Recomendaciones\nView" as vista
+control "Motor\nRecomendacion" as motor
+entity "ItemList" as lista
+entity "Usuario" as usuario
+
+musico -> vista : abrirRecomendaciones()
+note right of musico : "Para ti": en\nInicio o dentro\nde una lista
+vista -> motor : pedirRecomendaciones(origenId)
+note right of motor : GET /api/recommendations/\nitems/by-user/{id} o\n.../by-item-list/{id}
+
+motor -> usuario : obtenerFavoritosYNivel(userId)
+usuario --> motor : géneros, instrumentos, nivel
+motor -> lista : obtenerItems(origenId)
+lista --> motor : ítems ya incluidos
+motor -> motor : calcularTopGenerosEInstrumentos()
+note right of motor : getTopNMostRepeated
+
+alt 4a. Lista nueva o usuario sin historial
+    motor -> motor : saltarANivelesDeRespaldo(favoritos, nivel)
+else Hay historial
+    motor -> motor : ejecutarAlgoritmoNiveles()
+    note right of motor
+        Nivel 1: coincidencia estricta
+        Nivel 2: reparto
+        Nivel 3: favoritos y nivel
+        de destreza
+        Nivel 4: general
+    end note
+end
+
+note over vista, motor : Continúa en DS-CU-09 (2/5)
+
+@enduml

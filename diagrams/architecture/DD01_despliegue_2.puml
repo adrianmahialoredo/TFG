@@ -1,0 +1,72 @@
+@startuml DD-01-2
+title DD-01 (2/2) - Despliegue (producción): backend en Render y sus servicios
+
+' Segunda parte de DD-01 (la primera, el móvil y lo que usa la app, está en
+' DD01_despliegue.puml). Las fuentes de los datos están en los comentarios de la parte 1.
+skinparam roundcorner 6
+skinparam nodesep 12
+skinparam ranksep 40
+skinparam defaultTextAlignment center
+skinparam node {
+    BackgroundColor<<device>> #F3F8FF
+    BorderColor<<device>> #3D6FA8
+    BackgroundColor<<executionEnvironment>> #FFFFFF
+}
+skinparam cloud {
+    BackgroundColor #F3F3F3
+    BorderColor #888888
+}
+skinparam artifact {
+    BackgroundColor #FFF4E0
+    BorderColor #B07A1F
+}
+skinparam database {
+    BackgroundColor #E6F5E6
+    BorderColor #3C8A3C
+}
+skinparam ArrowColor #555555
+
+node "Móvil Android\n(ver DD-01 1/2)" <<device>> as phone
+
+' ---------------------------------------------------------------------
+' Backend en Render
+' ---------------------------------------------------------------------
+
+cloud "Render (plan free, frankfurt)" as render {
+    node "Proxy HTTPS :443\n(terminación TLS)" <<executionEnvironment>> as proxy
+    node "Contenedor Docker\n(eclipse-temurin:23-jre)" <<executionEnvironment>> as docker {
+        node "Tomcat embebido\n:${PORT}" <<executionEnvironment>> as tomcat {
+            artifact "app.jar\n(TOCO-0.0.1-SNAPSHOT.jar,\nSpring Boot 3.4.3)" as jar
+        }
+    }
+}
+
+' ---------------------------------------------------------------------
+' Servicios externos
+' ---------------------------------------------------------------------
+
+cloud "Neon" as neon {
+    database "PostgreSQL" as pg
+}
+
+cloud "Brevo" as brevo {
+    component "SMTP\nsmtp-relay.\nbrevo.com:2525" as smtp
+}
+
+cloud "Spotify" as spotify {
+    component "Spotify Accounts\n(accounts.spotify.com)" as spotify_accounts
+    component "Spotify Web API\n(api.spotify.com)" as spotify_api
+}
+
+' ---------------------------------------------------------------------
+' Comunicaciones
+' ---------------------------------------------------------------------
+
+phone --> proxy : app: HTTPS :443, JSON REST,\nBearer <JWT>\nnavegador: GET /api/spotify/callback
+proxy --> tomcat : HTTP
+jar --> pg : JDBC sobre TLS\n(sslmode=require,\nHikariCP máx. 10)
+jar --> smtp : SMTP STARTTLS\n(códigos por email,\nasíncrono)
+jar --> spotify_accounts : HTTPS :443\nOAuth2 (tokens)
+jar --> spotify_api : HTTPS :443\nREST (Bearer\nde Spotify)
+
+@enduml

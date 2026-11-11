@@ -1,0 +1,45 @@
+@startuml DSD-CU-08-3
+title DSD-CU-08 (3/5) - Añadir/eliminar ítems en listas: 1a. quitar un ítem (app)
+
+' Fuentes: frontend/src/screens/ListScreen.tsx (handleRemoveItem), hooks/useItemListDetail.ts,
+' repositories/itemList.repository.ts, services/itemList.service.ts. Backend en DSD-CU-08 (5/5).
+' - La lista que se ve se deriva de la Store, así que basta con hidratarla con la respuesta.
+' - itemListService (Nivel 1) no tiene línea de vida: la flecha a la API es su llamada.
+' - useItemListEntitiesStore (Nivel 4) no tiene línea de vida: hydrateItemLists hace setItemLists en
+'   ella y useItemListDetail recibe la lista por su suscripción (Zustand).
+!include ../_estilo.iuml
+
+actor "Músico" as actor
+box "App (React Native)" #F3F8FF
+    participant "ListScreen\n<<Nivel 7>>" as listScreen
+    participant "useItemList\nDetail\n<<Nivel 6>>" as detailHook
+    participant "itemList\nRepository\n<<Nivel 3>>" as repo
+end box
+participant "API REST" as api
+
+actor -> listScreen : pulsa quitar en un ítem
+listScreen -> listScreen : handleRemoveItem(item)
+listScreen --> actor : showAlert("Quitar de la lista", confirmación)
+
+alt El músico cancela
+    actor -> listScreen : Cancelar
+else El músico confirma
+    actor -> listScreen : Quitar
+    listScreen -> detailHook : removeItem(item.id)
+    detailHook -> repo : removeItemFromList(\nlistId, itemId)
+    repo -> api : itemListService\n.removeItemFromList: DELETE /api/item-lists/{listId}\n/items/{itemId}
+    alt Éxito
+        api --> repo : 200 OK ItemListDTO
+        repo -> repo : hydrateItemLists(\n[updated]): setItemLists en la Store
+        repo --> detailHook : updated
+        detailHook --> listScreen : items (derivados de la Store)
+        listScreen --> actor : la lista se refresca sin el ítem
+    else Error: sin red, 401, 403 o lista inexistente (404)
+        api --> repo : error (throw)
+        repo --> detailHook : null
+        detailHook --> listScreen : throw Error
+        listScreen --> actor : showAlert("No se pudo quitar el item de la lista")
+    end
+end
+
+@enduml

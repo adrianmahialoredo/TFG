@@ -1,74 +1,46 @@
 @startuml DSD-CU-06-1
-title DSD-CU-06 (1/4) - Consultar espacio de género: entrada al género (app)
+title DSD-CU-06 (1/8) - Consultar espacio de género: entrada y carga del género (app)
 
 ' Parte de la app de la realización de CU-06. El backend se dibuja como una sola línea de
-' vida ("API REST"); lo que hace cada endpoint está en DSD-CU-06 (4/4).
+' vida ("API REST"); lo que hace cada endpoint está en DSD-CU-06 (7/8 y 8/8).
+' Partes: (1/8) entrada y carga del género; (2/8) instrumentos, lecciones y descripción;
+' (3/8) pestaña "Canciones"; (4/8) pestaña "Instrumentos" y carga del itinerario;
+' (5/8) carga de la lección del itinerario; (6/8) lección mostrada y navegación;
+' (7/8 y 8/8) backend.
 ' Fuentes: screens/GenreMainScreen.tsx, GenreDescriptionScreen.tsx; hooks/useGenreMain.ts,
 ' useGenreDescription.ts; repositories/genre, instrumentGenre, lesson, item .repository.ts;
 ' utils/entityCache.utils.ts; services/genre, instrumentGenre, lesson .service.ts.
 ' GenreDescriptionScreen, GenreSongsScreen y GenreInstrumentsScreen son pestañas embebidas
 ' en GenreMainScreen (no rutas).
+' Para que quepa en A4, los service (Nivel 1) no tienen línea de vida: cada flecha
+' "Repositories -> API REST" es la llamada al service indicado, que hace la petición HTTP.
 !include ../_estilo.iuml
 
 actor "Músico" as actor
 box "App (React Native)" #F3F8FF
-    participant "GenreMainScreen\n<<Nivel 7>>" as screen
-    participant "useGenreMain\nuseGenreDescription\n<<Nivel 6>>" as hooks
-    participant "genre / instrumentGenre /\nlesson / item\nRepository <<Nivel 3>>" as repos
+    participant "GenreMain\nScreen\n<<Nivel 7>>" as screen
+    participant "useGenreMain\n<<Nivel 6>>" as hooks
+    participant "Repositories\n<<Nivel 3>>" as repos
     participant "Entity Stores\n<<Nivel 4>>" as stores
-    participant "genre / instrumentGenre /\nlesson Service\n<<Nivel 1>>" as services
 end box
-participant "API REST\n(backend)" as api
+participant "API REST" as api
 
-actor -> screen : pulsa un género\nnavigate('GenreMainScreen', { genreId })
+actor -> screen : pulsa un género: navigate(\n'GenreMainScreen', { genreId })
 screen -> hooks : useGenreMain(genreId)
-hooks -> repos : Promise.allSettled([genreRepository.getById,\ninstrumentGenreRepository.getByGenreId,\nlessonRepository.getByGenreId])
+hooks -> repos : Promise.allSettled([ genreRepository\n.getById, instrumentGenreRepository\n.getByGenreId, lessonRepository\n.getByGenreId ])
+note right of hooks : las dos últimas,\nen DSD-CU-06 (2/8)
 
 group genreRepository.getById(genreId)
     repos -> stores : genres[id]
     alt en RAM o en disco (genreLocal.getById)
         stores --> repos : GenreDTO
-        repos ->> services : cache.revalidate([id])
-        services ->> api : POST /api/genres/by-ids (segundo plano)
+        repos ->> api : cache.revalidate(\n[id]): POST /api/genres/by-ids (segundo plano)
     else cache-miss
-        repos -> services : genreService.getById(id)
-        services -> api : GET /api/genres/{id}
-        api --> services : 200 GenreDTO (404 si no existe)
-        services --> repos : GenreDTO
-        repos -> repos : cache.markFresh([id])\ngenreLocal.saveBatch([genre])
+        repos -> api : genreService\n.getById(id): GET /api/genres/{id}
+        api --> repos : 200 GenreDTO (404 si no existe)
+        repos -> repos : cache.markFresh([id]), genreLocal\n.saveBatch([genre])
     end
-    repos -> stores : useGenreEntitiesStore.setGenres([genre])
+    repos -> stores : useGenreEntitiesStore\n.setGenres([genre])
 end
-
-group instrumentGenreRepository.getByGenreId(genreId)
-    note right of repos : cache.list('genre_{genreId}'): con índice\nguardado devuelve los IDs al instante
-    repos -> services : instrumentGenreService.getByGenreId(genreId)
-    services -> api : GET /api/instrument-genres/by-genre/{genreId}
-    api --> services : 200 List<InstrumentGenreDTO>\n(lessonIds ya ordenados)
-    services --> repos : InstrumentGenreDTO[]
-    repos -> stores : setInstrumentGenres(igs)\n(RAM + disco + índice)
-    opt hay lessonIds
-        repos ->> services : lessonRepository.getAllById(allLessonIds)
-        services ->> api : POST /api/lessons/by-ids (precarga)
-    end
-end
-
-group lessonRepository.getByGenreId(genreId)
-    repos -> services : lessonService.getByGenreId(genreId)
-    services -> api : GET /api/lessons/by-genre/{genreId}
-    api --> services : 200 List<LessonDTO>
-    services --> repos : LessonDTO[]
-    repos -> stores : setLessons(lessons) + índice
-end
-
-hooks ->> repos : itemRepository.markAsAccessed(genreId)
-repos ->> stores : useRecentItemsStore.markAsAccessed(userId, genreId)
-hooks --> screen : { genre, loading, error,\nselectedTab = 'Género' }
-
-note over screen, hooks : Promise.allSettled no rechaza: si el género no\nse carga, genre queda a null y la pestaña sale vacía
-screen -> hooks : useGenreDescription(genreId)
-hooks -> stores : genres[genreId]
-hooks --> screen : { description, bannerUrl,\nwelcomeVideoId, welcomeSongId }
-screen --> actor : pestañas (Instrumentos, Canciones, Género),\nbanner, descripción y vídeos de bienvenida
 
 @enduml

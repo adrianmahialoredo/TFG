@@ -1,0 +1,33 @@
+@startuml DSD-CU-06-5
+title DSD-CU-06 (5/8) - Consultar espacio de género: carga de la lección del itinerario (app)
+
+' Sigue a DSD-CU-06 (4/8). Fuentes: screens/InstrumentGenreLessonScreen.tsx;
+' hooks/useInstrumentGenreLesson.ts, useLesson.ts; repositories/lesson, lessonSection
+' .repository.ts. Backend en DSD-CU-06 (8/8).
+' LessonScreen (ruta propia) solo se usa desde el carrusel "Recomendaciones", con el mismo useLesson.
+!include ../_estilo.iuml
+
+box "App (React Native)" #F3F8FF
+    participant "Instrument\nGenreLesson\nScreen\n<<Nivel 7>>" as igScreen
+    participant "useInstrument\nGenreLesson\nuseLesson\n<<Nivel 6>>" as hooks
+    participant "Repositories\n<<Nivel 3>>" as repos
+    participant "Entity\nStores\n<<Nivel 4>>" as stores
+end box
+participant "API REST" as api
+
+igScreen -> hooks : useLesson(\nactiveLesson?\n.id ?? '',\n{ markAccessed: false })
+group useLesson
+    hooks -> repos : lessonRepository\n.getById(lessonId)
+    repos -> repos : lessonSectionRepository\n.getAllById(\nsectionIds)
+    opt faltan secciones en caché
+        repos -> api : POST /api/lesson-sections\n/by-ids [ids]
+        api --> repos : 200 List<LessonSectionDTO>
+        repos -> stores : setLessonSections(\nsections)
+    end
+    repos --> hooks : LessonDTO
+    hooks -> hooks : secciones por orderIndex; currentSection = sections[0]
+end
+hooks --> igScreen : { lessons, activeLesson } y { sections, currentSection, goToNext, goToPrevious }
+note over igScreen : sigue en\nDSD-CU-06 (6/8)
+
+@enduml

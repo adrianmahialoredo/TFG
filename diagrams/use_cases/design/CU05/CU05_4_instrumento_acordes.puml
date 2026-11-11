@@ -1,0 +1,34 @@
+@startuml DSD-CU-05-4
+title DSD-CU-05 (4/5) - Consultar canción: instrumento y acordes (app)
+
+' Fuentes: screens/SongScreen.tsx, components/InstrumentCarousel.tsx, Touchable.tsx,
+' ChordModal.tsx; hooks/useSong.ts; stores/ui/songScreen.store.ts.
+' Además del análisis: selector de instrumento (InstrumentCarousel), que solo aparece si hay
+' lecciones de más de un instrumento. Sin peticiones: todo sale de las Entity Stores.
+!include ../_estilo.iuml
+
+actor "Músico" as actor
+box "App (React Native)" #F3F8FF
+    participant "SongScreen\n(+ ChordModal)\n<<Nivel 7>>" as screen
+    participant "useSong\n<<Nivel 6>>" as hook
+    participant "useSongScreen\nStore <<Nivel 5>>" as uiStore
+end box
+
+opt Cambia de instrumento (solo si hay lecciones de más de uno)
+    actor -> screen : elige instrumento en InstrumentCarousel
+    screen -> hook : changeInstrument(\ninstrumentId)
+    hook -> uiStore : setInstrument(\ninstrumentId)
+    hook -> hook : useMemo: lecciones y dificultades de ese instrumento (dificultad por defecto si la elegida no existe)
+    hook --> screen : lección seleccionada
+    screen --> actor : actualiza la lección mostrada
+end
+
+opt 5a. Pulsa un acorde
+    actor -> screen : pulsa un acorde (Touchable)
+    screen -> screen : setSelectedChord(\nchord)
+    screen --> actor : <ChordModal chord />: nombre, diagrama (imageUrl), tags (Mayor, Menor, Séptima, Power chord, Abierto, Cejilla) y "Capo: n" / "Sin capo"
+    actor -> screen : cierra el modal
+    screen -> screen : setSelectedChord(null)
+end
+
+@enduml

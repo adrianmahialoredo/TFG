@@ -1,0 +1,48 @@
+@startuml DS-CU-11-3
+title DS-CU-11 (3/4) - Utilizar afinador cromático:\nanálisis de cada bloque de audio
+
+' Diagrama de secuencia de análisis (patrón Boundary-Control-Entity)
+' Fuentes: TunerScreen.tsx, useTunes.ts, useTuner.ts, microphone.utils.ts, pitch.utils.ts, tuner.utils.ts
+' Partes: (1/4) carga de las afinaciones (CU11_1_carga.puml); (2/4) arranque de la escucha
+' (CU11_2_arranque_escucha.puml); (3/4) análisis de cada bloque (CU11_3_analisis.puml);
+' (4/4) acciones durante la escucha y salida (CU11_4_acciones_y_salida.puml).
+autonumber
+hide footbox
+skinparam sequenceMessageAlign center
+skinparam roundcorner 6
+skinparam maxMessageSize 130
+skinparam wrapWidth 170
+skinparam ParticipantPadding 2
+skinparam BoxPadding 2
+skinparam defaultFontSize 12
+
+actor "Músico" as musico
+boundary "AfinadorScreen" as pantalla
+control "Procesador\nAudio" as procesador
+boundary "Microfono" as microfono
+
+note over pantalla, microfono : Viene de DS-CU-11 (2/4): el micrófono está grabando
+
+loop Cada bloque de audio (~10 por segundo) mientras se escucha
+    musico -> microfono : hacerSonarCuerda()
+    microfono --> procesador : bloque de audio
+    note left of procesador : Si analizar un bloque\ntarda X ms, se descartan\nlos que llegan en los\nX ms siguientes (el\nanálisis nunca ocupa más\nde la mitad del hilo de JS)
+
+    alt Silencio o ruido (volumen bajo o sin periodicidad)
+        procesador -> procesador : descartarBloque()
+        note right of procesador : Se mantiene la\núltima lectura
+    else Nota detectada
+        procesador -> procesador : extraerFrecuenciaFundamental() (YIN)
+        procesador -> procesador : suavizar(mediana de 3 bloques)
+        procesador -> procesador : compararCon(cuerda seleccionada)
+        note right of procesador : No se adivina qué\ncuerda suena: se\ncompara siempre con la\nque ha seleccionado el\nmúsico (al abrir,\nla primera)
+        procesador -> procesador : calcularDesviacion(cents)
+        procesador --> pantalla : cuerda, frecuencia, desviación
+        pantalla --> musico : resaltarCuerda(), moverAguja(), mostrar(cents, Hz, Tensar/Destensar/Afinado)
+        note right of pantalla : Aguja vertical y verde:\nafinada (±5 cents)\nA la izquierda: baja\n(tensar)\nA la derecha: alta\n(destensar)
+    end
+end
+
+note over musico, pantalla : Acciones durante la escucha\ny salida en DS-CU-11 (4/4)
+
+@enduml

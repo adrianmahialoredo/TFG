@@ -1,0 +1,40 @@
+@startuml DSD-CU-06-8
+title DSD-CU-06 (8/8) - Consultar espacio de género: backend (canciones y lecciones por id)
+
+' Lo que hace el backend en las peticiones de DSD-CU-06 (2/8 a 6/8).
+' Fuentes: SongController, LessonController, LessonSectionController;
+' Song/Lesson/LessonSectionServiceImpl; utils/mapper/DtoMapper.java.
+' DtoMapper (<<mapper>>) no tiene línea de vida: sus llamadas son mensajes del servicio a sí mismo.
+' Consultas por tipo de carrusel: SongRepository.findByGenresIdAndGenrePopularTrue,
+' findByGenresIdAndGenreClassicTrue y findByGenresIdAndGenreNewTrue (genreId).
+' DTO devueltos en el último bloque: LessonDTO (sectionIds...) y LessonSectionDTO (title,
+' htmlContent, videoUrl, orderIndex).
+!include ../_estilo.iuml
+
+participant "App\n(services)" as app
+box "Backend (Spring Boot)" #FFF9F0
+    participant "XController\n<<controller>>" as ctrl
+    participant "XServiceImpl\n<<service>>" as svc
+    participant "XRepository" as repo
+end box
+database "PostgreSQL" as db
+
+group GET /api/songs/by-genre/{genreId}/popular|classic|new
+    app -> ctrl : SongController
+    ctrl -> svc : SongServiceImpl\n.findPopularForGenre | findClassicForGenre | findNewForGenre(\ngenreId)
+    svc -> repo : SongRepository\n.findByGenresIdAndGenre PopularTrue | ClassicTrue | NewTrue(genreId)
+    repo -> db : SELECT
+    svc -> svc : DtoMapper\n.songToSongDto(song)
+    ctrl --> app : 200 List<SongDTO>
+end
+
+group POST /api/lessons/by-ids | POST /api/lesson-sections/by-ids
+    app -> ctrl : LessonController | LessonSectionController .getByIds(ids)
+    ctrl -> svc : LessonServiceImpl | LessonSectionServiceImpl .findByIds(ids)
+    svc -> repo : findAllById(ids)
+    repo -> db : SELECT ... WHERE id IN (...)
+    svc -> svc : DtoMapper: lessonToLessonDto | lessonSectionToLessonSectionDto
+    ctrl --> app : 200 List<LessonDTO | LessonSectionDTO>
+end
+
+@enduml

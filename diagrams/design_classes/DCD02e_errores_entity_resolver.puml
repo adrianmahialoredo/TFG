@@ -1,0 +1,60 @@
+@startuml DCD-02e
+title DCD-02e - Diagrama de clases de diseño: capas del backend (5/6) -\nmanejo de errores y EntityResolver
+
+' Utilidades que usan todos los XServiceImpl (DCD-02a-d) y el manejador global de errores.
+' Fuentes: exception/GlobalExceptionHandler.java, utils/EntityResolver.java, Utils.java,
+'          RecommendationConstants.java, utils/mapper/DtoMapper.java, EntityMapper.java,
+'          service/SpotifyAuthServiceImpl.java (userRepository.findById)
+' Seis partes: DCD-02a/b canciones (controlador e interfaz / implementación y repositorio),
+' DCD-02c/d listas de estudio (ídem), DCD-02e manejo de errores y EntityResolver,
+' DCD-02f Utils, constantes y mappers.
+skinparam classAttributeIconSize 0
+skinparam roundcorner 6
+skinparam nodesep 20
+skinparam ranksep 50
+skinparam packageStyle rectangle
+skinparam class {
+    BackgroundColor<<RestController>> #E3F0FF
+    BorderColor<<RestController>> #3D6FA8
+    BackgroundColor<<Repository>> #FFF4E0
+    BorderColor<<Repository>> #B07A1F
+    BackgroundColor<<Component>> #F3F3F3
+    BackgroundColor<<RestControllerAdvice>> #FDECEC
+    BorderColor<<RestControllerAdvice>> #B03A3A
+}
+hide empty members
+
+class "XController" as XController <<RestController>>
+note left of XController : SongController,\nItemListController...\n(DCD-02a-d)
+
+class "exception.GlobalExceptionHandler" as GlobalExceptionHandler <<RestControllerAdvice>> {
+        {field} todos devuelven ResponseEntity<Map<String,Object>>
+        --
+        + handleBadCredentials(ex) {401}
+        + handleAccessDenied(ex) {403}
+        + handleIllegalArgument(ex) {400}
+        + handleEntityNotFound(ex) {404}
+        + handleValidation(ex) {400 + errores por campo}
+        + handleNotReadable(ex) {400}
+        + handleTypeMismatch(ex) {400}
+        + handleGeneric(ex)
+    }
+note left of GlobalExceptionHandler : handleGeneric: si la\nexcepción es un\nErrorResponse devuelve\nsu estado; si no, 500
+
+package "utils" {
+    class EntityResolver <<Component>> {
+        + {static} findX(id : Long) : Optional<X>
+        + {static} resolveX(id : Long) : X
+        + {static} resolveXs(ids : List<Long>) : Set<X>
+        + {static} resolveChords(ids : List<Long>, instrument : Instrument) : Set<Chord>
+    }
+    note left of EntityResolver : X = Song, Item, ItemList, User...\n(una terna por entidad). Recibe los\nrepositorios por constructor y los guarda\nen campos estáticos: punto común de\nfindById (excepción: SpotifyAuthServiceImpl\nusa userRepository.findById).\nresolveX: id null -> IllegalArgumentException\n(400), no existe -> EntityNotFoundException\n(404). resolveChords(ids, instrument): 400\nsi un acorde no es de ese instrumento
+}
+
+interface "repository.XRepository" as XRepository <<Repository>>
+
+GlobalExceptionHandler .up.> XController : <<intercepta>>
+GlobalExceptionHandler -[hidden]down- EntityResolver
+EntityResolver -down-> XRepository : 14 repositorios\n(campos estáticos)
+
+@enduml

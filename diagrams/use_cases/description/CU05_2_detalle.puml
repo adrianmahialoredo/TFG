@@ -1,0 +1,44 @@
+@startuml DS-CU-05-2
+title DS-CU-05 (2/2) - Consultar detalle de canción y lección:\ndetalle, cambio de lección y acordes
+
+' Diagrama de secuencia de análisis (patrón Boundary-Control-Entity)
+' Fuentes: SongScreen.tsx, useSong.ts, songScreen.store.ts, ChordModal.tsx
+' Partes: (1/2) carga y lección por defecto (CU05_1_carga.puml); (2/2) este.
+autonumber
+hide footbox
+skinparam sequenceMessageAlign center
+skinparam roundcorner 6
+skinparam maxMessageSize 130
+skinparam wrapWidth 170
+skinparam ParticipantPadding 2
+skinparam BoxPadding 2
+skinparam defaultFontSize 12
+
+actor "Músico" as musico
+boundary "SongDetailScreen" as pantalla
+control "GestorCanciones" as gestor
+
+note over pantalla, gestor : Viene de DS-CU-05 (1/2): canción, lecciones y lección seleccionada
+
+alt No hay lecciones disponibles
+    pantalla --> musico : mostrarAviso("No hay lecciones disponibles para esta canción")
+else Hay lecciones
+    pantalla --> musico : mostrarDetalle(carátula, título, artista, chordedLyrics, vídeo de YouTube, acordes, tablaturas)
+
+    opt 3a. Cambiar instrumento o dificultad (EASY, MEDIUM, ORIGINAL)
+        musico -> pantalla : cambiarInstrumento(id) / cambiarDificultad(dificultad)
+        pantalla -> gestor : seleccionarLeccion(instrumento, dificultad)
+        note right of gestor : Sin peticiones: las\nlecciones, acordes y\ntablaturas ya están\ncargados
+        gestor --> pantalla : lección
+        pantalla --> musico : actualizarLetraAcordesYTablatura()
+    end
+
+    opt 5a. El músico pulsa un acorde
+        musico -> pantalla : seleccionarAcorde(chordId)
+        pantalla --> musico : mostrarModalAcorde(nombre, diagrama, propiedades, capo)
+        note right of pantalla : Propiedades como tags\n(Mayor, Menor, Séptima,\nPower chord, Abierto,\nCejilla) y el traste del\ncapo ("Sin capo" si es 0)
+        musico -> pantalla : cerrarModal()
+    end
+end
+
+@enduml

@@ -1,0 +1,85 @@
+@startuml DCA-01b
+title DCA-01b - Diagrama de clases de análisis: contenido de las canciones
+
+' Clases «entity» del modelo de análisis (parte 2/3: contenido de las canciones,
+' acordes, afinaciones e instrumentos). Song se detalla en DCA-01a
+' (01a_entidades_catalogo.puml); aquí aparece vacía como extremo de relación.
+' Fuentes: src/main/java/com/uo289390/toco/model/*.java.
+skinparam classAttributeIconSize 0
+skinparam roundcorner 6
+
+skinparam nodesep 35
+skinparam ranksep 70
+skinparam class {
+    BackgroundColor<<entity>> #FFF4E0
+    BorderColor<<entity>> #B07A1F
+}
+hide empty members
+
+class Song <<entity>> <<ver DCA-01a>>
+
+class Instrument <<entity>> {
+    id
+    name
+    imageUrl
+}
+
+class SongLesson <<entity>> {
+    id
+    difficulty : Dificultad
+    chordedLyrics
+    videoUrl
+}
+
+enum Dificultad {
+    EASY
+    MEDIUM
+    ORIGINAL
+}
+
+class Chord <<entity>> {
+    id
+    name {único por instrumento}
+    notes [*] {ordered}
+    imageUrl
+    open
+    barre
+    powerChord
+    minor
+    major
+    seventh
+    capo
+    capoFret {0..12}
+}
+
+class Tune <<entity>> {
+    id
+    title
+    notes [1..*] {ordered}
+}
+
+class TabSection <<entity>> {
+    id
+    identifier
+    content
+}
+
+Song "1" *-- "0..*" SongLesson : se desglosa en >
+SongLesson "0..*" --> "0..*" Chord : usa {ordered}
+SongLesson "1" *-- "0..*" TabSection : contiene {ordered}
+SongLesson "0..*" --> "1" Instrument : para >
+Chord "0..*" --> "1" Instrument : para >
+Tune "0..*" --> "1" Instrument : afinación de >
+SongLesson ..> Dificultad
+
+note bottom of Chord
+  Un mismo acorde (p. ej.
+  Do menor) existe una vez
+  por instrumento, con su
+  propia digitación y
+  diagrama. {Los acordes de
+  una SongLesson son del
+  instrumento de la lección}
+end note
+
+@enduml

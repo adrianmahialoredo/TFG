@@ -1,0 +1,7 @@
+escenario;perfil;fecha;vus_max;duracion_s;peticiones;req_s;media_ms;mediana_ms;p95_ms;p99_ms;max_ms;errores_pct;fichero
+Catálogo (GET /api/items);load;2026-11-11 04:45:29;20;392;1697;4.3;3090;3283;4208;4789;7104;0.06;k6_catalogo_2026-11-11T04-45-29-554Z.json
+Catálogo (GET /api/items);smoke;2026-11-11 04:35:01;1;31;22;0.7;454;363;721;1151;1265;0;k6_catalogo_2026-11-11T04-35-01-852Z.json
+Recomendaciones (Para ti);load;2026-11-11 04:52:03;20;394;2942;7.5;1404;18;8709;16249;28791;83.11;k6_recomendaciones_2026-11-11T04-52-03-994Z.json
+Recomendaciones (Para ti);smoke;2026-11-11 04:35:33;1;31;18;0.6;833;884;1085;1152;1169;0;k6_recomendaciones_2026-11-11T04-35-33-237Z.json
+Login / JWT;load;2026-11-11 04:58:36;20;392;2867;7.3;1435;21;12481;16419;23812;86.71;k6_login_2026-11-11T04-58-36-003Z.json
+Login / JWT;smoke;2026-11-11 04:36:04;1;31;18;0.6;733;719;836;891;905;0;k6_login_2026-11-11T04-36-04-804Z.json

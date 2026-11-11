@@ -1,0 +1,88 @@
+@startuml DCD-04d
+title DCD-04d - Diagrama de clases de diseño: seguridad (4/7) -\nautenticación: códigos por email
+
+' Códigos de verificación del registro y de recuperación de contraseña. Continuación de
+' DCD-04c.
+' Siete partes: DCD-04a config; DCD-04b security; DCD-04c autenticación (login, registro y
+' recuperación de contraseña); DCD-04d códigos por email; DCD-04e vinculación con Spotify
+' (OAuth2); DCD-04f/g recomendaciones de Spotify. Reglas: architecture.md §9.
+' Fuentes: service/EmailVerificationService.java, EmailVerificationServiceImpl.java,
+'          EmailService.java, EmailServiceImpl.java
+skinparam classAttributeIconSize 0
+skinparam roundcorner 6
+skinparam nodesep 20
+skinparam ranksep 45
+skinparam packageStyle rectangle
+skinparam class {
+    BackgroundColor<<RestController>> #E3F0FF
+    BorderColor<<RestController>> #3D6FA8
+    BackgroundColor<<Service>> #E6F5E6
+    BorderColor<<Service>> #3C8A3C
+    BackgroundColor<<interface>> #F4FBF4
+    BorderColor<<interface>> #3C8A3C
+    BackgroundColor<<Repository>> #FFF4E0
+    BorderColor<<Repository>> #B07A1F
+    BackgroundColor<<Component>> #F3F3F3
+    BackgroundColor<<external>> #FFFFFF
+    BorderColor<<external>> #888888
+}
+hide empty members
+
+class "controller.AuthController" as AuthController <<RestController>> <<ver DCD-04c>>
+
+package "service" {
+    interface EmailVerificationService <<interface>> {
+        + sendCode(email : String) : void
+        + checkCode(email : String, code : String) : void
+        + consume(email : String) : void
+        + sendPasswordResetCode(email : String) : void
+        + checkPasswordResetCode(email : String, code : String) : void
+        + consumePasswordResetCode(email : String) : void
+    }
+    class EmailVerificationServiceImpl <<Service>> {
+        - {static} CODE_DIGITS : int = 6
+        - random : SecureRandom
+        - pendingCodes : Map<String, PendingCode>
+        - resetCodes : Map<String, PendingCode>
+        - userRepository : UserRepository
+        - emailService : EmailService
+        - emailExecutor : Executor
+        - clock : Clock
+    }
+    note right of EmailVerificationServiceImpl
+        Códigos en memoria
+        (registro y recuperación
+        en mapas separados):
+        caducan a los 10 min,
+        5 intentos, reenvío
+        tras 60 s (429).
+        Envío asíncrono
+        (emailExecutor =
+        applicationTaskExecutor);
+        si falla se descarta
+        el código. Recuperación
+        de un email sin cuenta:
+        204 sin enviar nada.
+    end note
+
+    interface EmailService <<interface>> {
+        + sendVerificationCode(to : String, code : String, minutes : long) : void
+        + sendPasswordResetCode(to : String, code : String, minutes : long) : void
+    }
+    class EmailServiceImpl <<Service>> {
+        - mailSender : ObjectProvider<JavaMailSender>
+        - from : String
+    }
+}
+
+interface "repository.UserRepository" as UserRepository <<Repository>> <<ver DCD-04c>>
+class "Servidor SMTP\n(Brevo)" as Smtp <<external>>
+
+AuthController --> EmailVerificationService
+EmailVerificationService <|.. EmailVerificationServiceImpl
+EmailVerificationServiceImpl --> EmailService
+EmailVerificationServiceImpl --> UserRepository
+EmailService <|.. EmailServiceImpl
+EmailServiceImpl ..> Smtp : JavaMailSender
+
+@enduml

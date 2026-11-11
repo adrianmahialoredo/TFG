@@ -1,0 +1,55 @@
+@startuml DCD-01e
+title DCD-01e - Diagrama de clases de diseño: modelo (5/5) - listas
+
+' Continuación de DCD-01d (User se detalla allí; Item, en DCD-01a).
+' Fuentes: model/ItemList.java, utils/Utils.java (getTopNMostRepeated)
+'
+' Notas de diseño:
+'   - IDENTITY en ItemList.
+'   - ItemList.items es List porque el orden es parte del dato.
+skinparam classAttributeIconSize 0
+skinparam roundcorner 6
+skinparam nodesep 20
+skinparam ranksep 50
+skinparam class {
+    BackgroundColor<<entity>> #FFF4E0
+    BorderColor<<entity>> #B07A1F
+    BackgroundColor<<enum>> #F3F3F3
+    BackgroundColor<<interface>> #E3F0FF
+    BorderColor<<interface>> #3D6FA8
+}
+hide empty members
+
+abstract class Item <<entity>> <<ver DCD-01a>>
+class User <<entity>> <<ver DCD-01d>>
+
+class ItemList <<entity>> {
+    - id : Long {PK}
+    - name : String
+    - imageUrl : String
+    --
+    + setItems(items : Collection<? extends Item>) : void {deduplica}
+    + addItem(item : Item) : boolean {ignora repetidos}
+    + removeItem(item : Item) : void
+    + getSize() : int
+    + containsItem(item : Item) : boolean
+    + getItemsOfType(type : Class<T>) : Set<T>
+    + getOnlyItemOfType(type : Class<T>) : Optional<T>
+    + getSongs() : Set<Song>
+    + getGenres() : Set<Genre>
+    + getOnlyGenre() : Optional<Genre>
+    + getOnlyInstrumentGenre() : Optional<InstrumentGenre>
+    + getMainGenreFrom{Songs, InstrumentGenres, Lessons, Items}() : Optional<Genre>
+    + getMainInstrumentFromItems() : Optional<Instrument>
+    + getTopGenresFrom{Songs, InstrumentGenres, Lessons, Items}(topN : int) : List<Genre>
+    + getTopInstrumentsFrom{Songs, Lessons, Items}(topN : int) : List<Instrument>
+    + getGenreOccurrencesFromItems() : List<Genre>
+    + getInstrumentOccurrencesFromItems() : List<Instrument>
+    - getTopN(topN : int, extractor) : List<T>
+}
+note bottom of ItemList : Todos los rankings pasan por getTopN\n(-> Utils.getTopNMostRepeated) con un\nextractor por tipo de item
+
+User "1" *-- "*" ItemList : itemLists / user
+ItemList "*" --> "*" Item : items\n{List ordenada, sin duplicados}
+
+@enduml

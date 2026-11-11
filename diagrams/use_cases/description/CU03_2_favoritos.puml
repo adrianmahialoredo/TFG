@@ -1,0 +1,45 @@
+@startuml DS-CU-03-2
+title DS-CU-03 (2/3) - Configurar perfil: favoritos
+
+' Diagrama de secuencia de análisis (patrón Boundary-Control-Entity)
+' Fuentes: ProfileScreen.tsx, useProfile.ts, FavoritesPickerModal.tsx, user.repository.ts,
+' UserController.java, UserServiceImpl.java
+' Partes: (1/3) CU03_1_datos_perfil.puml; (2/3) este; (3/3) CU03_3_foto_sesion.puml.
+autonumber
+hide footbox
+skinparam sequenceMessageAlign center
+skinparam roundcorner 6
+skinparam maxMessageSize 130
+skinparam wrapWidth 170
+skinparam ParticipantPadding 2
+skinparam BoxPadding 2
+skinparam defaultFontSize 12
+
+actor "Músico" as musico
+boundary "PerfilScreen" as pantalla
+control "GestorPerfil" as gestor
+entity "Preferencia" as preferencia
+
+note over musico, pantalla : El músico está en su\nperfil (DS-CU-03 (1/3))
+
+musico -> pantalla : pulsarAnadir(géneros | instrumentos)
+pantalla --> musico : mostrarSelectorFavoritos()
+note right of pantalla : "Guardar" deshabilitado\ncon menos de 2 elegidos
+musico -> pantalla : guardarSeleccion(ids)
+pantalla -> pantalla : calcularAltasYBajas(ids)
+loop Por cada alta y cada baja, una a una
+    pantalla -> gestor : anadirFavorito(userId, id) / quitarFavorito(userId, id)
+    note left of gestor : POST / DELETE\n/api/users/{id}/\nfavorite-genres/{genreId}\n(o favorite-instruments)
+    gestor -> preferencia : anadir(id) / quitar(id)
+    preferencia --> gestor : usuario
+    gestor --> pantalla : 200 OK + usuario
+end
+alt Alguna petición falla
+    pantalla -> pantalla : restaurar(backupUser) y recargarUsuario()
+    pantalla --> musico : mostrarError("No se pudieron guardar los favoritos")
+else Todas correctas
+    pantalla -> pantalla : actualizarAlmacenLocal(usuario)
+    pantalla --> musico : mostrarFavoritos()
+end
+
+@enduml

@@ -1,9 +1,10 @@
-@startuml DCU-01
-title DCU-01 - Diagrama de casos de uso de TOCO
+@startuml DCU-01-1
+title DCU-01 (1/2) - Casos de uso de TOCO: acceso, perfil y administración
 
-' Actores y casos de uso del apartado 4.3 de la memoria (CU-01 a CU-13).
-' CU-09 incluye las recomendaciones de lista ("Para ti"), las del Inicio, los artistas
-' favoritos y "Basado en tu Spotify". CU-13 es "Olvidé mi contraseña", desde el login.
+' Actores y casos de uso del apartado 4.3 de la memoria (CU-01 a CU-13), en dos partes para
+' que quepan en una página: (1/2) acceso, perfil y administración; (2/2) catálogo, listas,
+' recomendaciones y herramientas (CU00_diagrama_casos_uso_2.puml).
+' CU-13 es "Olvidé mi contraseña", desde el login.
 ' La administración del catálogo no es un caso de uso numerado: es el requisito RF-ADM-01
 ' (CRUD por la API REST con un token ADMIN, en la práctica con los scripts de carga).
 left to right direction
@@ -18,22 +19,12 @@ skinparam actorStyle awesome
 actor "Visitante" as visitante
 actor "Músico" as musico
 actor "Administrador" as admin
-actor "API de Spotify\n<<sistema externo>>" as spotify
 
 rectangle "TOCO" {
     usecase "CU-01 Registrar\nnuevo usuario" as CU01
     usecase "CU-02 Iniciar sesión" as CU02
-    usecase "CU-03 Configurar perfil" as CU03
-    usecase "CU-04 Explorar catálogo\nde ítems" as CU04
-    usecase "CU-05 Consultar canción\ny lección" as CU05
-    usecase "CU-06 Consultar\nespacio de género" as CU06
-    usecase "CU-07 Gestionar listas\nde estudio" as CU07
-    usecase "CU-08 Añadir/eliminar\nítems en listas" as CU08
-    usecase "CU-09 Consultar\nrecomendaciones" as CU09
-    usecase "CU-10 Vincular cuenta\nde Spotify" as CU10
-    usecase "CU-11 Utilizar afinador" as CU11
-    usecase "CU-12 Utilizar metrónomo" as CU12
     usecase "CU-13 Recuperar\ncontraseña" as CU13
+    usecase "CU-03 Configurar perfil" as CU03
     usecase "Administrar catálogo\n(RF-ADM-01, API REST)" as ADM
 }
 
@@ -42,29 +33,16 @@ visitante --> CU02
 visitante --> CU13
 
 musico --> CU03
-musico --> CU04
-musico --> CU05
-musico --> CU06
-musico --> CU07
-musico --> CU08
-musico --> CU09
-musico --> CU10
-musico --> CU11
-musico --> CU12
 
 admin --> ADM
 
-CU10 --> spotify
-CU09 --> spotify
-
-CU02 <.. CU13 : <<extend>>\n("Olvidé mi contraseña")
-CU04 <.. CU05 : <<extend>>
-CU04 <.. CU06 : <<extend>>
-CU08 ..> CU09 : <<include>>\n("Para ti")
-CU09 <.. CU10 : <<extend>>\n(sin Spotify)
+CU02 <.. CU13 : <<extend>>\n("Olvidé mi\ncontraseña")
 
 note bottom of admin
-  Músico y Administrador son
-  usuarios registrados (rol USER / ADMIN)
+  Músico y Administrador
+  son usuarios registrados
+  (rol USER / ADMIN). Los
+  casos de uso del Músico
+  siguen en DCU-01 (2/2).
 end note
 @enduml

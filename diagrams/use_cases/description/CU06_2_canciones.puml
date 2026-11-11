@@ -1,0 +1,44 @@
+@startuml DS-CU-06-2
+title DS-CU-06 (2/3) - Consultar espacio de género:\npestaña "Canciones"
+
+' Diagrama de secuencia de análisis (patrón Boundary-Control-Entity)
+' Fuentes: GenreMainScreen.tsx, useGenreMain.ts, GenreDescriptionScreen.tsx, GenreSongsScreen.tsx,
+' useGenreSongs.ts, GenreInstrumentsScreen.tsx, useGenreInstruments.ts,
+' InstrumentGenreLessonScreen.tsx, useInstrumentGenre.ts, useInstrumentGenreLesson.ts, useLesson.ts
+' Partes: (1/3) abrir el género (CU06_1_genero.puml); (2/3) pestaña "Canciones"
+' (CU06_2_canciones.puml); (3/3) pestaña "Instrumentos" e itinerario (CU06_3_itinerario.puml).
+autonumber
+hide footbox
+skinparam sequenceMessageAlign center
+skinparam roundcorner 6
+skinparam maxMessageSize 130
+skinparam wrapWidth 170
+skinparam ParticipantPadding 2
+skinparam BoxPadding 2
+skinparam defaultFontSize 12
+
+actor "Músico" as musico
+boundary "GenreScreen" as pantalla
+control "GestorGeneros" as gestor
+entity "Song" as song
+
+note over musico, pantalla : Viene de DS-CU-06 (1/3):\ngénero abierto
+
+opt Pestaña "Canciones"
+    musico -> pantalla : abrirPestanaCanciones()
+    pantalla -> gestor : cargarCarruselesCanciones(id)
+    par Cada carrusel se pinta en cuanto llega
+        gestor -> song : obtenerPopulares(genreId)
+        song --> gestor : SongDTO[]
+    else
+        gestor -> song : obtenerClasicas(genreId)
+        song --> gestor : SongDTO[]
+    else
+        gestor -> song : obtenerNuevas(genreId)
+        song --> gestor : SongDTO[]
+    end
+    gestor --> pantalla : carruseles
+    pantalla --> musico : mostrarCarruseles("Populares", "Clásicos del Género", "Novedades")
+end
+
+@enduml

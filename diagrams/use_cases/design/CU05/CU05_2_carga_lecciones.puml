@@ -1,0 +1,48 @@
+@startuml DSD-CU-05-2
+title DSD-CU-05 (2/5) - Consultar canción: lecciones, acordes y tablaturas (app)
+
+' Sigue a DSD-CU-05 (1/5), dentro de songRepository.getById(songId). Mismas fuentes y
+' simplificaciones (los service no tienen línea de vida; las flechas a la API son sus llamadas).
+' Diferencias con el guion:
+' - Las lecciones NO se piden con GET /api/song-lessons/by-song/{songId} (existe, SongLessonController.
+'   getForSong, pero la app no lo usa): se cargan desde song.lessonIds con
+'   songLessonRepository.getAllById -> POST /api/song-lessons/by-ids.
+' - getAllById (createEntityCache) busca en RAM, después en disco y pide a la API solo los que faltan.
+' - Acordes y tablaturas de TODAS las lecciones se piden a la vez (Promise.allSettled), así que
+'   cambiar de dificultad o de instrumento no hace peticiones (DSD-CU-05 3/5 y 4/5).
+!include ../_estilo.iuml
+
+box "App (React Native)" #F3F8FF
+    participant "useSong\n<<Nivel 6>>" as hook
+    participant "Repositories\n<<Nivel 3>>" as repos
+    participant "Stores\n<<Nivel 5 y 4>>" as stores
+end box
+participant "API REST" as api
+
+opt song.lessonIds no vacío
+    repos -> repos : songLessonRepository\n.getAllById(song\n.lessonIds): RAM -> disco -> API
+    opt faltan lecciones en caché
+        repos -> api : songLessonService\n.getAllById(missing): POST /api/song-lessons/by-ids [ids]
+        api --> repos : 200 List<SongLessonDTO>
+        repos -> stores : setSongLessons(\nlessons)
+    end
+    par acordes de todas las lecciones
+        repos -> repos : chordRepository\n.getAllById(chordIds)
+        opt faltan acordes en caché
+            repos -> api : chordService\n.getAllById(missing): POST /api/chords/by-ids [ids]
+            api --> repos : 200 List<ChordDto>
+            repos -> stores : setChords(chords)
+        end
+    else tablaturas de todas las lecciones
+        repos -> repos : tabSectionRepository\n.getAllById(tabIds)
+        opt faltan tablaturas en caché
+            repos -> api : tabSectionService\n.getAllById(missing): POST /api/tab-sections/by-ids [ids]
+            api --> repos : 200 List<TabSectionDTO>
+            repos -> stores : setTabSections(tabs)
+        end
+    end
+end
+repos --> hook : SongDTO
+hook -> stores : useSongScreenStore\n.setLoading(false)
+
+@enduml

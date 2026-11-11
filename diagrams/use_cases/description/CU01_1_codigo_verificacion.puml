@@ -1,24 +1,29 @@
 @startuml DS-CU-01-1
-title DS-CU-01 (1/2) - Registrar nuevo usuario: formulario y código de verificación
+title DS-CU-01 (1/3) - Registrar nuevo usuario:\nformulario y petición del código
 
 ' Diagrama de secuencia de análisis (patrón Boundary-Control-Entity)
 ' Fuentes: RegisterScreen.tsx, EmailVerificationModal.tsx, useRegister.ts, auth.service.ts,
 ' AuthContext.tsx, AuthController.java, EmailVerificationServiceImpl.java, UserServiceImpl.java
+' Partes: (1/3) formulario y petición del código; (2/3) generación, envío y reenvío del código
+' (CU01_2_envio_codigo.puml); (3/3) registro con el código (CU01_3_registro.puml).
 autonumber
 hide footbox
 skinparam sequenceMessageAlign center
 skinparam roundcorner 6
+skinparam maxMessageSize 130
+skinparam wrapWidth 170
+skinparam ParticipantPadding 2
+skinparam BoxPadding 2
+skinparam defaultFontSize 12
 
 actor "Visitante" as visitante
 boundary "RegistroScreen" as pantalla
-boundary "ModalVerificacionEmail" as modal
-control "GestorAutenticacion" as gestor
-entity "CodigoVerificacion" as codigo
+boundary "Modal\nVerificacionEmail" as modal
+control "Gestor\nAutenticacion" as gestor
 entity "Usuario" as usuario
-participant "ServidorCorreo\n<<sistema externo>>" as correo
 
 visitante -> pantalla : accederRegistro()
-pantalla --> visitante : mostrarFormulario(nombre, email, username,\npassword, confirmación, favoritos)
+pantalla --> visitante : mostrarFormulario(nombre, email, username, password, confirmación, favoritos)
 visitante -> pantalla : solicitarRegistro(datos)
 pantalla -> pantalla : validarFormato()
 
@@ -27,7 +32,7 @@ alt 4a. Datos con formato inválido
 else Datos válidos
 
     pantalla -> gestor : solicitarCodigo(email)
-    note right of gestor : POST /api/auth/verification-code
+    note left of gestor : POST /api/auth/\nverification-code
     gestor -> usuario : comprobarEmailUnico(email)
     usuario --> gestor : resultado
 
@@ -37,29 +42,10 @@ else Datos válidos
     else Se pidió otro código hace menos de 60 s
         gestor --> pantalla : 429 Too Many Requests
         pantalla -> modal : abrir(email)
-        modal --> visitante : mostrarAviso("Ya te enviamos un código hace poco,\nrevisa tu email")
+        modal --> visitante : mostrarAviso("Ya te enviamos un código hace poco, revisa tu email")
     else Email libre
-        gestor -> codigo : generarCodigo(email)
-        note right of codigo : 6 dígitos, válido 10 minutos,\nmáximo 5 intentos fallidos
-        gestor ->> correo : enviarCodigo(email, codigo)
-        opt Falla el envío (en segundo plano)
-            gestor -> codigo : descartar(email)
-            note right of codigo : No llega al cliente:\npuede pedir otro código ya
-        end
-        gestor --> pantalla : 204 No Content
-        pantalla -> modal : abrir(email)
-        modal --> visitante : pedirCodigo()
-
-        opt El visitante no recibe el código
-            note over modal : "Reenviar" activo tras 60 s
-            visitante -> modal : reenviarCodigo()
-            modal -> gestor : solicitarCodigo(email)
-            gestor -> codigo : generarCodigo(email)
-            gestor ->> correo : enviarCodigo(email, codigo)
-            gestor --> modal : 204 No Content
-        end
+        note over gestor, usuario : Continúa en DS-CU-01 (2/3):\ngeneración y envío del código
     end
 end
 
-note over visitante, modal : Continúa en DS-CU-01 (2/2) con el modal abierto
 @enduml

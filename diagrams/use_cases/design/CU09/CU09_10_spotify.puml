@@ -1,0 +1,71 @@
+@startuml DSD-CU-09-10
+title DSD-CU-09 (10/12) - Recomendaciones:\n"Basado en tu Spotify" (app)
+
+' Bloque de Spotify de CU-09 (análisis en
+' diagrams/use_cases/description/CU09_*.puml, DS-CU-09 (4/5) y (5/5)).
+' Endpoint en DSD-CU-09 (11/12) y (12/12).
+' Fuentes: frontend/src/screens/HomeScreen.tsx (SPOTIFY_TITLE = "Basado en tu Spotify"),
+' components/buttons/SpotifyButton.tsx, hooks/useHomeItems.ts, repositories/itemFeed.repository.ts,
+' repositories/item.repository.ts, utils/entityCache.utils.ts, services/item.service.ts, config/apiConfig.ts.
+' - Solo se pide con la cuenta vinculada (UserDTO.spotifyConnected). Sin vincular se muestra el
+'   título y el botón "Conectar con Spotify" (CU-10); al vincular la cuenta se recarga el usuario,
+'   cambia spotifyConnected y el hook la pide. Mientras no se sabe (usuario sin cargar) no se
+'   pinta nada.
+' - useEffect([currentUserId, spotifyConnected, tasteKey]): se repite al vincular la cuenta o al
+'   cambiar sus listas.
+' - Feed mixto con DTO completo (como "Para ti"): getMixedFeed('items_spotify_user') ->
+'   getCustomFeed -> cacheFirst; el índice se borra en el logout. Con índice guardado devuelve
+'   sus ids y después onFresh(ids).
+' - GET /api/spotify/recommendations/items/{userId}: 200 List<ItemDTO> barajada ([] si ninguna
+'   canción de Spotify está en la app). Si falla (Spotify, red, 401, 403, 404 sin cuenta, 500),
+'   cacheFirst captura el error y devuelve []. Un fallo solo afecta a este carrusel; el resto
+'   del Inicio no muestra error.
+' - spotifyItems = itemsToCarouselItems(ids); entran en shownIds (las tarjetas no los repiten).
+' - 14a. Vacío: "Escucha música en Spotify para que te recomendemos canciones, lecciones y géneros".
+!include ../_estilo.iuml
+
+actor "Músico" as actor
+box "App" #F3F8FF
+    participant "Home\nScreen\n<<Nivel 7>>" as screen
+    participant "useHome\nItems\n<<Nivel 6>>" as hook
+    participant "itemFeed\nRepository\n<<Nivel 3>>" as feedRepo
+    participant "Entity\nStores\n<<Nivel 4>>" as stores
+    participant "item\nService\n<<Nivel 1>>" as service
+end box
+participant "API\nREST" as api
+
+actor -> screen : abre Inicio
+screen -> hook : useHomeItems()
+hook -> stores : spotify\nConnected
+
+alt 3a. No vinculada
+    hook --> screen : spotifyConnected\n= false
+    screen --> actor : título +\n"Conectar\ncon Spotify"
+else Vinculada
+    hook -> feedRepo : getFromSpotify\nForUser(userId)
+    feedRepo -> feedRepo : cacheFirst
+    alt Hay índice guardado
+        feedRepo --> hook : ids de la caché\n(+ onFresh)
+    else Sin caché
+        feedRepo -> service : getRecommended\nFromSpotify\n(userId)
+        service -> api : GET .../spotify/\nrecommendations\n/items/{userId}
+        alt Éxito
+            api --> service : 200 List\n<ItemDTO>
+            service --> feedRepo : AnyItemDTO[]
+            feedRepo -> stores : hydrateMixed +\nsaveQueryIndex
+            feedRepo --> hook : ids
+        else Error
+            api --> service : error
+            feedRepo --> hook : []
+        end
+    end
+    hook -> hook : itemsToCarousel\nItems(ids)
+    hook --> screen : spotifyItems
+    alt Hay ítems
+        screen --> actor : carrusel\n"Basado en\ntu Spotify"
+    else 14a. Vacío
+        screen --> actor : "Escucha\nmúsica en\nSpotify..."
+    end
+end
+
+@enduml

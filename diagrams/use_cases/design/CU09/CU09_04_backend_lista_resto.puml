@@ -1,0 +1,47 @@
+@startuml DSD-CU-09-4
+title DSD-CU-09 (4/12) - Recomendaciones:\nbackend por lista, resto y mezcla
+
+' Continuación de DSD-CU-09 (3/12).
+' Fuentes: ItemRecommendationServiceImpl.java, GenreRecommendationServiceImpl.java,
+' InstrumentGenreRecommendationServiceImpl.java, LessonRecommendationServiceImpl.java,
+' utils/RecommendationConstants.java, model/ItemList.java, utils/mapper/DtoMapper.java.
+' Notas:
+' - Género (N_RECOMMENDED_GENRES = 1): getMainGenreFrom{Songs,IGs,Lessons}() y
+'   getTopGenresFrom{...}(2); principales -> top -> favoritos -> aleatorios; nunca uno de la
+'   lista (itemList.containsItem).
+' - Instrument-genres (N_RECOMMENDED_INSTRUMENT_GENRES = 3): getMainGenreFromItems,
+'   getMainInstrumentFromItems, getTopGenres/InstrumentsFromItems(3). 1: combinación principal;
+'   2: top x top (findByGenreIdAndInstrumentId), sin los de la lista.
+' - Lecciones (N_RECOMMENDED_LESSONS = 6): getItemsOfType(Lesson.class), getTopGenresFromItems(1).
+'   1: 2/3 del género top; 2: favoritos; 3: aleatorias (...IdNotIn acumulado).
+' - items.addAll(...) en ese orden (sin duplicados) y Collections.shuffle(new ArrayList<>(items)):
+'   mezcla los tipos, porque la app enseña las 5 primeras y si no serían siempre canciones.
+' - DtoMapper.itemsToItemDTOs (itemToItemDto a cada item): Hibernate.unproxy + switch por
+'   subtipo -> Song/Lesson/Genre/InstrumentGenreDTO. Respuesta: 200 OK List<ItemDTO>
+'   (polimórfica, DTOs completos).
+!include ../_estilo.iuml
+
+participant "App" as app
+box "Backend" #FFF9F0
+    participant "Recommen-\ndation\nController" as controller
+    participant "ItemRecommen-\ndation\nServiceImpl" as itemRec
+    participant "Genre /\nIG / Lesson\nRecommen-\ndationService" as subRec
+    participant "ItemList\n<<entity>>" as itemList
+end box
+
+itemRec -> subRec : Genre: findFor\nItemList(id, 1)
+subRec -> itemList : getMainGenreFrom...;\ngetTopGenresFrom\n...(2)
+subRec --> itemRec : SequencedSet\n<Genre>
+itemRec -> subRec : IG: findFor\nItemList(id, 3)
+subRec -> itemList : géneros e\ninstrumentos\nprincipales y top 3
+subRec --> itemRec : SequencedSet\n<InstrumentGenre>
+itemRec -> subRec : Lesson: findFor\nItemList(id, 6)
+subRec -> itemList : getItemsOfType\n(Lesson);\ngetTopGenres\nFromItems(1)
+subRec --> itemRec : SequencedSet\n<Lesson>
+itemRec -> itemRec : items.addAll(...)\nen ese orden
+itemRec -> itemRec : Collections\n.shuffle(items)
+itemRec -> itemRec : DtoMapper.items\nToItemDTOs\n(shuffled)
+itemRec --> controller : List<ItemDTO>
+controller --> app : 200 OK\nList<ItemDTO>
+
+@enduml

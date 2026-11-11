@@ -1,0 +1,42 @@
+@startuml DSD-CU-06-3
+title DSD-CU-06 (3/8) - Consultar espacio de género: pestaña "Canciones" (app)
+
+' Fuentes: screens/GenreSongsScreen.tsx; hooks/useGenreSongs.ts; repositories/song.repository.ts;
+' utils/entityCache.utils.ts; services/song.service.ts. Backend en DSD-CU-06 (8/8).
+' songService (Nivel 1) no tiene línea de vida: la flecha a la API es su llamada.
+' Cada carrusel usa cache.list('<tipo>_genre_{genreId}'). Las canciones llegan como DTO completo
+' (excepción de negocio). Al pulsar una canción se abre SongScreen (DSD-CU-05).
+!include ../_estilo.iuml
+
+actor "Músico" as actor
+box "App (React Native)" #F3F8FF
+    participant "GenreMain\nScreen\n(GenreSongs\nScreen)\n<<Nivel 7>>" as screen
+    participant "useGenreSongs\n<<Nivel 6>>" as hooks
+    participant "songRepository\n<<Nivel 3>>" as repos
+    participant "Entity Stores\n<<Nivel 4>>" as stores
+end box
+participant "API REST" as api
+
+actor -> screen : pulsa "Canciones" (changeTab)
+screen -> hooks : useGenreSongs(genreId)
+par Promise.all de los tres carruseles
+    hooks -> repos : getPopularByGenreId(\ngenreId, onFresh)
+else
+    hooks -> repos : getClassicByGenreId(\ngenreId, onFresh)
+else
+    hooks -> repos : getNewByGenreId(\ngenreId, onFresh)
+end
+
+loop por carrusel (popular | classic | new)
+    repos -> api : songService\n.get<Tipo>ByGenreId(\ngenreId): GET /api/songs/by-genre\n/{genreId}\n/popular|classic|new
+    api --> repos : 200 List<SongDTO>
+    repos -> stores : setSongs(songs) + setItems(resúmenes) + índice
+    repos --> hooks : ids (y onFresh(ids) si había caché)
+end
+
+hooks -> stores : useItemEntitiesStore(\nstate => state.items)
+hooks -> hooks : itemsToCarouselItems(\n...) por carrusel
+hooks --> screen : { populars, classics, news }
+screen --> actor : SongsCarousel "Populares", "Clásicos del Género" y "Novedades" (los vacíos no se muestran)
+
+@enduml

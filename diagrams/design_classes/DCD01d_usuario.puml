@@ -1,0 +1,96 @@
+@startuml DCD-01d
+title DCD-01d - Diagrama de clases de diseño: modelo (4/5) - usuario
+
+' Continuación de DCD-01a/b/c (Genre se detalla en DCD-01a; Instrument en DCD-01b);
+' ItemList, en DCD-01e.
+' Fuentes: model/User.java, Role.java, Preferences.java, SpotifyUser.java, ItemList.java,
+'          Settings.java, utils/RecommendationConstants.java
+'
+' Notas de diseño:
+'   - IDENTITY en User, ItemList, SpotifyUser y Settings.
+'   - Los favoritos del usuario viven en Preferences (relación 1:1 con clave compartida, @MapsId).
+'   - ItemList.items es List porque el orden es parte del dato.
+skinparam classAttributeIconSize 0
+skinparam roundcorner 6
+skinparam nodesep 20
+skinparam ranksep 50
+skinparam class {
+    BackgroundColor<<entity>> #FFF4E0
+    BorderColor<<entity>> #B07A1F
+    BackgroundColor<<enum>> #F3F3F3
+    BackgroundColor<<interface>> #E3F0FF
+    BorderColor<<interface>> #3D6FA8
+}
+hide empty members
+
+interface "UserDetails" as UserDetails <<interface>> {
+    + getAuthorities() : Collection<GrantedAuthority>
+}
+note top of UserDetails : Spring Security
+
+class Genre <<entity>> <<ver DCD-01a>>
+class Instrument <<entity>> <<ver DCD-01b>>
+
+class User <<entity>> {
+    - id : Long {PK}
+    - email : String {unique}
+    - username : String {unique}
+    - password : String {BCrypt}
+    - name : String
+    - profileImageUrl : String
+    - role : Role = USER
+    - difficultyLevel : int = 1 {0..5}
+    - createdAt : LocalDateTime
+    - updatedAt : LocalDateTime
+    --
+    + getAuthorities() : Collection<GrantedAuthority>
+    + getPreferences() : Preferences {nunca null}
+    + setPreferences(p : Preferences) : void
+    + hasItemInLists(item : Item) : boolean
+    + getAllFromItemListsOfType(type : Class<T>) : Set<T>
+    + getIdsExcludedFromRecommendationsOfType(type : Class<T>) : Set<Long>
+    + getTopGenresFromItemLists(topN : int) : List<Genre>
+    + getTopInstrumentsFromItemLists(topN : int) : List<Instrument>
+    + getTopArtistsFromItemLists(topN : int) : List<String>
+}
+note left of User : getIdsExcluded\nFromRecommendations\nOfType: ids de los\nitems que están en\nN_ITEM_LISTS_TO_\nEXCLUDE_FROM_\nRECOMMENDATIONS (3)\no más listas del\nusuario
+
+enum Role <<enum>> {
+    ADMIN
+    USER
+}
+
+class Preferences <<entity>> {
+    + {static} MIN_N_FAVOURITE_GENRES : int = 2
+    + {static} MIN_N_FAVOURITE_INSTRUMENTS : int = 2
+    - id : Long {PK = FK user_id, @MapsId}
+}
+note bottom of Preferences : Solo los favoritos.\nEl nivel del usuario es\nUser.difficultyLevel (0..5)
+
+class ItemList <<entity>> <<ver DCD-01e>>
+
+class SpotifyUser <<entity>> {
+    - id : Long {PK}
+    - spotifyUserId : String {unique}
+    - accessToken : String
+    - refreshToken : String
+    - tokenExpiration : Instant
+}
+
+
+class Settings <<entity>> {
+    - id : Long {PK}
+    - notifications : boolean
+    - sound : boolean
+}
+note bottom of Settings : Tabla sin uso en el código\n(ninguna clase la referencia)
+
+UserDetails <|.. User
+User --> Role
+User "1" *-- "*" ItemList : itemLists / user
+User "1" *-- "1" Preferences : preferences / user
+Preferences "*" --> "2..*" Genre : favoriteGenres
+Preferences "*" --> "2..*" Instrument : favoriteInstruments
+User "1" *-- "0..1" SpotifyUser : spotifyUser / user\n{orphanRemoval}
+
+@enduml

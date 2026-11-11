@@ -1,0 +1,55 @@
+@startuml DSD-CU-03-1
+title DSD-CU-03 (1/6) - Configurar perfil:\ncarga del perfil (app)
+
+' Parte de la app de la realización de CU-03 (análisis en
+' diagrams/use_cases/description/CU03_*.puml, DS-CU-03 (1/3) a (3/3)). El backend se dibuja como una
+' sola línea de vida ("API REST"); lo que hace cada endpoint está en DSD-CU-03 (5/6 y 6/6).
+' Fuentes: screens/ProfileScreen.tsx, hooks/useProfile.ts, useGenres.ts, useInstruments.ts,
+' repositories/user.repository.ts, services/user.service.ts, services/apiClient.ts,
+' stores/entities/user.entities.store.ts, auth.entities.store.ts, local/user.local.ts,
+' utils/entityCache.utils.ts.
+' userRepository (nivel 3) y userService (nivel 1) se dibujan juntos; las llamadas a los stores
+' (nivel 4) y a userLocal (nivel 2, disco) las hace userRepository.
+' Todas las peticiones llevan Authorization: Bearer <token> (apiClient). Sin token válido: 401
+' (y apiClient cierra la sesión).
+' Diferencias con el análisis:
+' - Los favoritos no se piden aparte: llegan como IDs en el UserDto (favouriteGenresIds,
+'   favouriteInstrumentsIds) y GenreViewer / InstrumentViewer los resuelven con
+'   useGenresByIds / useInstrumentsByIds.
+!include ../_estilo.iuml
+skinparam maxMessageSize 110
+
+actor "Músico" as actor
+box "App (React Native)" #F3F8FF
+    participant "ProfileScreen\n<<Nivel 7>>" as screen
+    participant "useProfile\n<<Nivel 6>>" as hook
+    participant "Stores\n+ userLocal\n<<Niveles 4 y 2>>" as store
+    participant "userRepository\n→ userService\n<<Niveles 3 y 1>>" as repo
+end box
+participant "API REST\n(backend)" as api
+
+actor -> screen : abre la pestaña Perfil
+screen -> hook : useProfile()
+hook -> store : users[currentUserId] (currentUserId de useAuthStore)
+store --> hook : user | undefined
+
+opt El usuario no está en RAM (p. ej. tras reiniciar la app)
+    hook -> repo : getById(currentUserId)
+    repo -> store : userLocal .getById(id)
+    store --> repo : UserDTO | null
+    alt Estaba en disco
+        repo ->> api : cache.revalidate([id]) (refresco en segundo plano)
+        repo -> store : setUsers([user])
+    else No estaba en disco
+        repo -> api : GET /api/users/{id}
+        api --> repo : 200 UserDto (403 si no es él)
+        repo -> repo : cache.markFresh([id])
+        repo -> store : hydrateUsers: setUsers([user])
+        repo -> store : userLocal .saveBatch([user])
+    end
+    store --> hook : user (el selector se actualiza)
+end
+hook --> screen : { user, isLoading, ... }
+screen --> actor : nombre, usuario, email (solo lectura), nivel (DifficultyLevelSlider 0-5) y favoritos
+
+@enduml

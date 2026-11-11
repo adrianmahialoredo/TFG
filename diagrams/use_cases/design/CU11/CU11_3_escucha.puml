@@ -1,7 +1,8 @@
 @startuml DSD-CU-11-3
-title DSD-CU-11 (3/5) - Utilizar afinador cromático: escucha y análisis (app)
+title DSD-CU-11 (3/5) - Afinador:\nescucha y análisis (app)
 
-' Bucle de análisis de cada bloque de audio mientras status = 'listening' (sin backend).
+' Bucle de análisis de cada bloque de audio (4096 muestras, ~93 ms) mientras status =
+' 'listening' (sin backend).
 ' Fuentes: hooks/useTuner.ts (handleBlock), utils/microphone.utils.ts, utils/pitch.utils.ts,
 ' utils/tuner.utils.ts, screens/TunerScreen.tsx, components/tuner/TunerGauge.tsx,
 ' components/tuner/TunerStringSelector.tsx.
@@ -11,42 +12,45 @@ title DSD-CU-11 (3/5) - Utilizar afinador cromático: escucha y análisis (app)
 '    del hilo y la app sigue respondiendo en un móvil lento.
 '  - detectPitch (YIN) busca entre MIN_FREQUENCY = 27 Hz y MAX_FREQUENCY = 1400 Hz (del Si0
 '    del bajo de 5 cuerdas al Mi6) y devuelve null si rms < MIN_RMS (0.01) o no hay periodicidad.
-'  - La aguja es dorada (COLORS.primary) y pasa a verde (IN_TUNE_COLOR) con |cents| <= 5.
+'    Con null (silencio o ruido) se vacía recentPitches y se mantiene la última lectura.
+'  - La aguja es dorada (COLORS.primary) y pasa a verde (IN_TUNE_COLOR) con |cents| <= 5
+'    (IN_TUNE_CENTS). tuningAdvice: 'Afinado' (±5 cents) | 'Tensar' | 'Destensar'.
+'  - Micrófono simulado: setInterval(SIMULATED_BLOCK_MS) con simulatedBlock(frecuencia, fase).
+'  - "componentes" = TunerStringSelector y TunerGauge (Nivel 7).
 !include ../_estilo.iuml
 
 actor "Músico" as actor
-box "App (React Native)" #F3F8FF
+box "App" #F3F8FF
     participant "TunerScreen\n<<Nivel 7>>" as screen
-    participant "TunerStringSelector\nTunerGauge <<Nivel 7>>" as comps
+    participant "compo-\nnentes" as comps
     participant "useTuner\n<<Nivel 6>>" as tuner
-    participant "Microphone\n(microphone.utils)" as mic
-    participant "pitch.utils /\ntuner.utils" as utils
+    participant "Micro-\nphone" as mic
+    participant "pitch /\ntuner\n.utils" as utils
 end box
-participant "react-native-audio-api\n<<librería nativa>>" as lib
+participant "audio\n-api" as lib
 
-loop Cada bloque de 4096 muestras (~93 ms) mientras escucha
-    actor -> lib : hace sonar una cuerda
-    lib ->> mic : onAudioReady({ buffer })
-    note right of mic : Simulado: setInterval(SIMULATED_BLOCK_MS)\ncon simulatedBlock(frecuencia, fase)
-    mic ->> tuner : handleBlock({ samples, sampleRate })
-    alt Date.now() < skipUntilRef
-        tuner -> tuner : descarta el bloque
+loop Cada bloque mientras escucha
+    actor -> lib : toca\nuna cuerda
+    lib ->> mic : onAudio\nReady\n({ buffer })
+    mic ->> tuner : handleBlock\n({ samples,\nsampleRate })
+    alt Antes de skipUntilRef
+        tuner -> tuner : descarta\nel bloque
     else
-        tuner -> utils : detectPitch(samples, sampleRate)
-        tuner -> tuner : skipUntilRef = fin + (fin - inicio)
-        alt pitch === null (silencio o ruido)
+        tuner -> utils : detectPitch\n(samples,\nsampleRate)
+        tuner -> tuner : skipUntilRef =\nfin + (fin - inicio)
+        alt Sin nota
             utils --> tuner : null
-            tuner -> tuner : recentPitches = []\n(se mantiene la última lectura)
+            tuner -> tuner : recentPitches = []
         else Nota detectada
             utils --> tuner : pitch (Hz)
-            tuner -> utils : median(últimos 3 pitches) : frequency
-            tuner -> tuner : stringIndex = selectedString\ntarget = targets[stringIndex]
-            tuner -> utils : centsBetween(frequency, target) : cents
-            tuner -> tuner : setReading({ frequency, stringIndex, cents })
-            tuner --> screen : reading (re-render)
-            screen -> utils : tuningAdvice(cents):\n'Afinado' (±5 cents) | 'Tensar' | 'Destensar'
-            screen -> comps : selectedIndex = selectedString; cents,\ninTune = |cents| <= IN_TUNE_CENTS (5)
-            comps --> actor : resalta la cuerda, mueve la aguja (dorada;\nverde si afinada), cents, consejo y Hz
+            tuner -> utils : median(últimos\n3 pitches)
+            tuner -> tuner : stringIndex =\nselectedString;\ntarget = targets\n[stringIndex]
+            tuner -> utils : centsBetween\n(frequency,\ntarget)
+            tuner -> tuner : setReading({ frequency,\nstringIndex, cents })
+            tuner --> screen : reading\n(re-render)
+            screen -> utils : tuningAdvice\n(cents)
+            screen -> comps : selectedIndex,\ncents, inTune
+            comps --> actor : cuerda resaltada,\naguja (verde si\nafinada), cents,\nconsejo y Hz
         end
     end
 end

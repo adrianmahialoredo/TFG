@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
   Ejecuta las pruebas de carga con k6 (catálogo, recomendaciones y login) y genera la tabla de resultados.
 
@@ -23,14 +23,17 @@ param(
   [int]$Vus = 20,
   [int]$SpikeVus = 50,
   [string]$Hold = "5m",
-  [string[]]$Scenarios = @("catalog", "recommendations", "login")
+  [string[]]$Scenarios = @("catalog", "recommendations", "login"),
+  # Carpeta de resultados (por defecto tests/load/results). Usa otra para no mezclar, p. ej.,
+  # las ejecuciones contra el backend local con las de Render: -ResultsDir tests/load/results_local
+  [string]$ResultsDir = ""
 )
 
 $ErrorActionPreference = "Stop"
 $here = Split-Path -Parent $MyInvocation.MyCommand.Path
 $k6Dir = Join-Path $here "k6"
-$results = Join-Path $here "results"
-New-Item -ItemType Directory -Force $results | Out-Null
+$results = if ($ResultsDir) { $ResultsDir } else { Join-Path $here "results" }
+$results = (New-Item -ItemType Directory -Force $results).FullName  # absoluta: k6 se ejecuta desde k6/
 
 $k6 = (Get-Command k6 -ErrorAction SilentlyContinue).Source
 if (-not $k6) { $k6 = "C:\Program Files\k6\k6.exe" }
@@ -52,13 +55,20 @@ foreach ($scenario in $Scenarios) {
   $script = Join-Path $k6Dir "$scenario.js"
   Write-Host "`n=== Escenario $scenario ($Profile) ==="
   Push-Location $k6Dir
+  # k6 escribe en stderr si no se cumple un umbral (y sale con código 99): en PowerShell 5.1, con
+  # "Stop", eso cortaría el script y no se ejecutarían los demás escenarios
+  $previousPreference = $ErrorActionPreference
+  $ErrorActionPreference = "Continue"
   try {
     & $k6 run `
       -e BASE_URL=$BaseUrl -e TEST_EMAIL=$Email -e TEST_PASSWORD=$Password `
       -e PROFILE=$Profile -e VUS=$Vus -e SPIKE_VUS=$SpikeVus -e HOLD=$Hold `
       -e RESULTS_DIR=$results `
-      $script
+      $script 2>&1 | ForEach-Object { "$_" }
+    if ($LASTEXITCODE -eq 99) { Write-Host "Aviso: no se cumple algún umbral (p95 < 1 s o errores < 1 %); queda en el resumen." }
+    elseif ($LASTEXITCODE -ne 0) { Write-Host "Aviso: k6 terminó con código $LASTEXITCODE." }
   } finally {
+    $ErrorActionPreference = $previousPreference
     Pop-Location
   }
 }

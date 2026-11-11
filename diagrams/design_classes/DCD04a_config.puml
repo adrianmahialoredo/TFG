@@ -1,0 +1,74 @@
+@startuml DCD-04a
+title DCD-04a - Diagrama de clases de diseño: seguridad (1/7) -\nconfig
+
+' Paquete config.
+' Siete partes: DCD-04a config; DCD-04b security; DCD-04c autenticación (login, registro y
+' recuperación de contraseña); DCD-04d códigos por email; DCD-04e vinculación con Spotify
+' (OAuth2); DCD-04f/g recomendaciones de Spotify. Reglas: architecture.md §9.
+' Clases y miembros tomados del código; se omiten getters y los métodos privados de ayuda
+' poco relevantes.
+' Fuentes: config/SecurityConfig.java, AppConfig.java, AdminBootstrap.java
+skinparam classAttributeIconSize 0
+skinparam roundcorner 6
+skinparam nodesep 20
+skinparam ranksep 45
+skinparam packageStyle rectangle
+skinparam class {
+    BackgroundColor<<Service>> #E6F5E6
+    BorderColor<<Service>> #3C8A3C
+    BackgroundColor<<Repository>> #FFF4E0
+    BorderColor<<Repository>> #B07A1F
+    BackgroundColor<<Configuration>> #F3F3F3
+    BackgroundColor<<Component>> #F3F3F3
+    BackgroundColor<<external>> #FFFFFF
+    BorderColor<<external>> #888888
+}
+hide empty members
+
+package "config" {
+    class SecurityConfig <<Configuration>> {
+        - jwtAuthenticationFilter : JwtAuthenticationFilter
+        + securityFilterChain(http : HttpSecurity) : SecurityFilterChain
+    }
+    note top of SecurityConfig
+        @EnableMethodSecurity, STATELESS, sin CSRF.
+        Públicas: /api/auth/**, /api/spotify/callback,
+        /actuator/health, /error,
+        GET /api/genres e /api/instruments.
+        /actuator/** (salvo health): solo ADMIN.
+        POST /api/*/by-ids: solo autenticado.
+        Escrituras del catálogo: solo ADMIN.
+        GET/POST /api/users y GET /api/item-lists:
+        solo ADMIN.
+        Resto: autenticado. Sin token: 401
+        (la app cierra la sesión).
+    end note
+
+    class AppConfig <<Configuration>> {
+        + restTemplate() : RestTemplate
+        + passwordEncoder() : BCryptPasswordEncoder
+    }
+    note right of AppConfig : RestTemplate ->\nSpotifyAuthServiceImpl y\nSpotifyRecommendation\nServiceImpl (DCD-04e/f)\nBCryptPasswordEncoder ->\nUserServiceImpl (DCD-04c)\ny AdminBootstrap
+
+    class AdminBootstrap <<Component>> {
+        - userRepository : UserRepository
+        - passwordEncoder : PasswordEncoder
+        - email : String
+        - username : String
+        - password : String
+        + run(args : ApplicationArguments) : void
+    }
+    note bottom of AdminBootstrap : Crea o asciende el ADMIN inicial\n(ADMIN_EMAIL / ADMIN_PASSWORD del .env)
+}
+
+class "security.JwtAuthenticationFilter" as JwtAuthenticationFilter <<Component>> <<ver DCD-04b>>
+interface "repository.UserRepository" as UserRepository <<Repository>> <<ver DCD-04c>>
+
+SecurityConfig --> JwtAuthenticationFilter
+AdminBootstrap --> UserRepository
+AppConfig ..> AdminBootstrap : PasswordEncoder
+
+' Solo para apilar (si no, el diagrama es demasiado ancho)
+SecurityConfig -[hidden]down- AppConfig
+
+@enduml

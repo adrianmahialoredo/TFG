@@ -1,0 +1,48 @@
+@startuml DSD-CU-10-2
+title DSD-CU-10 (2/7) - Vincular Spotify:\nautorización en el navegador (app)
+
+' Continuación de DSD-CU-10 (1/7). Lo que hace el backend en el callback está en
+' DSD-CU-10 (5/7) y (6/7).
+' Fuentes: hooks/useSpotifyConnect.ts; SpotifyAuthController.java.
+' Notas de diseño:
+'  - El navegador se abre con WebBrowser.openBrowserAsync (expo-web-browser); el callback de
+'    Spotify llega al backend desde el navegador (sin JWT: el usuario se identifica por el state).
+'  - URL: accounts.spotify.com/authorize?client_id&response_type=code&redirect_uri
+'    &scope=user-read-email user-top-read&state.
+'  - Respuestas del callback: con error, 400 (text/html) "No se ha conectado Spotify
+'    (access_denied). Puedes volver a la app."; con state desconocido o caducado (10 min),
+'    code vacío o usuario inexistente, 400 Bad Request; vinculada, 200 (text/html)
+'    "¡Spotify conectado! Ya puedes volver a la app."
+!include ../_estilo.iuml
+
+actor "Músico" as actor
+box "App" #F3F8FF
+    participant "useSpotify\nConnect\n<<Nivel 6>>" as hook
+    participant "WebBrowser\n<<expo-web\n-browser>>" as browser
+end box
+participant "API\nREST" as api
+participant "Spotify\nAccounts\n<<externo>>" as accounts
+
+hook -> browser : openBrowser\nAsync(authUrl)
+browser -> accounts : GET /authorize\n?client_id&...\n&scope&state
+accounts --> actor : pide login\ny permisos
+actor -> accounts : decide sobre\nlos permisos
+
+alt 5a. Rechaza los permisos
+    accounts --> browser : 302 redirect_uri\n?error=access_denied\n&state
+    browser -> api : GET /api/spotify\n/callback?error\n&state
+    api --> browser : 400 (text/html)\n"No se ha\nconectado Spotify"
+else Permisos concedidos
+    accounts --> browser : 302 redirect_uri\n?code&state
+    browser -> api : GET /api/spotify\n/callback?code\n&state
+    alt state desconocido\no caducado, code\nvacío o sin usuario
+        api --> browser : 400 Bad Request
+    else Vinculada
+        api --> browser : 200 (text/html)\n"¡Spotify\nconectado!"
+    end
+end
+browser --> actor : muestra\nla página
+
+note over hook, browser : Sigue en DSD-CU-10 (3/7)
+
+@enduml

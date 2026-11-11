@@ -1,0 +1,81 @@
+@startuml DCA-02c
+title DCA-02c - Diagrama de clases de análisis: fronteras\ny controles (recomendaciones y Spotify)
+
+' Vista BCE en cinco partes: DCA-02a cuenta y perfil; DCA-02b listas y catálogo;
+' DCA-02c recomendaciones y Spotify; DCA-02d canciones y géneros; DCA-02e afinador
+' y metrónomo. Los controles de otra parte aparecen vacíos con <<ver DCA-02x>>.
+' Las operaciones de los controles salen de los diagramas de secuencia de los casos de uso
+' (diagrams/use_cases); entre corchetes, las entidades de DCA-01a/01b/01c que maneja cada uno.
+' Fuentes: frontend/src/screens (HomeScreen, SongsScreen), backend service/recommendation/*,
+' service/Spotify*.
+skinparam roundcorner 6
+skinparam classAttributeIconSize 0
+skinparam nodesep 20
+skinparam ranksep 40
+skinparam class {
+    BackgroundColor<<boundary>> #E3F0FF
+    BorderColor<<boundary>> #3D6FA8
+    BackgroundColor<<control>> #E6F5E6
+    BorderColor<<control>> #3C8A3C
+}
+hide empty members
+top to bottom direction
+
+package "Fronteras con el músico" {
+    class RecomendacionesView <<boundary>>
+}
+
+package "Controles" {
+    class MotorRecomendacion <<control>> {
+        [User, ItemList, Item, Song, SpotifyUser]
+        --
+        pedirRecomendaciones(origenId)
+        calcularTopGenerosEInstrumentos()
+        ejecutarAlgoritmoNiveles()
+        saltarANivelesDeRespaldo()
+        filtrarExclusiones(idsPrevios)
+        unificarYBarajar()
+        pedirCancionesDeArtistasFavoritos(userId)
+        obtenerArtistasFavoritos(userId, n)
+        intercalarPorTurnos(artistas)
+        pedirRecomendacionesDeSpotify(userId)
+        obtenerTopsDeSpotify(userId)
+        elegirGeneroMasRepetidoNoIncluido()
+    }
+    class GestorSpotifyAuth <<control>> {
+        [SpotifyUser, User]
+        --
+        solicitarURLAutorizacion()
+        callback(code, state)
+        renovarToken(userId)
+    }
+}
+
+package "Fronteras con\nsistemas externos" {
+    class NavegadorExterno <<boundary>>
+    class SpotifyOAuthGateway <<boundary>>
+    class SpotifyWebApiGateway <<boundary>>
+}
+
+' Frontera -> control
+RecomendacionesView --> MotorRecomendacion
+RecomendacionesView --> GestorSpotifyAuth : vincular\nSpotify
+
+' Control -> control / sistemas externos
+MotorRecomendacion --> GestorSpotifyAuth : token válido\n(lo renueva\nsi caduca)
+MotorRecomendacion --> SpotifyWebApiGateway : canciones y\nartistas top
+GestorSpotifyAuth --> NavegadorExterno : abre la\nautorización
+GestorSpotifyAuth --> SpotifyOAuthGateway : tokens\nOAuth2
+
+note bottom of RecomendacionesView
+    Carruseles de
+    recomendaciones del
+    Inicio y de Canciones
+    (incluidos los "Basado
+    en tu Spotify" de ambas
+    pantallas); con la cuenta
+    sin vincular ofrecen el
+    botón de conectar Spotify.
+end note
+
+@enduml

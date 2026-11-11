@@ -1,0 +1,71 @@
+@startuml DCD-02d
+title DCD-02d - Diagrama de clases de diseño: capas del backend (4/6) -\nlistas: implementación y repositorios
+
+' Continuación de DCD-02c (ItemListService se detalla allí; SongService, en DCD-02a).
+' Fuentes: service/ItemListServiceImpl.java, repository/ItemListRepository.java,
+'          ItemRepository.java, utils/EntityResolver.java
+' Seis partes: DCD-02a/b canciones (controlador e interfaz / implementación y repositorio),
+' DCD-02c/d listas de estudio (ídem), DCD-02e manejo de errores y EntityResolver,
+' DCD-02f Utils, constantes y mappers.
+skinparam classAttributeIconSize 0
+skinparam roundcorner 6
+skinparam nodesep 20
+skinparam ranksep 50
+skinparam packageStyle rectangle
+skinparam class {
+    BackgroundColor<<RestController>> #E3F0FF
+    BorderColor<<RestController>> #3D6FA8
+    BackgroundColor<<Service>> #E6F5E6
+    BorderColor<<Service>> #3C8A3C
+    BackgroundColor<<interface>> #F4FBF4
+    BorderColor<<interface>> #3C8A3C
+    BackgroundColor<<Repository>> #FFF4E0
+    BorderColor<<Repository>> #B07A1F
+    BackgroundColor<<Component>> #F3F3F3
+}
+hide empty members
+
+package "service" {
+    interface ItemListService <<interface>> <<ver DCD-02c>>
+    interface SongService <<interface>> <<ver DCD-02a>>
+
+    class ItemListServiceImpl <<Service>> {
+        - itemListRepository : ItemListRepository
+        - songService : SongService
+        - dtoMapper : DtoMapper
+        - entityMapper : EntityMapper
+    }
+    note bottom of ItemListServiceImpl : addItem (@Transactional):\nfindItemList(listId) + resolveItem(itemId)\n-> ItemList.addItem(item) -> save
+}
+
+package "repository" {
+    interface "JpaRepository<T, Long>" as JpaRepository <<interface>>
+    interface ItemListRepository <<Repository>>
+    interface ItemRepository <<Repository>> {
+        + findByTitleContainingIgnoreCase(title : String) : List<Item>
+    }
+}
+
+package "utils" {
+    class EntityResolver <<Component>> <<ver DCD-02e>>
+    class "mapper.DtoMapper" as DtoMapper <<Component>> <<ver DCD-02f>>
+    class "mapper.EntityMapper" as EntityMapper <<Component>> <<ver DCD-02f>>
+}
+
+ItemListService <|.. ItemListServiceImpl
+ItemListServiceImpl --> SongService
+ItemListServiceImpl -down-> ItemListRepository
+ItemListServiceImpl ..down.> DtoMapper
+ItemListServiceImpl ..down.> EntityMapper
+ItemListServiceImpl ..down.> EntityResolver : <<use>>
+JpaRepository <|-- ItemListRepository
+JpaRepository <|-- ItemRepository
+EntityResolver --> ItemListRepository
+EntityResolver --> ItemRepository
+
+' Solo para colocar el repositorio debajo de utils (si no, el diagrama es demasiado ancho)
+SongService -[hidden]down- DtoMapper
+DtoMapper -[hidden]down- JpaRepository
+EntityMapper -[hidden]down- JpaRepository
+
+@enduml

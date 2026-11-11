@@ -1,0 +1,49 @@
+@startuml DSD-CU-12-2
+title DSD-CU-12 (2/4) - Metrónomo:\najuste del tempo (app)
+
+' Continuación de DSD-CU-12 (1/4). Solo frontend.
+' Fuentes: frontend/src/screens/MetronomeScreen.tsx, hooks/useMetronome.ts (useTapTempo),
+' components/metronome/(MetronomeSlider, MetronomeTempoButton, MetronomeActionButton).tsx.
+' Notas:
+'  - Los botones de ajuste fino son MetronomeTempoButton (dentro de MetronomeSlider); "TAP TEMPO"
+'    es un MetronomeActionButton de la pantalla.
+'  - tap(): now = Date.now(); si han pasado más de TAP_RESET_MS (2 s) desde el último toque,
+'    taps = []; después taps.push(now) y conserva los 5 últimos (TAP_SAMPLES + 1).
+'  - Si está sonando, el nuevo tempo se aplica desde el siguiente golpe (tempoRef).
+!include ../_estilo.iuml
+
+actor "Músico" as actor
+box "App" #F3F8FF
+    participant "Metronome\nScreen\n<<Nivel 7>>" as screen
+    participant "Metronome\nSlider\n<<Nivel 7>>" as slider
+    participant "useTap\nTempo\n<<Nivel 6>>" as tapHook
+    participant "use\nMetronome\n<<Nivel 6>>" as metro
+end box
+
+alt Deslizador
+    actor -> slider : arrastra\nel slider
+    slider -> slider : updateTempo(value)\n-> clampTempo(value)
+    slider -> screen : onTempoChange(bpm)\n= setTempo(bpm)
+else Ajuste fino
+    actor -> slider : pulsa -10 / -1\n/ +1 / +10
+    slider -> screen : onTempoChange\n(clampTempo\n(tempo ± n))
+else 3a. Tap Tempo
+    loop Cada pulsación de "TAP TEMPO"
+        actor -> screen : pulsa TAP TEMPO\n-> handleTap()
+        screen -> tapHook : tap()
+        tapHook -> tapHook : guarda el instante\n(5 últimos; reinicia\nsi pasan > 2 s)
+        alt Menos de 2 toques
+            tapHook --> screen : null
+        else
+            tapHook -> tapHook : averageInterval =\n(último - primero)\n/ (n - 1)
+            tapHook --> screen : Math.round(60000\n/ averageInterval)
+            screen -> screen : setTempo\n(clampTempo(bpm))
+        end
+    end
+end
+screen -> metro : useMetronome\n(tempo, ...)
+metro -> metro : tempoRef.current\n= tempo
+screen -> slider : tempo
+slider --> actor : "<tempo> BPM"
+
+@enduml

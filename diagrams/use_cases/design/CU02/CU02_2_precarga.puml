@@ -1,0 +1,31 @@
+@startuml DSD-CU-02-2
+title DSD-CU-02 (2/3) - Iniciar sesión:\nprecarga de datos globales (app)
+
+' Efecto de AuthProvider al guardarse el token (DSD-CU-02 1/3). También se ejecuta tras el
+' registro (DSD-CU-01 3/6). Endpoints en DSD-CU-02 (3/3).
+' Fuentes: context/AuthContext.tsx, repositories/item.repository.ts, genre.repository.ts,
+' services/item.service.ts, genre.service.ts, utils/entityCache.utils.ts.
+' itemRepository.getCatalog() se lanza sin esperar: si hay índice en disco devuelve sus IDs
+' al instante; la red se consulta una vez por sesión e hidrata useItemEntitiesStore + disco.
+' item / genre Service (nivel 1) se dibujan con su repositorio (nivel 3).
+!include ../_estilo.iuml
+
+box "App (React Native)" #F3F8FF
+    participant "useAuthStore\n<<Nivel 4>>" as authStore
+    participant "AuthProvider\n<<Nivel 6>>" as context
+    participant "item / genre\nRepository\n→ Service\n<<Niveles 3 y 1>>" as repo
+    participant "useItem / useGenre\nEntitiesStore\n<<Nivel 4>>" as store
+end box
+participant "API REST\n(backend)" as api
+
+authStore ->> context : token cambia (selector de useAuthStore)
+context -> context : useEffect -> initializeAuth() (initialDataLoadedRef = true) -> loadInitialData()
+context ->> repo : itemRepository .getCatalog() (sin esperar)
+repo ->> api : cache.list('items_catalog', itemService.getAll): GET /api/items (segundo plano)
+context -> repo : await genreRepository.getAll()
+repo -> api : cache.list('all', genreService.getAll): GET /api/genres
+api --> repo : 200 List<GenreDTO>
+repo -> store : setGenres(genres) + índice
+repo --> context : géneros
+
+@enduml

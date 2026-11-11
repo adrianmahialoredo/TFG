@@ -1,0 +1,37 @@
+@startuml DSD-CU-13-2
+title DSD-CU-13 (2/5) - Recuperar contraseña:\ncomprobar el código (app)
+
+' Continuación de DSD-CU-13 (1/5). El backend es una sola línea de vida; el endpoint está en
+' DSD-CU-13 (5/5).
+' Fuentes: screens/ForgotPasswordScreen.tsx, components/EmailVerificationModal.tsx,
+' hooks/useForgotPassword.ts, repositories/auth.repository.ts, services/auth.service.ts.
+' Notas:
+'  - useForgotPassword llama a authService a través de authRepository (passthrough).
+'  - 400 si el código es incorrecto, caducó, no se pidió o es el 5.º fallo; el mensaje se
+'    traduce al español y el modal sigue abierto.
+!include ../_estilo.iuml
+
+actor "Visitante" as actor
+box "App" #F3F8FF
+    participant "ForgotPassword\nScreen\n<<Nivel 7>>" as screen
+    participant "useForgot\nPassword\n<<Nivel 6>>" as hook
+    participant "auth\nService\n<<Nivel 1>>" as service
+end box
+participant "API\nREST" as api
+
+actor -> screen : escribe las\n6 cifras
+screen -> hook : submitCode(code)
+hook -> service : verifyPassword\nResetCode\n(email, code)
+service -> api : POST /api/auth/\npassword-reset/verify\n{ email, code }
+alt 400
+    api --> service : 400 { message }
+    service --> hook : AuthServiceError\n(mensaje en español)
+    hook -> hook : codeError = mensaje
+    screen --> actor : error en el modal
+else 204
+    api --> service : 204
+    hook -> hook : code = código;\nstep = 'password'
+    screen --> actor : "Nueva contraseña"\ny "Repetir\ncontraseña"
+    note over screen, hook : Sigue en DSD-CU-13 (3/5)
+end
+@enduml

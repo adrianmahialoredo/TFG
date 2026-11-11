@@ -1,0 +1,29 @@
+﻿id;pa;descripcion;esperado;obtenido;estado;tiempo_ms;fecha_utc
+SIS-01;Despliegue;Health check /actuator/health;200 UP;200 UP (1.ª petición: incluye el arranque en frío si estaba dormido);Superada;186;2026-11-11 04:27:51
+SIS-02;Despliegue;Health check ya despierto;200 en < 1 s;200 en caliente;Superada;99;2026-11-11 04:27:51
+SIS-03;PA-02;Login con contraseña errónea;401 sin revelar si la cuenta existe;401;Superada;1174;2026-11-11 04:27:52
+SIS-04;PA-02;Login con usuario inexistente;401, igual que contraseña errónea;401 (mismo código que contraseña errónea);Superada;122;2026-11-11 04:27:53
+SIS-05;PA-02;Login correcto con email;200 con JWT y usuario;200, JWT recibido: True;Superada;1475;2026-11-11 04:27:54
+SIS-06;PA-02 / RF-USR-01;Login con nombre de usuario;200;200;Superada;928;2026-11-11 04:27:55
+SIS-07;RNF-03;Recurso protegido sin token;401;401;Superada;178;2026-11-11 04:27:55
+SIS-08;RNF-03;Leer el perfil de otro usuario;403;403;Superada;907;2026-11-11 04:27:56
+SIS-09;PA-04 / RF-CAT-09;Descarga del resumen del catálogo (precarga);200 con todos los ítems;200, 66 ítems, 13 KB;Superada;1292;2026-11-11 04:27:57
+SIS-10;PA-07 / RF-LIS-01;"Crear la lista ""Rutina Diaria""";201;201, id 3;Superada;1102;2026-11-11 04:27:58
+SIS-11;PA-07 / RNF-03;Crear una lista a nombre de otro usuario;403;403;Superada;205;2026-11-11 04:27:59
+SIS-12;PA-08 / RF-LIS-02;Añadir canción, lección y género;200 y orden de inserción;200 x3, orden [209, 106, 2];Superada;351;2026-11-11 04:28:00
+SIS-13;PA-08 / RF-LIS-02;Añadir otra vez la canción;200, sin duplicarse;200, 3 ítems;Superada;259;2026-11-11 04:28:00
+SIS-14;PA-09 / RF-REC-01;"""Para ti"" de la lista";200, ≤ 20 ítems, ninguno de la lista;200, 16 ítems (Genre, InstrumentGenre, Lesson, Song), repetidos de la lista: 0;Superada;4185;2026-11-11 04:28:04
+SIS-15;PA-08 / CU-08;Quitar la lección de la lista;200 y el resto en orden;200, quedan [209, 2];Superada;354;2026-11-11 04:28:04
+SIS-16;CU-09 / RF-REC-02;"""Para ti"" del Inicio";200, ≤ 12 ítems;200, 12 ítems;Superada;1536;2026-11-11 04:28:06
+SIS-17;PA-14 / RF-REC-06;Artistas más repetidos en las listas;200, ≤ 5 artistas;200, 4 artistas;Superada;328;2026-11-11 04:28:06
+SIS-18;PA-14 / RNF-03;Artistas de otro usuario;403;403;Superada;179;2026-11-11 04:28:07
+SIS-19;PA-15 / RF-REC-05;"""Basado en tu Spotify"" del Inicio";"200 si está vinculado; 404 si no";404, 0 ítems (vinculado: False);Superada;809;2026-11-11 04:28:07
+SIS-20;PA-13 / RF-ADM-01;Crear canción con un USER;403;403;Superada;387;2026-11-11 04:28:08
+SIS-21;PA-13 / RF-ADM-01;Crear canción sin token;401;401;Superada;107;2026-11-11 04:28:08
+SIS-22;PA-13 / RF-ADM-01;Crear canción con un ADMIN;201;201 (borrada después);Superada;792;2026-11-11 04:28:12
+SIS-23;PA-01 / CU-01;Código de registro para un email ya registrado;"400 ""Email already registered""";400 Email already registered;Superada;171;2026-11-11 04:28:12
+SIS-24;PA-16 / CU-13;Recuperar contraseña de un email sin cuenta;204;204 (no revela si existe la cuenta);Superada;125;2026-11-11 04:28:12
+SIS-25;PA-16 / CU-13;Pedir otro código antes de 60 s;429;429;Superada;130;2026-11-11 04:28:12
+SIS-26;PA-16 / CU-13;Comprobar un código que no se pidió;400;400 Invalid verification code;Superada;127;2026-11-11 04:28:13
+SIS-27;PA-16 / CU-13;Contraseña nueva que no cumple la política;400;400;Superada;122;2026-11-11 04:28:13
+SIS-28;PA-07 / CU-07;Borrar la lista de prueba;204;204;Superada;314;2026-11-11 04:28:13

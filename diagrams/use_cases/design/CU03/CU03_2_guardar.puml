@@ -1,0 +1,55 @@
+@startuml DSD-CU-03-2
+title DSD-CU-03 (2/6) - Configurar perfil:\nguardado del perfil (app)
+
+' Fuentes: screens/ProfileScreen.tsx, hooks/useProfile.ts, repositories/user.repository.ts,
+' services/user.service.ts, stores/entities/user.entities.store.ts, local/user.local.ts.
+' userRepository (nivel 3) y userService (nivel 1) se dibujan juntos; las llamadas a los stores
+' (nivel 4) y a userLocal (nivel 2, disco) las hace userRepository.
+' "Guardar" (PUT /api/users/{id}) envía nombre, usuario y nivel; los favoritos se cambian
+' aparte (DSD-CU-03 3/6). userService.updateUserProfile hace el PUT. El email no se puede cambiar (el backend ignora el del body).
+' La actualización es optimista: se escribe en RAM antes de la respuesta y, si falla, se
+' restaura la copia (rollback).
+' Errores del PUT: 400 (validación, usuario ocupado, nivel fuera de 0-5, pocos favoritos),
+' 403 (no es él) o 404.
+!include ../_estilo.iuml
+skinparam maxMessageSize 100
+
+actor "Músico" as actor
+box "App (React Native)" #F3F8FF
+    participant "ProfileScreen\n<<Nivel 7>>" as screen
+    participant "useProfile\n<<Nivel 6>>" as hook
+    participant "Stores\n+ userLocal\n<<Niveles 4 y 2>>" as store
+    participant "userRepository\n→ userService\n<<Niveles 3 y 1>>" as repo
+end box
+participant "API REST\n(backend)" as api
+
+actor -> screen : modifica nombre, usuario o nivel y pulsa "Guardar"
+screen -> screen : handleSaveProfile()
+alt Faltan favoritos (MIN_FAVOURITE_GENRES, MIN_FAVOURITE_INSTRUMENTS)
+    screen --> actor : showAlert('Faltan favoritos', ...) (no se envía nada)
+else
+    screen -> hook : updateProfileData({ name, username, email, difficultyLevel })
+    hook -> repo : updateProfile(currentUserId, updates)
+    repo -> repo : backupUser = users[userId]
+    repo -> repo : cache .markFresh([userId])
+    repo -> store : updateUser(userId, updates) (optimista)
+    repo -> api : PUT /api/users/{id} { ...backupUser, ...updates }
+
+    alt 400, 403 o 404
+        api --> repo : 4xx (AxiosError)
+        repo -> store : setUsers ([backupUser]) (rollback)
+        repo --> hook : throw
+        hook -> hook : setError('Error al actualizar el perfil')
+        hook --> screen : throw
+        screen --> actor : showAlert({ title: 'Error', message: 'No se pudieron guardar los cambios' })
+    else Datos válidos
+        api --> repo : 200 UserDto
+        repo -> store : hydrateUsers ([apiResponse])
+        repo -> store : userLocal .saveBatch([apiResponse])
+        repo --> hook : UserDTO
+        hook --> screen : void
+        screen --> actor : showAlert({ title: 'Exito', message: 'Perfil actualizado correctamente' })
+    end
+end
+
+@enduml

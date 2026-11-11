@@ -1,0 +1,59 @@
+@startuml DSD-CU-09-11
+title DSD-CU-09 (11/12) - Recomendaciones:\nbackend de Spotify, canciones
+
+' GET /api/spotify/recommendations/items/{userId}, pedido desde DSD-CU-09 (10/12). Sigue en
+' DSD-CU-09 (12/12).
+' Fuentes: SpotifyRecommendationController.java, SpotifyRecommendationServiceImpl.java,
+' SpotifyAuthServiceImpl.java, model/User.java, repository/SongRepository.java,
+' utils/RecommendationConstants.java, GlobalExceptionHandler.java.
+' - @PreAuthorize(hasRole('ADMIN') or @ownership.isSelf(#userId)). Otro: 403.
+' - Errores: sin cuenta vinculada, EntityNotFoundException -> 404; si falla la renovación del
+'   token (permisos revocados o Spotify caído), IllegalStateException -> 500. El token se renueva
+'   si ha caducado o caduca en menos de 1 min (POST accounts.spotify.com/api/token,
+'   grant_type=refresh_token) y se guarda el nuevo.
+' - findSongEntitiesForUser(userId, N_SPOTIFY_RECOMMENDED_SONGS = 6): GET /v1/me/top/tracks con
+'   medium_term 6, long_term 3 y short_term 3; SongRepository.findByTitleAndArtistIn(candidatos)
+'   devuelve las canciones de la app sin orden; se ordenan como en Spotify, sin las que están en
+'   N_ITEM_LISTS_TO_EXCLUDE_FROM_RECOMMENDATIONS (3) o más listas
+'   (User.getIdsExcludedFromRecommendationsOfType(Song.class)), distinct(), limit(6).
+' - Si faltan hasta 6: GET /v1/me/top/artists?limit=5&time_range=medium_term
+'   (N_TOP_ARTISTS_USED_IN_SPOTIFY_SONG_RECOMMENDATION = 5) y, por artista (el primero se queda
+'   con el resto del reparto), findByArtistIgnoreCaseAndArtist{Popular,Classic,New}TrueAndIdNotIn
+'   (...) en ese orden.
+!include ../_estilo.iuml
+
+participant "App" as app
+box "Backend" #FFF9F0
+    participant "SpotifyRec.\nController" as controller
+    participant "SpotifyRec.\nServiceImpl" as spotifyService
+    participant "SpotifyAuth\nServiceImpl" as authService
+    participant "User /\nSong\nRepository" as repos
+end box
+participant "Spotify\nWeb API" as spotify
+
+app -> controller : GET .../spotify/\nrecommendations\n/items/{userId}
+controller -> spotifyService : findItems\nForUser(userId)
+spotifyService -> authService : getValidAccess\nToken(userId)
+alt Sin cuenta vinculada
+    authService --> controller : EntityNotFound\nException -> 404
+else Token caducado
+    authService -> spotify : POST /api/token\n(refresh_token)
+    authService -> authService : guarda el\nnuevo token
+end
+authService --> spotifyService : accessToken
+spotifyService -> repos : ids excluidos\n(Song)
+spotifyService -> spotify : GET /v1/me/\ntop/tracks
+spotify --> spotifyService : canciones top
+spotifyService -> repos : findByTitle\nAndArtistIn\n(candidatos)
+repos --> spotifyService : canciones\nde la app
+spotifyService -> spotifyService : orden de Spotify,\nsin excluidas,\nlimit(6)
+opt Faltan canciones hasta 6
+    spotifyService -> spotify : GET /v1/me/\ntop/artists
+    spotify --> spotifyService : artistas top
+    loop Por artista
+        spotifyService -> repos : findByArtist...\n{Popular, Classic,\nNew}True...
+    end
+end
+note over spotifyService, authService : Sigue en DSD-CU-09 (12/12)
+
+@enduml

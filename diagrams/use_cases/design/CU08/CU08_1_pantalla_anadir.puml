@@ -1,0 +1,44 @@
+@startuml DSD-CU-08-1
+title DSD-CU-08 (1/5) - Añadir/eliminar ítems en listas: pantalla de añadir y búsqueda (app)
+
+' Diagrama de secuencia de diseño: realización de CU-08 (análisis en
+' diagrams/use_cases/description/CU08_1_recomendaciones.puml a CU08_4_quitar.puml). Parte de la app: el backend se dibuja
+' como una sola línea de vida ("API REST"); lo que hace cada endpoint está en DSD-CU-08 (4/5 y 5/5).
+' Partes: (1/5) pantalla de añadir y búsqueda; (2/5) añadir un ítem; (3/5) quitar un ítem;
+' (4/5 y 5/5) backend.
+' Fuentes: frontend/src/screens/ListScreen.tsx, screens/AddItemScreen.tsx, hooks/useAddItemScreen.ts,
+' hooks/useItemListDetail.ts, repositories/itemList.repository.ts, repositories/itemFeed.repository.ts,
+' repositories/item.repository.ts, services/itemList.service.ts, config/apiConfig.ts.
+' Diferencias con el guion:
+' - No existe "ItemDetailScreen": se añade desde AddItemScreen (hook useAddItemScreen) y se quita desde
+'   ListScreen (hook useItemListDetail). La petición la hace itemListService (Nivel 1) sobre apiClient.
+' - "Para ti": itemFeedRepository.getRecommendedByItemList (ver DSD-CU-09).
+' - itemRepository.getCatalog: resúmenes de todos los items, normalmente ya en RAM desde el arranque (CU-04).
+' - La búsqueda no llama al backend.
+!include ../_estilo.iuml
+
+actor "Músico" as actor
+box "App (React Native)" #F3F8FF
+    participant "ListScreen\n<<Nivel 7>>" as listScreen
+    participant "AddItemScreen\n<<Nivel 7>>" as addScreen
+    participant "useAddItemScreen\n<<Nivel 6>>" as hooks
+end box
+
+actor -> listScreen : pulsa "Añadir"
+listScreen -> addScreen : navigate(\n'AddItemScreen', { itemListId })
+addScreen -> hooks : useAddItemScreen(\nitemListId)
+hooks -> hooks : itemFeedRepository\n.getRecommendedByItemList(\nitemListId, onFresh): "Para ti"
+hooks -> hooks : itemRepository\n.getCatalog(apply)
+hooks -> hooks : useMemo: oculta los que ya están en la lista (listItemIds de la Store) y deja los VISIBLE_RECOMMENDATIONS (5) primeros
+hooks --> addScreen : items, loading, error
+addScreen --> actor : 5 recomendaciones "Para ti" (el resto, en espera)
+
+opt 3a. Busca un ítem concreto
+    actor -> addScreen : escribe en el buscador
+    addScreen -> hooks : setQuery(query)
+    hooks -> hooks : useMemo: filtra catalogIds en local (título y artista, sin tildes; máx. 50)
+    hooks --> addScreen : resultados sin los ya añadidos
+    addScreen --> actor : muestra los resultados
+end
+
+@enduml

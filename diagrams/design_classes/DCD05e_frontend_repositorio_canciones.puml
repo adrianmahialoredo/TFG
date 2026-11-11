@@ -1,0 +1,69 @@
+@startuml DCD-05e
+title DCD-05e - Diagrama de clases de diseño: frontend (React Native),\nnivel 3: repositorio de canciones
+
+' Partes: DCD-05a niveles 7-5 (pantalla de canción); DCD-05b dependencias de sus hooks con
+' los niveles 4 y 3; DCD-05c nivel 6 (AuthProvider); DCD-05d nivel 4 (Entity Stores);
+' DCD-05e/f/g nivel 3 (repositorios de canciones, de items con EntityCache y de
+' autenticación); DCD-05h nivel 2 (local); DCD-05i nivel 1 (services).
+' Cada recurso (genre, lesson, itemList, tune...) repite el patrón
+' <x>Service -> <x>Local -> <x>Repository -> use<X>EntitiesStore; aquí se muestra
+' el de canciones, el de items (catálogo, feeds, recientes) y el de autenticación.
+' Fuentes: repositories/song.repository.ts, songLesson/chord/tabSection.repository.ts.
+skinparam classAttributeIconSize 0
+skinparam roundcorner 6
+skinparam nodesep 12
+skinparam ranksep 45
+skinparam packageStyle rectangle
+skinparam class {
+    BackgroundColor<<store>> #F3EAFB
+    BorderColor<<store>> #7A4FA8
+    BackgroundColor<<repository>> #E6F5E6
+    BorderColor<<repository>> #3C8A3C
+    BackgroundColor<<local>> #FFF4E0
+    BorderColor<<local>> #B07A1F
+    BackgroundColor<<service>> #FDF7E3
+    BorderColor<<service>> #B07A1F
+    BackgroundColor<<utils>> #F3F3F3
+    BackgroundColor<<external>> #FFFFFF
+    BorderColor<<external>> #888888
+}
+hide empty members
+
+package "Nivel 3 - Repositories" {
+    class songRepository <<repository>> {
+        + getById(id : string) : Promise<SongDTO | null>
+        + getAllById(ids : string[]) : Promise<SongDTO[]>
+        + hydrate(songs : SongDTO[]) : string[]
+        + getPopular(onFresh?) : Promise<string[]>
+        + getNewByGenreId(genreId : string, onFresh?) : Promise<string[]>
+        + getFromSpotify(userId : string, onFresh?) : Promise<string[]>
+        + getByFavouriteArtists(userId : string, onFresh?)\n    : Promise<{newSongs; popularSongs}>
+        {method} ...
+    }
+    class "songLessonRepository /\nchordRepository /\ntabSectionRepository" as contentRepos <<repository>> {
+        + getAllById(ids : string[]) : Promise<T[]>
+    }
+    class "EntityCache<T>" as EntityCache <<utils>> <<ver DCD-05f>>
+}
+
+package "Nivel 4 - Entity Stores (ver DCD-05d)" {
+    class "useSongEntitiesStore /\nuseSongLessonEntitiesStore /\nuseChordEntitiesStore /\nuseTabSectionEntitiesStore" as songStores <<store>>
+    class "useItemEntitiesStore /\nuseRecentItemsStore" as itemStores <<store>>
+}
+
+class "songLocal" as songLocal <<local>> <<ver DCD-05h>>
+class "songService / userService" as songServices <<service>> <<ver DCD-05i>>
+
+songRepository --> EntityCache
+songRepository --> contentRepos : lessonIds ->\nchordIds,\ntabSectionIds
+songRepository --> songServices : getTopArtists\n(userService)
+songRepository --> songLocal
+songRepository --> songStores
+songRepository --> itemStores : resumen\ndel catálogo
+contentRepos --> songStores
+
+' Solo para apilar (si no, el diagrama es demasiado ancho)
+songLocal -[hidden]down- songServices
+songStores -[hidden]down- itemStores
+
+@enduml

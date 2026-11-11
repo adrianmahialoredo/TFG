@@ -1,0 +1,42 @@
+@startuml DS-CU-13-3
+title DS-CU-13 (3/4) - Recuperar contraseña\n("Olvidé mi contraseña"): comprobación del código
+
+' Diagrama de secuencia de análisis (patrón Boundary-Control-Entity)
+' Fuentes: LoginScreen.tsx, ForgotPasswordScreen.tsx, EmailVerificationModal.tsx, useForgotPassword.ts,
+' auth.service.ts, AuthController.java, EmailVerificationServiceImpl.java, UserServiceImpl.java
+' Partes: (1/4) petición del código (CU13_1_codigo.puml); (2/4) generación y envío del código
+' (CU13_2_envio.puml); (3/4) comprobación del código (CU13_3_comprobar.puml); (4/4) nueva
+' contraseña (CU13_4_nueva_contrasena.puml).
+autonumber
+hide footbox
+skinparam sequenceMessageAlign center
+skinparam roundcorner 6
+skinparam maxMessageSize 130
+skinparam wrapWidth 170
+skinparam ParticipantPadding 2
+skinparam BoxPadding 2
+skinparam defaultFontSize 12
+
+actor "Visitante" as visitante
+boundary "Recuperar\nContrasena\nScreen" as pantalla
+boundary "Modal\nVerificacion\nEmail" as modal
+control "Gestor\nAutenticacion" as gestor
+entity "Codigo\nVerificacion\n(recuperación)" as codigo
+
+note over visitante, modal : Viene de DS-CU-13 (2/4):\nel modal pide el código
+
+visitante -> modal : introducirCodigo(6 dígitos)
+modal -> gestor : comprobarCodigo(email, código)
+note right of gestor : POST /api/auth/\npassword-reset/verify\n(no gasta el código)
+gestor -> codigo : comprobar(email, código)
+alt Código incorrecto, caducado o sin pedir
+    gestor --> modal : 400 Bad Request
+    modal --> visitante : mostrarError("El código no es correcto" / "El código ha caducado, pide uno nuevo")
+else Código correcto
+    gestor --> modal : 204 No Content
+    modal -> pantalla : cerrar()
+    pantalla --> visitante : pedirNuevaContrasena(nueva, repetir)
+    note over visitante, pantalla : Continúa en DS-CU-13 (4/4)
+end
+
+@enduml

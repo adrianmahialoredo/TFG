@@ -1,0 +1,39 @@
+@startuml DSD-CU-09-8
+title DSD-CU-09 (8/12) - Recomendaciones:\nbackend de artistas favoritos
+
+' GET /api/users/{id}/top-artists?total_artists=5, pedido desde DSD-CU-09 (6/12).
+' Fuentes: UserController.java, UserServiceImpl.java, model/User.java, utils/EntityResolver.java,
+' utils/RecommendationConstants.java, security/OwnershipChecker.java, GlobalExceptionHandler.java.
+' - @PreAuthorize(hasRole('ADMIN') or @ownership.isSelf(#id)). Otro usuario: 403.
+' - Los artistas favoritos son los que más se repiten en las canciones de las listas del usuario
+'   (User.getTopArtistsFromItemLists: LinkedHashMap + orden estable por apariciones); no se
+'   guardan en ningún sitio. [] si no hay canciones.
+' - total_artists entre 1 y MAX_N_TOP_ARTISTS = 10 (por defecto DEFAULT_N_TOP_ARTISTS = 5).
+'   Fuera de rango: IllegalArgumentException -> 400.
+' - Usuario inexistente: Optional.empty() -> 404 Not Found (ResponseEntity.of).
+!include ../_estilo.iuml
+
+participant "App" as app
+box "Backend" #FFF9F0
+    participant "User\nController" as ctrl
+    participant "User\nServiceImpl" as svc
+    participant "User\n<<entity>>" as user
+    participant "Entity\nResolver" as repo
+end box
+database "Postgre\nSQL" as db
+
+app -> ctrl : getTopArtists\nForUser(id, 5)
+ctrl -> svc : findTopArtists\nForUser(id, 5)
+svc -> repo : findUser(id)
+repo -> db : SELECT
+alt El usuario no existe
+    svc --> ctrl : Optional.empty()
+    ctrl --> app : 404 Not Found
+else Existe
+    svc -> user : getTopArtists\nFromItemLists(5)
+    user --> svc : List<String>\nartistas
+    svc --> ctrl : Optional\n<List<String>>
+    ctrl --> app : 200 OK\n[artistas]
+end
+
+@enduml

@@ -1,0 +1,33 @@
+@startuml DSD-CU-12-4
+title DSD-CU-12 (4/4) - Metrónomo:\ndetención (app)
+
+' Continuación de DSD-CU-12 (3/4). Solo frontend.
+' Fuentes: frontend/src/screens/MetronomeScreen.tsx, hooks/useMetronome.ts,
+' components/metronome/(MetronomePulse, MetronomeBeatIndicator).tsx.
+' Nota: al desmontar el hook, clearTimeout y releaseAll(sounds) (player.remove() de cada
+' AudioPlayer de expo-audio).
+!include ../_estilo.iuml
+
+actor "Músico" as actor
+box "App" #F3F8FF
+    participant "Metronome\nScreen\n<<Nivel 7>>" as screen
+    participant "Metronome\nPulse\n<<Nivel 7>>" as pulse
+    participant "Metronome\nBeat\nIndicator\n<<Nivel 7>>" as beats
+    participant "use\nMetronome\n<<Nivel 6>>" as metro
+end box
+
+alt El músico lo detiene
+    actor -> pulse : toca el círculo\n(stop)
+    pulse -> screen : onToggle() ->\nhandleToggle()
+    screen -> beats : setBeat(null)
+    screen -> metro : toggle() -> stop()
+else Sale de la pantalla\n(useFocusEffect)
+    actor -> screen : sale del\nmetrónomo
+    screen -> metro : stop()
+    screen -> beats : setBeat(null)
+end
+metro -> metro : clearTimeout(timerRef);\ntimerRef = null;\nisPlaying = false
+metro --> screen : isPlaying = false
+screen --> actor : "Toca para empezar"
+
+@enduml

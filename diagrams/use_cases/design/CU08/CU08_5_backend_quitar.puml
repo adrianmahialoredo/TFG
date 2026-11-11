@@ -1,0 +1,35 @@
+@startuml DSD-CU-08-5
+title DSD-CU-08 (5/5) - Añadir/eliminar ítems en listas: backend (quitar)
+
+' Lo que hace el backend en la petición de DSD-CU-08 (3/5). La seguridad (401 sin token válido,
+' 403 si la lista es de otro) es la misma que al añadir: DSD-CU-08 (4/5).
+' Diferencias con el guion:
+' - Quitar no usa ItemList.removeItem ni resolveItem: hace list.getItems().removeIf(id == itemId).
+'   Responde 200 OK + ItemListDTO (no 204).
+' - DtoMapper no tiene línea de vida: su llamada es un mensaje del servicio a sí mismo.
+!include ../_estilo.iuml
+
+participant "App\n(services)" as app
+box "Backend (Spring Boot)" #FFF9F0
+    participant "ItemList\nController\n(@PreAuthorize)" as controller
+    participant "ItemList\nServiceImpl" as listService
+    participant "ItemList\n<<entity>>" as itemList
+    participant "ItemList\nRepository /\nEntityResolver" as listRepo
+end box
+
+app -> controller : DELETE /api/item-lists/{listId}\n/items/{itemId}
+controller -> controller : @PreAuthorize: ownsItemList(listId) (401 / 403 como en 4/5)
+controller -> listService : removeItem(listId, itemId) @Transactional
+listService -> listRepo : EntityResolver\n.findItemList(listId)
+alt La lista no existe
+    listService --> controller : Optional.empty()
+    controller --> app : 404 Not Found
+else La lista existe
+    listService -> itemList : getItems().removeIf(id == itemId)
+    listService -> listRepo : save(list)
+    listService -> listService : DtoMapper\n.itemListTo\nItemListDto(list)
+    listService --> controller : Optional<ItemListDTO>
+    controller --> app : 200 OK ItemListDTO
+end
+
+@enduml

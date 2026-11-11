@@ -1,0 +1,46 @@
+@startuml DSD-CU-12-1
+title DSD-CU-12 (1/4) - Metrónomo:\napertura (app)
+
+' Diagrama de secuencia de diseño: realización de CU-12 (análisis en
+' diagrams/use_cases/description/CU12_*.puml, DS-CU-12 (1/2) y (2/2)). Partes: (1/4) apertura, (2/4) ajuste
+' del tempo, (3/4) sonido y golpes, (4/4) detención.
+' Fuentes: frontend/src/screens/MetronomeScreen.tsx, hooks/useMetronome.ts (useMetronome y
+' useTapTempo), components/metronome/(MetronomeSlider, MetronomeTempoButton,
+' MetronomeActionButton).tsx, navigation/BottomTabs.tsx, screens/HomeScreen.tsx.
+' Solo frontend: no hay llamadas al backend ni configuración guardada.
+' Diferencias con el análisis:
+'  - Rango de tempo 30-300 BPM (MIN_TEMPO/MAX_TEMPO de MetronomeSlider), no 40-240; por defecto 120.
+'  - No hay entidad de configuración persistida: tempo y sonido son estado (useState) de la pantalla;
+'    se conservan mientras la pantalla siga montada (los tabs no se desmontan).
+'  - Además del deslizador y el tap tempo, hay botones de ajuste fino (-10, -1, +1, +10).
+' Notas:
+'  - MetronomeSlider incluye los botones MetronomeTempoButton.
+'  - setAudioModeAsync({ playsInSilentMode: true, interruptionMode: 'mixWithOthers' }).
+'  - Cada AudioPlayer se crea con player.volume = volume * MASTER_VOLUME.
+'  - Si falla la carga de los sonidos solo se registra el error: el pulso visual funciona igual.
+!include ../_estilo.iuml
+
+actor "Músico" as actor
+box "App" #F3F8FF
+    participant "Metronome\nScreen\n<<Nivel 7>>" as screen
+    participant "Metronome\nSlider\n<<Nivel 7>>" as slider
+    participant "useTap\nTempo\n<<Nivel 6>>" as tapHook
+    participant "use\nMetronome\n<<Nivel 6>>" as metro
+end box
+participant "expo-audio\n<<librería>>" as audio
+
+actor -> screen : pulsa "Metrónomo"\nen el Home
+screen -> screen : tempo = 120;\nsound = 'click'
+screen -> metro : useMetronome(tempo,\nsound, handleBeat)
+activate metro
+metro -> audio : setAudioMode\nAsync(...)
+loop Por cada sonido (click, hihat)\ny variante (normal, accent)
+    metro -> audio : createAudio\nPlayer(file)
+end
+metro -> metro : soundsRef = loaded;\nready = true
+deactivate metro
+screen -> tapHook : useTapTempo()
+screen -> slider : <MetronomeSlider\ntempo onTempoChange\n={setTempo}>
+slider --> actor : "Tempo BPM 30-300",\n"120 BPM",\n-10 -1 +1 +10
+
+@enduml

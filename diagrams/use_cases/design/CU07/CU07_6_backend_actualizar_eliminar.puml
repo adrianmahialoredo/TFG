@@ -1,0 +1,58 @@
+@startuml DSD-CU-07-6
+title DSD-CU-07 (6/6) - Gestionar listas de estudio: backend (actualizar y eliminar)
+
+' Lo que hace el backend en las peticiones de DSD-CU-07 (3/6 y 4/6). Mismas fuentes y reglas de
+' seguridad que DSD-CU-07 (5/6).
+' - ownsItemList deja pasar una lista inexistente para que el controlador responda 404 y no un 403 engañoso.
+' - updateItemListFromDto(existing, dto) hace setName, setImageUrl, resolveUser y resolveItems.
+' - DtoMapper no tiene línea de vida: su llamada es un mensaje del servicio a sí mismo.
+!include ../_estilo.iuml
+
+participant "App\n(services)" as app
+box "Backend (Spring Boot)" #FFF9F0
+    participant "JwtAuthentication\nFilter +\n@PreAuthorize\n(Ownership\nChecker)" as sec
+    participant "ItemList\nController" as ctrl
+    participant "ItemList\nServiceImpl" as svc
+    participant "ItemList\nRepository /\nEntityResolver" as repo
+end box
+database "PostgreSQL" as db
+
+group PUT /api/item-lists/{id}
+    app -> sec : @ownership\n.ownsItemList(#id) and @ownership\n.isSelf(#dto.userId)
+    sec -> ctrl : update(id, dto)
+    ctrl -> svc : update(id, dto)
+    svc -> repo : EntityResolver\n.findItemList(id)
+    alt La lista no existe
+        svc --> ctrl : Optional.empty()
+        ctrl --> app : 404 Not Found
+    else Existe
+        svc -> svc : updateItemListFromDto(\nexisting, dto)
+        svc -> repo : save(existing)
+        repo -> db : UPDATE
+        svc -> svc : DtoMapper\n.itemListToItemListDto(\nlist)
+        svc --> ctrl : Optional<ItemListDTO>
+        ctrl --> app : 200 OK ItemListDTO
+    end
+end
+
+group DELETE /api/item-lists/{id}
+    app -> sec : @ownership\n.ownsItemList(#id)
+    sec -> ctrl : delete(id)
+    ctrl -> svc : delete(id)
+    svc -> repo : existsById(id)
+    alt No existe
+        svc --> ctrl : false
+        ctrl --> app : 404 Not Found
+    else Existe
+        svc -> repo : deleteById(id)
+        repo -> db : DELETE
+        svc --> ctrl : true
+        ctrl --> app : 204 No Content
+    end
+end
+
+opt la lista o el usuario es de otro
+    sec --> app : 403 Forbidden (AccessDeniedException)
+end
+
+@enduml

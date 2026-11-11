@@ -1,0 +1,47 @@
+@startuml DS-CU-06-1
+title DS-CU-06 (1/3) - Consultar espacio de género:\nabrir el género
+
+' Diagrama de secuencia de análisis (patrón Boundary-Control-Entity)
+' Fuentes: GenreMainScreen.tsx, useGenreMain.ts, GenreDescriptionScreen.tsx, GenreSongsScreen.tsx,
+' useGenreSongs.ts, GenreInstrumentsScreen.tsx, useGenreInstruments.ts,
+' InstrumentGenreLessonScreen.tsx, useInstrumentGenre.ts, useInstrumentGenreLesson.ts, useLesson.ts
+' Partes: (1/3) abrir el género (CU06_1_genero.puml); (2/3) pestaña "Canciones"
+' (CU06_2_canciones.puml); (3/3) pestaña "Instrumentos" e itinerario (CU06_3_itinerario.puml).
+autonumber
+hide footbox
+skinparam sequenceMessageAlign center
+skinparam roundcorner 6
+skinparam maxMessageSize 130
+skinparam wrapWidth 170
+skinparam ParticipantPadding 2
+skinparam BoxPadding 2
+skinparam defaultFontSize 12
+
+actor "Músico" as musico
+boundary "GenreScreen" as pantalla
+control "GestorGeneros" as gestor
+entity "Genre" as genre
+entity "Instrument\nGenre" as ig
+entity "Lesson" as lesson
+
+musico -> pantalla : abrirEspacioGenero(id)
+pantalla -> gestor : obtenerDetalleGenero(id)
+par Carga en paralelo
+    gestor -> genre : obtener(id)
+    genre --> gestor : GenreDTO (banner, descripción, vídeos de bienvenida)
+else
+    gestor -> ig : obtenerPorGenero(genreId)
+    note right of ig : GET /api/\ninstrument-genres\n/by-genre/{id}
+    ig --> gestor : InstrumentGenreDTO[]
+else
+    gestor -> lesson : obtenerPorGenero(genreId)
+    lesson --> gestor : LessonDTO[]
+end
+gestor ->> gestor : marcarRecienteLocal(id)
+gestor --> pantalla : género
+pantalla --> musico : mostrarPestanaGenero(banner, descripción, vídeos)
+note right of pantalla : Pestañas "Instrumentos",\n"Canciones" y "Género";\nse abre en "Género"
+
+note over musico, pantalla : Pestaña "Canciones": DS-CU-06 (2/3).\nPestaña "Instrumentos": DS-CU-06 (3/3)
+
+@enduml

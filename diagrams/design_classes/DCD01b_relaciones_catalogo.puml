@@ -1,0 +1,54 @@
+@startuml DCD-01b
+title DCD-01b - Diagrama de clases de diseño: modelo (2/5) -\nrelaciones del catálogo y secciones de lección
+
+' Asociaciones entre las clases del catálogo (detalladas en DCD-01a) e Instrument.
+' Fuentes: model/Song.java, Lesson.java, Genre.java, InstrumentGenre.java, Instrument.java,
+'          LessonSection.java.
+skinparam classAttributeIconSize 0
+skinparam roundcorner 6
+skinparam nodesep 15
+skinparam ranksep 50
+skinparam class {
+    BackgroundColor<<entity>> #FFF4E0
+    BorderColor<<entity>> #B07A1F
+    BackgroundColor<<enum>> #F3F3F3
+    BackgroundColor<<interface>> #E3F0FF
+    BorderColor<<interface>> #3D6FA8
+}
+hide empty members
+
+interface "Identifiable<ID>" as Identifiable <<interface>>
+class Song <<entity>> <<ver DCD-01a>>
+class Lesson <<entity>> <<ver DCD-01a>>
+class Genre <<entity>> <<ver DCD-01a>>
+class InstrumentGenre <<entity>> <<ver DCD-01a>>
+
+class Instrument <<entity>> {
+    - id : Long {PK, asignado}
+    - name : String {unique}
+    # imageUrl : String
+    --
+    + equals(o : Object) : boolean
+    + hashCode() : int
+}
+
+class LessonSection <<entity>> {
+    - id : Long {PK}
+    - title : String
+    - htmlContent : String {TEXT}
+    - videoUrl : String
+    - orderIndex : int
+}
+
+Identifiable <|.. Instrument
+
+Song "*" --> "*" Genre : genres
+Song "*" --> "*" Instrument : instruments
+Lesson "*" -- "0..1" Genre : genre / lessons
+Lesson "*" -- "0..1" InstrumentGenre : instrumentGenre / lessons\n{@OrderBy indexInInstrumentGenre}
+Lesson "*" --> "0..1" Instrument : instrument
+InstrumentGenre "*" --> "1" Instrument : instrument
+InstrumentGenre "*" --> "1" Genre : genre
+Lesson "1" *-- "*" LessonSection : sections\n{List, @OrderBy orderIndex}
+
+@enduml

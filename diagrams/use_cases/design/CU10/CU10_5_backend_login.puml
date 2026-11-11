@@ -1,0 +1,63 @@
+@startuml DSD-CU-10-5
+title DSD-CU-10 (5/7) - Vincular Spotify:\nlogin y errores del callback (backend)
+
+' Lo que hace el backend en GET /api/spotify/login (DSD-CU-10 1/7) y en los casos de error de
+' GET /api/spotify/callback (DSD-CU-10 2/7). La vinculación está en DSD-CU-10 (6/7).
+' Fuentes: SpotifyAuthController.java, SpotifyAuthServiceImpl.java, UserRepository.java,
+' SpotifyProperties.java, SecurityConfig.java, GlobalExceptionHandler.java.
+' Diferencias con el guion:
+'  - getLoginUrl() no recibe la Authentication como parámetro: lee el userId del SecurityContextHolder
+'    (currentUserId() : Optional<Long>).
+'  - El state lo genera SpotifyAuthServiceImpl.buildAuthorizationUrl(userId) (UUID en un
+'    ConcurrentHashMap en memoria, caduca a los 10 min), no el controlador: primero
+'    removeIf(isExpired), luego state = UUID.randomUUID() y
+'    pendingAuthorizations.put(state, (userId, now + 10 min)).
+'  - authUrl = accounts.spotify.com/authorize?client_id&response_type=code&redirect_uri
+'    &scope=user-read-email user-top-read&state.
+'  - /api/spotify/login exige JWT (401 sin usuario); /api/spotify/callback es permitAll.
+'  - handleCallback es @Transactional. Con error != null (5a. permisos rechazados) responde
+'    400 (text/html) "No se ha conectado Spotify (error)...". Las IllegalArgumentException
+'    pasan a 400 en GlobalExceptionHandler.
+!include ../_estilo.iuml
+
+participant "App /\nNavegador" as app
+box "Backend" #FFF9F0
+    participant "Spotify\nAuth\nController" as ctrl
+    participant "Spotify\nAuth\nServiceImpl" as svc
+    participant "User\nRepository" as repo
+end box
+database "Postgre\nSQL" as db
+
+group GET /api/spotify/login
+    app -> ctrl : getLoginUrl()
+    ctrl -> ctrl : currentUserId()
+    ctrl -> svc : buildAuthorization\nUrl(userId)
+    svc -> svc : guarda state =\nUUID (10 min)
+    svc --> ctrl : authUrl
+    ctrl --> app : 200 { authUrl }\n/ 401
+end
+
+group GET /api/spotify/callback
+    app -> ctrl : callback(code,\nstate, error)
+    alt error != null
+        ctrl --> app : 400 (text/html)
+    else
+        ctrl -> svc : handleCallback\n(code, state)
+        svc -> svc : pendingAuthori\nzations.remove\n(state) -> userId
+        alt code vacío o state\ndesconocido / caducado
+            svc --> ctrl : IllegalArgument\nException
+            ctrl --> app : 400
+        else
+            svc -> repo : findById\n(userId)
+            repo -> db : SELECT
+            alt Usuario inexistente
+                svc --> ctrl : IllegalArgument\nException
+                ctrl --> app : 400
+            else
+                note over svc, repo : Sigue en DSD-CU-10 (6/7)
+            end
+        end
+    end
+end
+
+@enduml

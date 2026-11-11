@@ -1,0 +1,52 @@
+@startuml DSD-CU-10-3
+title DSD-CU-10 (3/7) - Vincular Spotify:\nvuelta a la app (app)
+
+' Parte de la app de la realización de CU-10: lo que pasa al volver del navegador.
+' Fuentes: hooks/useSpotifyConnect.ts, components/buttons/SpotifyButton.tsx,
+' repositories/spotify.repository.ts, repositories/user.repository.ts (refresh, hydrateUsers),
+' services/user.service.ts. El endpoint está en DSD-CU-10 (7/7).
+' Notas de diseño:
+'  - La app no recibe nada del callback: recarga el usuario (GET /api/users/{id}) y mira
+'    UserDTO.spotifyConnected.
+'  - result de openBrowserAsync: en iOS 'cancel' | 'dismiss' al cerrarse; en Android 'opened'
+'    al abrirse, así que se espera a await appActive.promise.
+'  - spotifyRepository.refreshLinkedUser llama a userRepository.refresh(userId), que llama a
+'    userService.getById(userId) e hidrata UserEntitiesStore y el disco (hydrateUsers).
+'  - connect() puede lanzar por error de red, 401 o URL vacía. spotifyConnected = false si el
+'    músico rechazó los permisos o falló el callback.
+'  - Con spotifyConnected = true se recargan los carruseles: DSD-CU-10 (4/7).
+!include ../_estilo.iuml
+
+actor "Músico" as actor
+box "App" #F3F8FF
+    participant "Spotify\nButton\n<<Nivel 7>>" as screen
+    participant "useSpotify\nConnect\n<<Nivel 6>>" as hooks
+    participant "spotify /\nuser\nRepository\n<<Nivel 3>>" as repos
+    participant "UserEntities\nStore\n<<Nivel 4>>" as stores
+    participant "user\nService\n<<Nivel 1>>" as services
+    participant "Web\nBrowser" as browser
+end box
+participant "API\nREST" as api
+
+actor -> browser : vuelve\na la app
+browser --> hooks : result
+hooks -> repos : refreshLinked\nUser(userId)
+repos -> services : getById\n(userId)
+services -> api : GET /api/\nusers/{id}
+api --> services : 200 UserDTO\n{ spotify\nConnected }
+services --> repos : UserDTO
+repos -> stores : hydrateUsers\n([user])
+repos --> hooks : UserDTO
+hooks -> hooks : finally:\nappActive.cancel();\nsetConnecting(false)
+
+alt connect() lanza
+    hooks --> screen : Error
+    screen --> actor : "No se pudo\niniciar sesión\ncon Spotify."
+else spotifyConnected\n= false
+    screen --> actor : sigue el botón\n"Conectar\ncon Spotify"
+else spotifyConnected\n= true
+    stores --> hooks : spotifyConnected\ncambia
+    note over hooks, stores : Sigue en DSD-CU-10 (4/7)
+end
+
+@enduml

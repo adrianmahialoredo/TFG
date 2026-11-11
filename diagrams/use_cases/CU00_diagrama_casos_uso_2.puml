@@ -1,0 +1,49 @@
+@startuml DCU-01-2
+title DCU-01 (2/2) - Casos de uso de TOCO: catálogo, listas y herramientas
+
+' Segunda parte del diagrama de casos de uso (la primera, acceso, perfil y administración, está
+' en CU00_diagrama_casos_uso.puml).
+' CU-09 incluye las recomendaciones de lista ("Para ti"), las del Inicio, los artistas
+' favoritos y "Basado en tu Spotify".
+left to right direction
+skinparam packageStyle rectangle
+skinparam roundcorner 6
+skinparam usecase {
+    BackgroundColor #F3F8FF
+    BorderColor #3D6FA8
+}
+skinparam actorStyle awesome
+
+actor "Músico" as musico
+actor "API de Spotify\n<<sistema externo>>" as spotify
+
+rectangle "TOCO" {
+    usecase "CU-04 Explorar catálogo\nde ítems" as CU04
+    usecase "CU-05 Consultar canción\ny lección" as CU05
+    usecase "CU-06 Consultar\nespacio de género" as CU06
+    usecase "CU-07 Gestionar listas\nde estudio" as CU07
+    usecase "CU-08 Añadir/eliminar\nítems en listas" as CU08
+    usecase "CU-09 Consultar\nrecomendaciones" as CU09
+    usecase "CU-10 Vincular cuenta\nde Spotify" as CU10
+    usecase "CU-11 Utilizar afinador" as CU11
+    usecase "CU-12 Utilizar metrónomo" as CU12
+}
+
+musico --> CU04
+musico --> CU05
+musico --> CU06
+musico --> CU07
+musico --> CU08
+musico --> CU09
+musico --> CU10
+musico --> CU11
+musico --> CU12
+
+CU10 --> spotify
+CU09 --> spotify
+
+CU05 ..> CU04 : <<extend>>
+CU06 ..> CU04 : <<extend>>
+CU08 ..> CU09 : <<include>>\n("Para ti")
+CU10 ..> CU09 : <<extend>>\n(sin Spotify)
+@enduml

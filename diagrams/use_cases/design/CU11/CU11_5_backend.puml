@@ -8,33 +8,33 @@ title DSD-CU-11 (5/5) - Utilizar afinador cromático: endpoints del backend
 ' lectura y solo pide estar autenticado).
 !include ../_estilo.iuml
 
-participant "App\n(services)" as app
+participant "App" as app
 box "Backend (Spring Boot)" #FFF9F0
-    participant "XController\n<<controller>>" as ctrl
-    participant "XServiceImpl\n<<service>>" as svc
-    participant "XRepository" as repo
-    participant "DtoMapper\n<<mapper>>" as mapper
+    participant "X\nController" as ctrl
+    participant "X\nServiceImpl" as svc
+    participant "X\nRepository" as repo
+    participant "Dto\nMapper" as mapper
 end box
 database "PostgreSQL" as db
 
 group GET /api/tunes
-    app -> ctrl : TuneController.getAll()
-    ctrl -> svc : TuneServiceImpl.findAll()
-    svc -> repo : TuneRepository.findAll()
+    app -> ctrl : TuneController\n.getAll()
+    ctrl -> svc : TuneServiceImpl\n.findAll()
+    svc -> repo : TuneRepository\n.findAll()
     repo -> db : SELECT
     db --> repo : List<Tune>
-    svc -> mapper : tuneToTuneDto(tune)
-    mapper --> svc : TuneDTO (id, title,\ninstrumentId, notes)
-    ctrl --> app : 200 List<TuneDTO>
+    svc -> mapper : tuneToTuneDto\n(tune)
+    mapper --> svc : TuneDTO (id,\ntitle, instrumentId,\nnotes)
+    ctrl --> app : 200 List\n<TuneDTO>
 end
 
 group POST /api/instruments/by-ids
-    app -> ctrl : InstrumentController.getByIds(ids)
-    ctrl -> svc : InstrumentServiceImpl.findByIds(ids)
-    svc -> repo : InstrumentRepository.findAllById(ids)\n(lista vacía si no hay ids)
-    repo -> db : SELECT ... WHERE id IN (...)
-    svc -> mapper : instrumentToInstrumentDto(instrument)
-    ctrl --> app : 200 List<InstrumentDTO>
+    app -> ctrl : Instrument\nController\n.getByIds(ids)
+    ctrl -> svc : Instrument\nServiceImpl\n.findByIds(ids)
+    svc -> repo : Instrument\nRepository\n.findAllById(ids)\n(lista vacía si\nno hay ids)
+    repo -> db : SELECT ...\nWHERE id\nIN (...)
+    svc -> mapper : instrumentTo\nInstrumentDto\n(instrument)
+    ctrl --> app : 200 List\n<InstrumentDTO>
 end
 
 @enduml

@@ -1,0 +1,57 @@
+@startuml DSD-CU-09-2
+title DSD-CU-09 (2/12) - Recomendaciones:\n"Para ti" del Inicio (app)
+
+' Fuentes: frontend/src/screens/HomeScreen.tsx, hooks/useHomeItems.ts, hooks/useUserTasteKey.ts,
+' repositories/itemFeed.repository.ts, utils/entityCache.utils.ts, services/item.service.ts.
+' El endpoint está en DSD-CU-09 (5/12).
+' - Índice 'items_recommended_user' (personalizado: se borra en el logout); getMixedFeed
+'   -> cacheFirst. Con índice guardado devuelve sus ids y después avisa con onFresh(ids).
+' - Se vuelve a pedir cuando cambian las listas, los favoritos o el nivel del usuario
+'   (useEffect([currentUserId, tasteKey])). El resultado va a setSection('recommendations').
+' - La respuesta son DTOs completos barajados: hydrateMixed(dtos) + saveQueryIndex.
+' - Como en (1/12), cacheFirst captura el error (sin red, 401, 403, 404): el
+'   setError("Error al sincronizar el inicio") de useHomeItems no llega a ejecutarse por un
+'   fallo de la red.
+' - recommendations = itemsToCarouselItems(ids), con los items de la store (suscripción Zustand).
+' - Vacío: "Explora la app y empieza a aprender para que se muestren tus recomendaciones".
+!include ../_estilo.iuml
+
+actor "Músico" as actor
+box "App" #F3F8FF
+    participant "Home\nScreen\n<<Nivel 7>>" as screen
+    participant "useHome\nItems\n<<Nivel 6>>" as hook
+    participant "itemFeed\nRepository\n<<Nivel 3>>" as feedRepo
+    participant "Entity\nStores\n<<Nivel 4>>" as stores
+    participant "item\nService\n<<Nivel 1>>" as service
+end box
+participant "API\nREST" as api
+
+actor -> screen : abre Inicio
+screen -> hook : useHomeItems()
+hook -> feedRepo : getRecommended\nForUser(userId)
+feedRepo -> feedRepo : cacheFirst
+alt Hay índice guardado
+    feedRepo --> hook : ids de la caché\n(+ onFresh)
+else Sin caché
+    feedRepo -> service : getRecommended\nByUser(userId)
+    service -> api : GET .../items/\nby-user/{id}
+    alt Éxito
+        api --> service : 200 List\n<ItemDTO>
+        service --> feedRepo : AnyItemDTO[]
+        feedRepo -> stores : hydrateMixed +\nsaveQueryIndex
+        feedRepo --> hook : ids
+    else Error
+        api --> service : error
+        feedRepo --> hook : []
+    end
+end
+hook -> stores : items
+hook -> hook : itemsToCarousel\nItems(ids)
+hook --> screen : recommen-\ndations
+alt Hay recomendaciones
+    screen --> actor : carrusel\n"Para ti"
+else Vacío
+    screen --> actor : "Explora la app\ny empieza a\naprender..."
+end
+
+@enduml

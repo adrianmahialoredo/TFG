@@ -1,12 +1,14 @@
 ' Estilo común de los diagramas de secuencia de diseño (DSD-CU-xx).
 ' Se incluye con: !include ../_estilo.iuml
-' Tamaño pensado para que cada diagrama quepa legible en una página A4
-' (≈1500 px de ancho como máximo al exportar sin escalar).
+' Tamaño objetivo: como ER-b, unos 830 px de ancho y 1300 px de alto como máximo al exportar
+' a PNG, para que en Word ocupe el ancho de la página con el texto legible y quepa en una A4.
+' Los mensajes y notas largos se parten solos (maxMessageSize, wrapWidth).
 autonumber
 hide footbox
 skinparam sequenceMessageAlign center
 skinparam roundcorner 6
-skinparam maxMessageSize 200
-skinparam BoxPadding 6
-skinparam ParticipantPadding 4
+skinparam maxMessageSize 130
+skinparam wrapWidth 170
+skinparam BoxPadding 2
+skinparam ParticipantPadding 2
 skinparam defaultFontSize 12

@@ -1,0 +1,54 @@
+@startuml DSD-CU-08-2
+title DSD-CU-08 (2/5) - Añadir/eliminar ítems en listas: añadir un ítem (app)
+
+' Sigue a DSD-CU-08 (1/5). Backend en DSD-CU-08 (4/5).
+' Para que quepa en A4:
+' - itemListService (Nivel 1) no tiene línea de vida: la flecha a la API es su llamada
+'   (respuesta convertida con toAppItemListDTO).
+' - useItemListEntitiesStore (Nivel 4) no tiene línea de vida: hydrateItemLists (privada del
+'   repositorio) = setItemLists (RAM) + cache.markFresh + itemListLocal.saveBatchWithUserIndex (disco).
+' - Las dos pantallas comparten línea de vida, igual que sus hooks (useAddItemScreen en
+'   AddItemScreen, useItemListDetail en ListScreen).
+' Respuesta optimista: el tic sale al instante; a los 600 ms el ítem desaparece y entra la
+' siguiente recomendación. Si el ítem ya estaba (7a), el backend lo ignora y responde 200.
+' Al volver, getItemListWithItems lee la lista desde RAM (ya actualizada) y pide los items que
+' falten con itemRepository.getAllById(itemIds).
+!include ../_estilo.iuml
+
+actor "Músico" as actor
+box "App (React Native)" #F3F8FF
+    participant "AddItemScreen\nListScreen\n<<Nivel 7>>" as screens
+    participant "useAddItemScreen\nuseItemListDetail\n<<Nivel 6>>" as hooks
+    participant "itemList\nRepository\n<<Nivel 3>>" as repo
+end box
+participant "API REST" as api
+
+actor -> screens : pulsa "+" en un ítem
+screens -> hooks : addItem(itemId)
+hooks -> hooks : setAddedIds([..., itemId]), setTimeout(dismiss, 600 ms)
+hooks --> screens : isAdded(itemId) = true
+screens --> actor : tic inmediato (respuesta optimista)
+
+hooks -> repo : addItemToList(listId, itemId)
+repo -> api : itemListService\n.addItemToList: POST /api/item-lists/{listId}\n/items/{itemId}
+alt 200 OK (añadido, o 7a. ya estaba)
+    api --> repo : 200 OK ItemListDTO
+    repo -> repo : hydrateItemLists(\n[updated])
+    repo --> hooks : updated
+else 8a. Falla (401, 403, 404, sin red)
+    api --> repo : 401 / 403 / 404 / error de red (throw)
+    repo --> hooks : null
+    hooks -> hooks : clearTimeout(timer); quita itemId de addedIds y dismissedIds
+    hooks -> hooks : setError("No se pudo añadir el item a la lista")
+    hooks --> screens : error
+    screens --> actor : muestra el error en rojo en lugar de la lista
+end
+
+actor -> screens : vuelve atrás (navigation.goBack())
+screens -> hooks : refresh() de useItemListDetail (useFocusEffect)
+hooks -> repo : getItemListWithItems(\nitemListId)
+repo --> hooks : itemIds
+hooks --> screens : list, items
+screens --> actor : muestra la lista actualizada
+
+@enduml

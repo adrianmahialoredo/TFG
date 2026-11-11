@@ -1,56 +1,56 @@
 @startuml DSD-CU-07-3
-title DSD-CU-07 (3/5) - Gestionar listas de estudio: renombrar o cambiar la foto (app)
+title DSD-CU-07 (3/6) - Gestionar listas de estudio: renombrar o cambiar la foto (app)
 
 ' Fuentes: frontend/src/screens/ListScreen.tsx (handleRename, handlePickImage), hooks/useItemListDetail.ts,
 ' repositories/itemList.repository.ts, services/itemList.service.ts, services/cloudinary.service.ts.
-' Backend en DSD-CU-07 (5/5).
-' - La imagen se sube a Cloudinary (axios sin apiClient: no se envía el JWT) y luego se guarda su
-'   secure_url con el mismo PUT /api/item-lists/{id} que el renombrado.
+' Backend en DSD-CU-07 (5/6 y 6/6). itemListService y cloudinary.service (Nivel 1) no tienen línea de
+' vida: las flechas a la API y a Cloudinary son sus llamadas.
+' - La imagen se sube a Cloudinary (axios sin apiClient: no se envía el JWT) con
+'   uploadProfileImageToCloudinary(localUri) -> POST /v1_1/{cloudName}/image/upload, y luego se
+'   guarda su secure_url con el mismo PUT /api/item-lists/{id} que el renombrado.
+' - getById(listId) mira RAM -> disco -> API; el resultado se fusiona con los cambios (id, userId e
+'   itemIds actuales) antes del PUT.
+' - useItemListEntitiesStore (Nivel 4) no tiene línea de vida: hydrateItemLists hace setItemLists
+'   en ella y useItemListDetail recibe la lista por su suscripción (Zustand).
+' - Si falla la subida a Cloudinary, updateItemListImage lanza el error y se muestra
+'   "No se pudo actualizar la foto de la lista".
 !include ../_estilo.iuml
 
 actor "Músico" as actor
 box "App (React Native)" #F3F8FF
     participant "ListScreen\n<<Nivel 7>>" as listScreen
-    participant "useItemListDetail\n<<Nivel 6>>" as useDetail
-    participant "itemListRepository\n<<Nivel 3>>" as repo
-    participant "useItemListEntitiesStore\n<<Nivel 4>>" as store
-    participant "itemListService\n<<Nivel 1>>" as service
+    participant "useItemList\nDetail\n<<Nivel 6>>" as useDetail
+    participant "itemList\nRepository\n<<Nivel 3>>" as repo
 end box
-participant "API REST\n(backend)" as api
-participant "Cloudinary\n<<sistema externo>>" as cloudinary
+participant "API REST" as api
+participant "Cloudinary\n<<externo>>" as cloudinary
 
 actor -> listScreen : edita el nombre (o elige una foto)
 alt 3a. Cambiar la foto
-    listScreen -> listScreen : ImagePicker.launchImageLibraryAsync()
+    listScreen -> listScreen : ImagePicker\n.launchImageLibraryAsync()
     listScreen -> useDetail : updateImage(localUri)
-    useDetail -> repo : updateItemListImage(listId, localUri)
-    repo -> cloudinary : uploadProfileImageToCloudinary(localUri)\nPOST /v1_1/{cloudName}/image/upload
+    useDetail -> repo : updateItemListImage(\nlistId, localUri)
+    repo -> cloudinary : POST .../image/upload
     cloudinary --> repo : secure_url
     repo -> repo : updateItemList(listId, { imageUrl: secure_url })
 else Renombrar
     listScreen -> listScreen : handleRename() (mínimo 2 caracteres)
     listScreen -> useDetail : updateList({ name })
-    useDetail -> repo : updateItemList(listId, { name })
+    useDetail -> repo : updateItemList(\nlistId, { name })
 end
-repo -> repo : getById(listId)
-note right of repo : RAM -> disco -> API; se fusiona con los\ncambios (id, userId e itemIds actuales)
-repo -> service : updateItemList(listId, payload)
-service -> api : PUT /api/item-lists/{id} ItemListDTO
+repo -> repo : getById(listId) + cambios
+repo -> api : updateItemList: PUT /api/item-lists/{id}
 alt Actualizada
-    api --> service : 200 OK ItemListDTO
-    service --> repo : ItemListDTO
-    repo -> repo : hydrateItemLists([updated])
-    repo -> store : setItemLists([updated])
-    store --> useDetail : list (suscripción Zustand)
+    api --> repo : 200 OK ItemListDTO
+    repo -> repo : hydrateItemLists(\n[updated])
+    repo --> useDetail : list (suscripción Zustand a la Store)
     useDetail --> listScreen : list
     listScreen --> actor : muestra la lista actualizada
 else Error (404 no existe, 403 no es tuya, sin red)
-    api --> service : 404 / 403 / error de red
-    service --> repo : throw
+    api --> repo : 404 / 403 / error de red (throw)
     repo --> useDetail : null
     useDetail --> listScreen : throw Error
-    listScreen --> actor : "No se pudo actualizar el nombre" /\n"No se pudo actualizar la foto de la lista"
+    listScreen --> actor : "No se pudo actualizar el nombre" / "No se pudo actualizar la foto de la lista"
 end
-note over listScreen, cloudinary : Si falla la subida a Cloudinary, updateItemListImage lanza\nel error y se muestra "No se pudo actualizar la foto de la lista"
 
 @enduml

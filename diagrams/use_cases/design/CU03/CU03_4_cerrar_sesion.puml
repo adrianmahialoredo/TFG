@@ -1,0 +1,37 @@
+@startuml DSD-CU-03-4
+title DSD-CU-03 (4/6) - Configurar perfil:\n3a. cerrar sesión (app)
+
+' Fuentes: screens/ProfileScreen.tsx, context/AuthContext.tsx, repositories/auth.repository.ts,
+' stores/entities/*.store.ts, local/user, itemList, item, song, lesson .local.ts.
+' El cierre de sesión es solo local: no hay petición al backend.
+' Se borran el usuario, sus listas y los índices personales: Promise.all([ userLocal.clearAll(),
+' itemListLocal.clearAll(), itemLocal.clearQueryIndexes(['items_catalog']),
+' songLocal.removeQueryIndexes([Spotify, recomendadas, de artistas favoritos]),
+' lessonLocal.removeQueryIndexes([recomendadas]) ]).
+' Se conservan el catálogo de items y el contenido público como caché, y los recientes por
+' usuario.
+!include ../_estilo.iuml
+skinparam maxMessageSize 110
+
+actor "Músico" as actor
+box "App (React Native)" #F3F8FF
+    participant "ProfileScreen\n<<Nivel 7>>" as screen
+    participant "AuthProvider\n(useAuth)\n<<Nivel 6>>" as hook
+    participant "authRepository\n<<Nivel 3>>" as repo
+    participant "useAuthStore\nuseUserEntitiesStore\nuseItemListEntitiesStore\n<<Nivel 4>>" as store
+    participant "userLocal, itemListLocal,\nitemLocal, songLocal,\nlessonLocal\n<<Nivel 2>>" as local
+end box
+
+actor -> screen : pulsa "Cerrar sesión"
+screen --> actor : showAlert('Cerrar sesión', '¿Estás seguro?')
+actor -> screen : confirma
+screen -> hook : useAuth().logout()
+hook -> repo : authRepository.logout()
+repo -> store : clearAuth(), clearUsers(), clearItemLists()
+repo -> local : clearAll(), clearQueryIndexes, removeQueryIndexes (índices personales)
+local --> repo : ok
+repo --> hook : void
+store ->> screen : isAuthenticated = false
+screen --> actor : AppNavigator muestra LoginScreen
+
+@enduml

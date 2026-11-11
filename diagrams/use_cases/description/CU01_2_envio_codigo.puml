@@ -1,0 +1,61 @@
+@startuml DS-CU-01-2
+title DS-CU-01 (2/3) - Registrar nuevo usuario:\nenvío y comprobación del código
+
+' Diagrama de secuencia de análisis (patrón Boundary-Control-Entity)
+' Fuentes: RegisterScreen.tsx, EmailVerificationModal.tsx, useRegister.ts, auth.service.ts,
+' AuthController.java, EmailVerificationServiceImpl.java, EmailServiceImpl.java
+' Partes: (1/3) CU01_1_codigo_verificacion.puml; (2/3) este (envío, reenvío y comprobación del
+' código); (3/3) CU01_3_registro.puml (alta del usuario y sesión).
+autonumber
+hide footbox
+skinparam sequenceMessageAlign center
+skinparam roundcorner 6
+skinparam maxMessageSize 130
+skinparam wrapWidth 170
+skinparam ParticipantPadding 2
+skinparam BoxPadding 2
+skinparam defaultFontSize 12
+
+actor "Visitante" as visitante
+boundary "RegistroScreen" as pantalla
+boundary "Modal\nVerificacionEmail" as modal
+control "Gestor\nAutenticacion" as gestor
+entity "Codigo\nVerificacion" as codigo
+participant "ServidorCorreo\n<<sistema\nexterno>>" as correo
+
+note over pantalla, gestor : Viene de DS-CU-01 (1/3): datos válidos y email libre
+
+gestor -> codigo : generarCodigo(email)
+note left of codigo : 6 dígitos, válido\n10 minutos, máximo\n5 intentos fallidos
+gestor ->> correo : enviarCodigo(email, codigo)
+opt Falla el envío (en segundo plano)
+    gestor -> codigo : descartar(email)
+    note left of codigo : No llega al cliente:\npuede pedir otro\ncódigo ya
+end
+gestor --> pantalla : 204 No Content
+pantalla -> modal : abrir(email)
+modal --> visitante : pedirCodigo()
+
+opt El visitante no recibe el código
+    note over modal : "Reenviar" activo\ntras 60 s
+    visitante -> modal : reenviarCodigo()
+    modal -> gestor : solicitarCodigo(email)
+    gestor -> codigo : generarCodigo(email)
+    gestor ->> correo : enviarCodigo(email, codigo)
+    gestor --> modal : 204 No Content
+end
+
+visitante -> modal : introducirCodigo(codigo)
+modal -> gestor : registrarUsuario(datos, codigo)
+note left of gestor : POST /api/auth/\nregister
+gestor -> codigo : comprobarCodigo(email, codigo)
+
+alt Código incorrecto, caducado o demasiados intentos
+    codigo --> gestor : código no válido
+    gestor --> modal : 400 Bad Request
+    modal --> visitante : mostrarErrorCodigo() (o pedir uno nuevo)
+else Código correcto
+    codigo --> gestor : ok
+    note over gestor, codigo : Continúa en DS-CU-01 (3/3)
+end
+@enduml

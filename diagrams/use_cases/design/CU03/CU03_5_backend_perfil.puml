@@ -1,0 +1,58 @@
+@startuml DSD-CU-03-5
+title DSD-CU-03 (5/6) - Configurar perfil:\nleer y guardar el perfil (backend)
+
+' Lo que hace el backend en GET y PUT /api/users/{id} (DSD-CU-03 1/6 y 2/6).
+' Fuentes: UserController.java, OwnershipChecker.java, UserServiceImpl.java, UserRepository.java,
+' utils/EntityResolver.java, utils/mapper/EntityMapper.java, DtoMapper.java,
+' JwtAuthenticationFilter.java, GlobalExceptionHandler.java.
+' JwtAuthenticationFilter valida el token y deja en el SecurityContext
+' authentication.getName() = id del usuario y ROLE_<rol>.
+' Todos los endpoints llevan @PreAuthorize("hasRole('ADMIN') or @ownership.isSelf(#id,
+' authentication)"): isSelf = String.valueOf(id) == authentication.getName(). Si es false:
+' AccessDeniedException -> 403.
+' Un id inexistente da 404: ResponseEntity.of con Optional vacío, o EntityNotFoundException
+' de EntityResolver.
+' @Valid UserDto -> 400 { errors } antes de evaluar @PreAuthorize.
+' UserRepository / EntityResolver consultan PostgreSQL (SELECT, UPDATE). DtoMapper convierte
+' la entidad en UserDto.
+' update copia name, username, favoritos, profileImageUrl y validDifficultyLevel (el email no
+' se cambia). IllegalArgumentException: usuario ocupado, nivel fuera de 0-5, pocos favoritos.
+!include ../_estilo.iuml
+
+participant "App\n(services)" as app
+box "Backend (Spring Boot)" #FFF9F0
+    participant "UserController\n<<controller>>" as ctrl
+    participant "OwnershipChecker\n<<security>>" as ownership
+    participant "UserServiceImpl\n<<service>>" as svc
+    participant "UserRepository\nEntityResolver\n(PostgreSQL)" as repo
+end box
+
+group GET /api/users/{id}
+    app -> ctrl : getById(id)
+    ctrl -> ownership : isSelf(id, authentication)
+    ownership --> ctrl : true
+    ctrl -> svc : findById(id)
+    svc -> repo : EntityResolver .findUser(id)
+    svc -> svc : dtoMapper .userToUserDto(user)
+    ctrl --> app : 200 UserDto / 404 (ResponseEntity.of)
+end
+
+group PUT /api/users/{id}
+    app -> ctrl : update(id, @Valid UserDto)
+    ctrl -> ownership : isSelf(id, authentication)
+    ownership --> ctrl : true (si no, 403)
+    ctrl -> svc : update(id, dto)
+    svc -> repo : findUser(id); findByUsername (username) (ensureUsernameAvailable)
+    svc -> repo : resolveGenres(ids), resolveInstruments(ids)
+    svc -> svc : entityMapper .userDtoToUser(...) ensureMinimumFavourites(...) copia los campos
+    alt Usuario ocupado, nivel fuera de 0-5 o pocos favoritos
+        svc --> ctrl : IllegalArgumentException
+        ctrl --> app : 400 { message }
+    else Datos válidos
+        svc -> repo : save(existingUser) (UPDATE)
+        svc -> svc : dtoMapper .userToUserDto(saved)
+        ctrl --> app : 200 UserDto
+    end
+end
+
+@enduml

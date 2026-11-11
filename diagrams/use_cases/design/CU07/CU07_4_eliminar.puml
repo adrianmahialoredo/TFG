@@ -1,21 +1,21 @@
 @startuml DSD-CU-07-4
-title DSD-CU-07 (4/5) - Gestionar listas de estudio: eliminar lista (app)
+title DSD-CU-07 (4/6) - Gestionar listas de estudio: eliminar lista (app)
 
 ' Fuentes: frontend/src/screens/ListScreen.tsx, hooks/useItemListDetail.ts,
 ' repositories/itemList.repository.ts, services/itemList.service.ts, local/itemList.local.ts.
-' Backend en DSD-CU-07 (5/5).
+' Backend en DSD-CU-07 (5/6 y 6/6). itemListService (Nivel 1) no tiene línea de vida: la flecha
+' a la API es su llamada.
 ' - La lista se purga de RAM y disco solo si el backend confirma el borrado (204).
 !include ../_estilo.iuml
 
 actor "Músico" as actor
 box "App (React Native)" #F3F8FF
     participant "ListScreen\n<<Nivel 7>>" as listScreen
-    participant "useItemListDetail\n<<Nivel 6>>" as useDetail
-    participant "itemListRepository\n<<Nivel 3>>" as repo
-    participant "useItemListEntitiesStore\n<<Nivel 4>>" as store
-    participant "itemListService\n<<Nivel 1>>" as service
+    participant "useItemList\nDetail\n<<Nivel 6>>" as useDetail
+    participant "itemList\nRepository\n<<Nivel 3>>" as repo
+    participant "useItemList\nEntitiesStore\n<<Nivel 4>>" as store
 end box
-participant "API REST\n(backend)" as api
+participant "API REST" as api
 
 actor -> listScreen : pulsa "Eliminar lista"
 listScreen --> actor : showAlert("Eliminar lista", confirmación)
@@ -26,20 +26,17 @@ else Confirma
     listScreen -> useDetail : deleteList()
     useDetail -> repo : deleteItemList(listId)
     repo -> repo : userId de la lista (RAM o disco)
-    repo -> service : deleteItemList(listId)
-    service -> api : DELETE /api/item-lists/{id}
+    repo -> api : itemListService\n.deleteItemList(\nlistId): DELETE /api/item-lists/{id}
     alt Eliminada
-        api --> service : 204 No Content
-        service --> repo : void
-        repo -> store : removeItemLists([listId])
-        repo -> repo : itemListLocal.removeById(listId, userId)
+        api --> repo : 204 No Content
+        repo -> store : removeItemLists(\n[listId])
+        repo -> repo : itemListLocal\n.removeById(listId, userId)
         repo --> useDetail : true
         useDetail --> listScreen : true
         listScreen -> listScreen : navigation.goBack()
         listScreen --> actor : vuelve a Perfil; la lista ya no aparece
     else Error (404 no existe, 403 no es tuya, sin red)
-        api --> service : 404 / 403 / error de red
-        service --> repo : throw
+        api --> repo : 404 / 403 / error de red (throw)
         repo --> useDetail : false
         useDetail --> listScreen : false
         listScreen --> actor : "No se pudo eliminar la lista"

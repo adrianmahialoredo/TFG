@@ -1,0 +1,86 @@
+@startuml DCD-05a
+title DCD-05a - Diagrama de clases de diseño: frontend (React Native),\nniveles 7 a 5: pantalla de canción (UI, hooks y Screen Store)
+
+' Arquitectura en 7 niveles de frontend/src (architecture.md §12 y frontend/bible.md),
+' mostrada con el recorrido de la pantalla de canción (SongScreen). El código es
+' TypeScript funcional: cada "clase" es un módulo, hook o store de Zustand, con sus
+' funciones exportadas como operaciones. Cada recurso (genre, lesson, itemList, tune...)
+' repite el mismo patrón: <x>Service -> <x>Local -> <x>Repository -> use<X>EntitiesStore.
+' Un nivel solo depende de los de debajo; types, constants y utils son transversales.
+' Partes: DCD-05a niveles 7-5 (pantalla de canción); DCD-05b dependencias de sus hooks con
+' los niveles 4 y 3; DCD-05c nivel 6 (AuthProvider); DCD-05d nivel 4 (Entity Stores);
+' DCD-05e/f/g nivel 3 (repositorios de canciones, de items con EntityCache y de
+' autenticación); DCD-05h nivel 2 (local); DCD-05i nivel 1 (services).
+' Fuentes: screens/SongScreen.tsx, hooks/useSong.ts, hooks/useInstruments.ts,
+'   stores/ui/songScreen.store.ts.
+skinparam classAttributeIconSize 0
+skinparam roundcorner 6
+skinparam nodesep 20
+skinparam ranksep 50
+skinparam packageStyle rectangle
+skinparam class {
+    BackgroundColor<<screen>> #E3F0FF
+    BorderColor<<screen>> #3D6FA8
+    BackgroundColor<<hook>> #EAF2FB
+    BorderColor<<hook>> #3D6FA8
+    BackgroundColor<<context>> #EAF2FB
+    BorderColor<<context>> #3D6FA8
+    BackgroundColor<<store>> #F3EAFB
+    BorderColor<<store>> #7A4FA8
+    BackgroundColor<<repository>> #E6F5E6
+    BorderColor<<repository>> #3C8A3C
+}
+hide empty members
+
+package "Nivel 7 - UI (screens, components)" {
+    class SongScreen <<screen>> {
+        + render() : JSX.Element
+    }
+    note right of SongScreen : Solo pinta y consume hooks:\nselector de instrumento y\ndificultad, letra con acordes,\nvídeo, tablaturas
+}
+
+package "Nivel 6 - Hooks" {
+    class useSong <<hook>> {
+        + useSong(songId : string)
+        --
+        song : SongDTO
+        loading : boolean
+        selectedLesson : SongLessonDTO
+        selectedInstrumentId : string
+        chords : ChordDTO[]
+        tabSections : TabSectionDTO[]
+        availableInstruments / availableDifficulties
+        parsedLyrics
+        changeInstrument(id : string) : void
+        changeDifficulty(d : DifficultyLevel) : void
+    }
+    note left of useSong : Convierte IDs en\nobjetos (useMemo)\nleyendo siempre de\nlas stores. Por\ndefecto: primer\ninstrumento favorito\ndel usuario con\nlecciones y, si es\navanzado, la\ndificultad ORIGINAL
+
+    class useInstrumentsByIds <<hook>> {
+        + useInstrumentsByIds(ids : string[]) : InstrumentDTO[]
+    }
+}
+
+package "Nivel 5 - Screen Store" {
+    class useSongScreenStore <<store>> {
+        isLoading : boolean
+        error : string | null
+        selectedInstrumentId : string | null
+        selectedDifficulty : DifficultyLevel | null
+        setLoading(loading : boolean) : void
+        setError(error : string | null) : void
+        setInstrument(id : string) : void
+        setDifficulty(d : DifficultyLevel) : void
+        reset() : void
+    }
+}
+
+SongScreen --> useSong
+
+useSong --> useSongScreenStore
+useSong --> useInstrumentsByIds
+
+' Las dependencias con los niveles 4 y 3 están en DCD-05b.
+
+
+@enduml

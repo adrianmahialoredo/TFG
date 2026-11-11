@@ -1,0 +1,50 @@
+@startuml DSD-CU-05-5
+title DSD-CU-05 (5/5) - Consultar canción: endpoints del backend
+
+' Lo que hace el backend en cada petición de DSD-CU-05 (1/5 y 2/5).
+' Fuentes: SongController.java, SongLessonController.java, ChordController.java,
+' TabSectionController.java, SongServiceImpl.java, SongLessonServiceImpl.java, ChordServiceImpl.java,
+' TabSectionServiceImpl.java, utils/EntityResolver.java, utils/mapper/DtoMapper.java.
+' DtoMapper (<<mapper>>) no tiene línea de vida: sus llamadas son mensajes del servicio a sí mismo.
+' En el último bloque, X es SongLesson, Chord o TabSection, y los DTO devueltos son
+' SongLessonDTO (difficulty, chordedLyrics, videoUrl, instrumentId, chordIds, tabSectionsIds),
+' ChordDto o TabSectionDTO.
+!include ../_estilo.iuml
+
+participant "App\n(services)" as app
+box "Backend (Spring Boot)" #FFF9F0
+    participant "XController\n<<controller>>" as ctrl
+    participant "XServiceImpl\n<<service>>" as svc
+    participant "XRepository /\nEntityResolver" as repo
+end box
+database "PostgreSQL" as db
+
+group GET /api/songs/{id}
+    app -> ctrl : SongController\n.getById(id)
+    ctrl -> svc : SongServiceImpl\n.findById(id)
+    svc -> repo : EntityResolver\n.findSong(id) -> SongRepository\n.findById(id)
+    repo -> db : SELECT
+    repo --> svc : Optional<Song>
+    svc -> svc : DtoMapper\n.songToSongDto(song): SongDTO (genreIds, instrumentIds, lessonIds)
+    ctrl --> app : 200 SongDTO / 404 (ResponseEntity.of)
+end
+
+group POST /api/songs/by-ids (revalidación)
+    app -> ctrl : SongController\n.getByIds(ids)
+    ctrl -> svc : SongServiceImpl\n.findByIds(ids)
+    svc -> repo : SongRepository\n.findAllById(ids)
+    repo -> db : SELECT ... WHERE id IN (...)
+    svc -> svc : DtoMapper\n.songToSongDto(song)
+    ctrl --> app : 200 List<SongDTO>
+end
+
+group POST /api/song-lessons/by-ids | /api/chords/by-ids | /api/tab-sections/by-ids
+    app -> ctrl : XController\n.getByIds(ids)
+    ctrl -> svc : XServiceImpl\n.findByIds(ids)
+    svc -> repo : XRepository\n.findAllById(ids)
+    repo -> db : SELECT ... WHERE id IN (...)
+    svc -> svc : DtoMapper: songLessonToSongLessonDto | chordToChordDto | tabSectionToTabSectionDto
+    ctrl --> app : 200 List<SongLessonDTO | ChordDto | TabSectionDTO>
+end
+
+@enduml

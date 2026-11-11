@@ -1,0 +1,51 @@
+@startuml DSD-CU-06-4
+title DSD-CU-06 (4/8) - Consultar espacio de género: pestaña "Instrumentos" y carga del itinerario (app)
+
+' Fuentes: screens/GenreInstrumentsScreen.tsx, InstrumentGenreLessonScreen.tsx;
+' hooks/useGenreInstruments.ts, useInstrumentGenreLesson.ts; repositories/instrumentGenre,
+' lesson, item .repository.ts. Backend en DSD-CU-06 (7/8 y 8/8).
+' El orden del itinerario lo da el backend (lessonIds ordenados por indexInInstrumentGenre).
+' La lista de instrumentos no hace peticiones: los InstrumentGenre se cargaron al entrar al
+' género (DSD-CU-06 2/8). instrumentGenreRepository.getById mira RAM -> disco ->
+' GET /api/instrument-genres/{id} (normalmente ya está en RAM).
+' Para que quepa en A4, GenreMainScreen y la InstrumentGenreLessonScreen que muestra embebida
+' (pestaña "Instrumentos", componente GenreInstrumentsScreen) comparten línea de vida.
+' El carrusel "Recomendaciones" pide GET /api/recommendations/lessons/by-genre/{genreId}.
+!include ../_estilo.iuml
+
+actor "Músico" as actor
+box "App (React Native)" #F3F8FF
+    participant "GenreMainScreen\n(Instrumentos e\nInstrumentGenre\nLessonScreen)\n<<Nivel 7>>" as screen
+    participant "useGenre\nInstruments\nuseInstrument\nGenreLesson\n<<Nivel 6>>" as hooks
+    participant "Repositories\n<<Nivel 3>>" as repos
+    participant "Entity\nStores\n<<Nivel 4>>" as stores
+end box
+participant "API\nREST" as api
+
+actor -> screen : pulsa "Instrumentos" (changeTab)
+screen -> hooks : useGenreInstruments(\ngenreId)
+hooks -> stores : instrumentGenres
+hooks -> hooks : filter(ig.genreId === genreId) .sort(por title)
+hooks --> screen : instrumentGenres
+alt sin InstrumentGenres
+    screen --> actor : "No hay instrumentos configurados para este género."
+else
+    screen --> actor : un botón por instrumento + carrusel "Recomendaciones"
+end
+
+actor -> screen : selecciona un instrumento
+screen -> screen : <InstrumentGenre\nLessonScreen\ninstrumentGenreId />
+screen -> hooks : useInstrument\nGenreLesson(\ninstrumentGenreId)
+hooks ->> repos : itemRepository\n.markAsAccessed(igId)
+hooks -> repos : instrumentGenreRepository\n.getById(igId)
+repos --> hooks : InstrumentGenreDTO
+hooks -> repos : lessonRepository\n.getAllById(lessonIds)
+opt faltan lecciones en caché
+    repos -> api : POST /api/lessons/by-ids [ids]
+    api --> repos : 200 List<LessonDTO>
+    repos -> stores : setLessons(lessons)
+end
+hooks -> hooks : lecciones en el orden de lessonIds; activeLesson = la primera
+note over screen : sigue en DSD-CU-06 (5/8)
+
+@enduml

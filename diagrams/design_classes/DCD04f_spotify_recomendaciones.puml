@@ -1,0 +1,81 @@
+@startuml DCD-04f
+title DCD-04f - Diagrama de clases de diseño: seguridad (6/7) -\nrecomendaciones de Spotify: controlador y servicio
+
+' Recomendaciones según los gustos de Spotify (carruseles "Basado en tu Spotify" del
+' Inicio y de Canciones). Continuación de DCD-04e.
+' Siete partes: DCD-04a config; DCD-04b security; DCD-04c autenticación (login, registro y
+' recuperación de contraseña); DCD-04d códigos por email; DCD-04e vinculación con Spotify
+' (OAuth2); DCD-04f/g recomendaciones de Spotify. Reglas: architecture.md §9.
+' Fuentes: controller/SpotifyRecommendationController.java,
+'          service/recommendation/SpotifyRecommendationService.java,
+'          SpotifyRecommendationServiceImpl.java, config/AppConfig.java
+skinparam classAttributeIconSize 0
+skinparam roundcorner 6
+skinparam nodesep 20
+skinparam ranksep 55
+skinparam packageStyle rectangle
+skinparam class {
+    BackgroundColor<<RestController>> #E3F0FF
+    BorderColor<<RestController>> #3D6FA8
+    BackgroundColor<<Service>> #E6F5E6
+    BorderColor<<Service>> #3C8A3C
+    BackgroundColor<<interface>> #F4FBF4
+    BorderColor<<interface>> #3C8A3C
+    BackgroundColor<<Repository>> #FFF4E0
+    BorderColor<<Repository>> #B07A1F
+    BackgroundColor<<Configuration>> #F3F3F3
+    BackgroundColor<<Component>> #F3F3F3
+    BackgroundColor<<external>> #FFFFFF
+    BorderColor<<external>> #888888
+}
+hide empty members
+
+class SpotifyRecommendationController <<RestController>> {
+    - spotifyRecommendationService : SpotifyRecommendationService
+    + getSongsForUser(userId : Long, limit : int) : ResponseEntity<List<SongDTO>>
+    + getItemsForUser(userId : Long) : ResponseEntity<List<ItemDTO>>
+}
+
+package "service.recommendation" {
+    interface SpotifyRecommendationService <<interface>> {
+        + findSongsForUser(id : Long, limit : int) : List<SongDTO>
+        + findItemsForUser(id : Long) : List<ItemDTO>
+    }
+    class SpotifyRecommendationServiceImpl <<Service>> {
+        - restTemplate : RestTemplate
+        - spotifyAuthService : SpotifyAuthService
+        - songRepository : SongRepository
+        - lessonRepository : LessonRepository
+        - instrumentGenreRepository : InstrumentGenreRepository
+        - dtoMapper : DtoMapper
+        - findSongEntitiesForUser(userId : Long, limit : int) : List<Song>
+        - authorizedRequest(userId : Long) : HttpEntity<Void>
+        - fetchTopTracks(request, count, timeRange) : List<TitleArtist>
+        - fetchTopArtists(request, count, timeRange) : List<String>
+        - fetchTopItems(request, endpoint, count, timeRange) : List<Map>
+    }
+    note bottom of SpotifyRecommendationServiceImpl
+        findSongsForUser: top tracks (medium, long y
+        short_term) -> SongRepository.findByTitleAndArtistIn
+        (una consulta); si faltan, canciones de sus
+        5 artistas top.
+        findItemsForUser: 6 canciones de lo anterior
+        + 3 lecciones de sus géneros + 2 instrument-genres
+        (5 géneros x 5 instrumentos más repetidos)
+        + el género más repetido; nada que ya esté en
+        3 o más de sus listas
+        (N_ITEM_LISTS_TO_EXCLUDE_FROM_RECOMMENDATIONS).
+        Barajado. Cantidades:
+        RecommendationConstants.N_SPOTIFY_*
+    end note
+}
+
+class "config.AppConfig" as AppConfig <<Configuration>> <<ver DCD-04a>>
+
+SpotifyRecommendationController --> SpotifyRecommendationService
+SpotifyRecommendationService <|.. SpotifyRecommendationServiceImpl
+AppConfig ..> SpotifyRecommendationServiceImpl : RestTemplate
+
+' Las dependencias de SpotifyRecommendationServiceImpl están en DCD-04g.
+
+@enduml

@@ -125,13 +125,16 @@ genres |o--o{ instrument_genres : genre_id
 ' Notas
 ' ---------------------------------------------------------------------
 
-note top of item
-    Tabla raíz de la herencia JOINED
-    (Item no tiene @Table: se llama item).
-    Cada subtipo (songs, genres, lessons,
-    instrument_genres) comparte su id con item.id.
-    dtype es el discriminador de Hibernate;
-    type es el subtipo expuesto en la API.
+note left of item
+    Raíz de la herencia JOINED
+    (Item no tiene @Table:
+    se llama item). Cada
+    subtipo (songs, genres,
+    lessons, instrument_genres)
+    comparte su id con item.id.
+    dtype: discriminador de
+    Hibernate; type: subtipo
+    expuesto en la API.
 end note
 
 note bottom of lessons

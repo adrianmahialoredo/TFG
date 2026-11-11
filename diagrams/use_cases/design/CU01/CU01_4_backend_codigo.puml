@@ -1,0 +1,44 @@
+@startuml DSD-CU-01-4
+title DSD-CU-01 (4/6) - Registrar usuario:\npetición del código (backend)
+
+' Lo que hace el backend en POST /api/auth/verification-code (DSD-CU-01 1/6 y 2/6).
+' Fuentes: AuthController.java, EmailVerificationServiceImpl.java, UserRepository.java,
+' GlobalExceptionHandler.java, SecurityConfig.java.
+' /api/auth/** es público (SecurityConfig). Errores (GlobalExceptionHandler):
+' IllegalArgumentException -> 400; ResponseStatusException (ErrorResponse) -> su estado,
+' p. ej. 429 (handleGeneric); otras excepciones -> 500 (handleGeneric).
+' Los códigos pendientes viven en memoria (ConcurrentHashMap pendingCodes, una sola instancia).
+' generateCode(): 6 dígitos con SecureRandom. Caduca a los 10 min (CODE_TTL), máximo 5 fallos
+' (MAX_ATTEMPTS). El envío del email sigue en DSD-CU-01 (5/6).
+!include ../_estilo.iuml
+
+participant "App\n(services)" as app
+box "Backend (Spring Boot)" #FFF9F0
+    participant "AuthController\n<<controller>>" as ctrl
+    participant "EmailVerification\nServiceImpl\n<<service>>" as verification
+    participant "UserRepository\n<<repository>>" as userRepo
+    participant "applicationTask\nExecutor" as executor
+end box
+
+group POST /api/auth/verification-code
+    app -> ctrl : sendVerificationCode(@Valid dto)
+    ctrl -> verification : sendCode(email)
+    verification -> verification : key = normalize(email) (trim + minúsculas)
+    verification -> userRepo : existsByEmailIgnoreCase(key)
+    userRepo --> verification : boolean
+    alt El email ya está registrado
+        verification --> ctrl : IllegalArgumentException("Email already registered")
+        ctrl --> app : 400 { message }
+    else Código previo de hace menos de 60 s (RESEND_COOLDOWN)
+        verification --> ctrl : ResponseStatusException (TOO_MANY_REQUESTS)
+        ctrl --> app : 429 Too Many Requests
+    else Email libre
+        verification -> verification : generateCode()
+        verification -> verification : pendingCodes.put(key, pending = PendingCode(code, now))
+        verification ->> executor : execute(() -> sendVerificationCode(...)) (DSD-CU-01 5/6)
+        verification --> ctrl : void
+        ctrl --> app : 204 No Content (inmediato)
+    end
+end
+
+@enduml

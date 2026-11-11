@@ -1,0 +1,43 @@
+@startuml DSD-CU-10-1
+title DSD-CU-10 (1/7) - Vincular Spotify:\nURL de autorización (app)
+
+' Parte de la app de la realización de CU-10 (análisis en
+' diagrams/use_cases/description/CU10_*.puml, DS-CU-10 (1/3) a (3/3)). Partes: (1/7) URL de
+' autorización, (2/7) autorización en el navegador, (3/7) vuelta a la app, (4/7) carruseles
+' de Spotify (app); (5/7) login y errores del callback, (6/7) vinculación, (7/7) usuario y
+' renovación del token (backend).
+' El backend se dibuja como una sola línea de vida ("API REST"); lo que hace cada endpoint está
+' en DSD-CU-10 (5/7 a 7/7).
+' Fuentes: components/buttons/SpotifyButton.tsx (lo pintan ProfileScreen, HomeScreen y
+' SongsScreen), hooks/useSpotifyConnect.ts, repositories/spotify.repository.ts,
+' services/spotify.service.ts, config/apiConfig.ts; SpotifyAuthController.java.
+' Notas de diseño:
+'  - El botón "Conectar con Spotify" es el componente SpotifyButton, que usa el hook
+'    useSpotifyConnect (Nivel 6). Inicio y Canciones lo muestran bajo el título del carrusel
+'    de Spotify cuando la cuenta no está vinculada (spotifyConnected === false).
+'  - waitForAppActive() escucha AppState 'change' para saber cuándo se vuelve a la app.
+'  - GET /api/spotify/login lleva Authorization: Bearer <JWT> (401 sin JWT válido).
+!include ../_estilo.iuml
+
+actor "Músico" as actor
+box "App" #F3F8FF
+    participant "Spotify\nButton\n<<Nivel 7>>" as screen
+    participant "useSpotify\nConnect\n<<Nivel 6>>" as hook
+    participant "spotify\nRepository\n<<Nivel 3>>" as repo
+    participant "spotify\nService\n<<Nivel 1>>" as service
+end box
+participant "API\nREST" as api
+
+actor -> screen : pulsa "Conectar\ncon Spotify"
+screen -> hook : handleSpotify\nLogin() ->\nconnect()
+hook -> hook : appActive =\nwaitForAppActive();\nsetConnecting(true)
+hook -> repo : getAuthUrl()
+repo -> service : spotifyLogin()
+service -> api : GET /api/\nspotify/login\n(JWT)
+api --> service : 200 { authUrl }
+service --> repo : { authUrl }
+repo --> hook : authUrl (Error\nsi viene vacía)
+
+note over hook, repo : Sigue en DSD-CU-10 (2/7)
+
+@enduml

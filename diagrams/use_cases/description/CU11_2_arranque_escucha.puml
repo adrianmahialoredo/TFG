@@ -1,0 +1,49 @@
+@startuml DS-CU-11-2
+title DS-CU-11 (2/4) - Utilizar afinador cromático:\narranque de la escucha
+
+' Diagrama de secuencia de análisis (patrón Boundary-Control-Entity)
+' Fuentes: TunerScreen.tsx, useTunes.ts, useTuner.ts, microphone.utils.ts, pitch.utils.ts, tuner.utils.ts
+' Partes: (1/4) carga de las afinaciones (CU11_1_carga.puml); (2/4) arranque de la escucha
+' (CU11_2_arranque_escucha.puml); (3/4) análisis de cada bloque (CU11_3_analisis.puml);
+' (4/4) acciones durante la escucha y salida (CU11_4_acciones_y_salida.puml).
+autonumber
+hide footbox
+skinparam sequenceMessageAlign center
+skinparam roundcorner 6
+skinparam maxMessageSize 130
+skinparam wrapWidth 170
+skinparam ParticipantPadding 2
+skinparam BoxPadding 2
+skinparam defaultFontSize 12
+
+actor "Músico" as musico
+boundary "AfinadorScreen" as pantalla
+control "Procesador\nAudio" as procesador
+boundary "Microfono" as microfono
+
+note over musico, pantalla : Viene de DS-CU-11 (1/4):\nafinaciones cargadas
+
+pantalla -> procesador : iniciarEscucha(notas de la afinación)
+procesador -> microfono : solicitarPermiso()
+
+alt Permiso de micrófono denegado
+    microfono --> procesador : denegado
+    procesador --> pantalla : permisoDenegado
+    pantalla --> musico : avisar("Sin acceso al micrófono"), ofrecer("Abrir ajustes")
+else El micrófono no arranca
+    microfono --> procesador : error
+    procesador --> pantalla : error
+    pantalla --> musico : avisar("No se pudo usar el micrófono")
+else Permiso concedido
+    microfono --> procesador : concedido
+    procesador -> microfono : grabar(44.1 kHz, bloques de 4096 muestras)
+    opt Expo Go: modo demostración
+        procesador -> procesador : usarMicrofonoSimulado()
+        note right of procesador : Sin módulo nativo:\nsuena una cuerda\nsimulada que se va\nafinando y pasa por\nel mismo análisis
+        procesador --> pantalla : simulado
+        pantalla --> musico : avisar("Modo demostración: ...")
+    end
+    note over pantalla, microfono : Cada bloque se analiza: DS-CU-11 (3/4)
+end
+
+@enduml

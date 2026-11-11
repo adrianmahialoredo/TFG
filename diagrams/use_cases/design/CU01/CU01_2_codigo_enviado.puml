@@ -1,0 +1,41 @@
+@startuml DSD-CU-01-2
+title DSD-CU-01 (2/6) - Registrar usuario:\ncódigo enviado y reenvío (app)
+
+' Continuación de DSD-CU-01 (1/6) cuando el email está libre.
+' Fuentes: screens/RegisterScreen.tsx, components/EmailVerificationModal.tsx, hooks/useRegister.ts,
+' repositories/auth.repository.ts, services/auth.service.ts.
+' authRepository y authService se dibujan juntos (el repositorio solo reenvía la llamada).
+' El 204 es inmediato: el email se envía en segundo plano. Si el envío falla, la app no recibe
+' ningún error (el código se descarta y se puede pedir otro sin esperar); ver el backend en
+' DSD-CU-01 (4/6 y 5/6).
+' Un error al reenviar se muestra en el modal (setResendError(e.message)).
+!include ../_estilo.iuml
+
+actor "Visitante" as actor
+box "App (React Native)" #F3F8FF
+    participant "RegisterScreen\n+ Modal\n<<Nivel 7>>" as screen
+    participant "useRegister\n<<Nivel 6>>" as hook
+    participant "authRepository\n→ authService\n<<Niveles 3 y 1>>" as service
+end box
+participant "API REST\n(backend)" as api
+
+api --> service : 204 No Content (inmediato)
+service --> hook : void
+hook --> screen : void
+screen -> screen : setCodeError(null) setVerifying(true)
+screen --> actor : muestra EmailVerificationModal(email)
+api ->> actor : email con el código (si el envío va bien)
+
+opt El visitante no recibe el código (tras la cuenta atrás de 60 s)
+    actor -> screen : pulsa "Reenviar código"
+    screen -> hook : handleResend() -> onResend() -> resendCode(email)
+    hook -> service : requestVerificationCode(email.trim())
+    service -> api : POST /api/auth/verification-code
+    api --> service : 204 (o 400 / 429)
+    service --> hook : void
+    hook --> screen : void
+    screen -> screen : setCode('') setSecondsLeft(60)
+    screen --> actor : nueva cuenta atrás de 60 s
+end
+
+@enduml

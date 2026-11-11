@@ -1,0 +1,65 @@
+@startuml DS-CU-07-2
+title DS-CU-07 (2/3) - Gestionar listas de estudio:\nrenombrar y cambiar la imagen
+
+' Diagrama de secuencia de análisis (patrón Boundary-Control-Entity)
+' Fuentes: ListScreen.tsx, useItemListDetail.ts, itemList.repository.ts, cloudinary.service.ts,
+' ItemListController.java
+' Partes: (1/3) consultar y crear (CU07_1_consultar_crear.puml); (2/3) renombrar y cambiar la
+' imagen (CU07_2_renombrar_imagen.puml); (3/3) eliminar (CU07_3_eliminar.puml).
+autonumber
+hide footbox
+skinparam sequenceMessageAlign center
+skinparam roundcorner 6
+skinparam maxMessageSize 200
+skinparam wrapWidth 170
+skinparam ParticipantPadding 2
+skinparam BoxPadding 2
+skinparam defaultFontSize 12
+
+actor "Músico" as musico
+boundary "ListaScreen" as pantalla
+control "GestorListas" as gestor
+entity "ItemList" as lista
+participant "Cloudinary\n<<sistema\nexterno>>" as cloudinary
+
+note over musico, pantalla : El músico tiene abierta una de\nsus listas (DS-CU-07 (1/3))
+
+alt 3a. Renombrar la lista
+    musico -> pantalla : renombrar(nombre)
+    alt Nombre con menos de 2 caracteres
+        pantalla --> musico : mostrarError("El nombre debe tener al menos 2 caracteres")
+    else Nombre válido
+        pantalla -> gestor : actualizarLista(id, nombre)
+        note left of gestor : PUT /api/\nitem-lists/{id}
+        gestor -> lista : verificarPropiedad(id, userId)
+        alt Lista inexistente (404) o de otro usuario (403)
+            gestor --> pantalla : error
+            pantalla --> musico : mostrarError("No se pudo actualizar el nombre")
+        else Propietario
+            gestor -> lista : actualizar(nombre)
+            lista --> gestor : ItemListDTO
+            gestor --> pantalla : 200 OK + ItemListDTO
+            pantalla -> pantalla : actualizarAlmacenLocal(lista)
+            note right of pantalla : RAM y disco
+            pantalla --> musico : mostrarListaActualizada()
+        end
+    end
+else 3b. Cambiar la imagen
+    musico -> pantalla : cambiarImagen()
+    pantalla --> musico : abrirGaleria()
+    musico -> pantalla : elegirImagen(uri)
+    pantalla -> cloudinary : subirImagen(uri)
+    cloudinary --> pantalla : secureUrl
+    pantalla -> gestor : actualizarLista(id, imageUrl = secureUrl)
+    note left of gestor : PUT /api/\nitem-lists/{id}\n(mismas\ncomprobaciones)
+    gestor -> lista : actualizar(imageUrl)
+    lista --> gestor : ItemListDTO
+    gestor --> pantalla : 200 OK + ItemListDTO
+    pantalla -> pantalla : actualizarAlmacenLocal(lista)
+    pantalla --> musico : mostrarImagen()
+    opt Falla la subida o el guardado
+        pantalla --> musico : mostrarError("No se pudo actualizar la foto de la lista")
+    end
+end
+
+@enduml

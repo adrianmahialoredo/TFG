@@ -1,12 +1,12 @@
 @startuml DCD-01a
-title DCD-01a - Diagrama de clases de diseño: modelo (1/3) - jerarquía del catálogo
+title DCD-01a - Diagrama de clases de diseño: modelo (1/5) - jerarquía del catálogo
 
 ' Entidades JPA tal y como están en el código (com.uo289390.toco.model). Se muestran los
 ' atributos persistentes con su tipo Java, las relaciones con su multiplicidad y nombre de
 ' rol, y los métodos de dominio. Se omiten getters/setters (Lombok) y los timestamps de
 ' auditoría salvo createdAt de Item.
-' Partes: DCD-01a (jerarquía Item), DCD-01b (contenido de canciones y lecciones),
-' DCD-01c (usuario y listas). Esquema físico equivalente: diagrams/er*.puml.
+' Partes: DCD-01a (jerarquía Item), DCD-01b (relaciones del catálogo e Instrument),
+' DCD-01c (contenido de las canciones), DCD-01d (usuario) y DCD-01e (listas). Esquema físico equivalente: diagrams/er*.puml.
 ' Reglas: architecture.md §2.
 ' Fuentes: model/Item.java, Song.java, Lesson.java, Genre.java, InstrumentGenre.java,
 '          Instrument.java, utils/Identifiable.java, dto/ItemDTO.java (@Min(0) @Max(5) level)
@@ -16,7 +16,7 @@ title DCD-01a - Diagrama de clases de diseño: modelo (1/3) - jerarquía del cat
 '   - Las colecciones del dominio musical son Set (sin duplicados).
 skinparam classAttributeIconSize 0
 skinparam roundcorner 6
-skinparam nodesep 40
+skinparam nodesep 15
 skinparam ranksep 50
 skinparam class {
     BackgroundColor<<entity>> #FFF4E0
@@ -30,7 +30,7 @@ hide empty members
 interface "Identifiable<ID>" as Identifiable <<interface>> {
     + getId() : ID
 }
-note left of Identifiable : utils.Identifiable: las entidades\nque entran en rankings (getTopNMostRepeated)
+note left of Identifiable : utils.Identifiable:\nlas entidades que\nentran en rankings\n(getTopNMostRepeated)
 
 abstract class Item <<entity>> {
     # id : Long {PK, asignado}
@@ -43,7 +43,7 @@ abstract class Item <<entity>> {
     + equals(o : Object) : boolean {por id, instanceof}
     + hashCode() : int
 }
-note right of Item : @Entity (sin @Table: tabla item)\n@Inheritance(strategy = JOINED)\n@DiscriminatorColumn("dtype")\n@DiscriminatorValue de los subtipos:\nSONG, LESSON, GENRE, INSTRUMENT_GENRE\nComparten espacio de IDs
+note right of Item : @Entity (sin @Table:\ntabla item)\n@Inheritance(JOINED)\n@DiscriminatorColumn\n("dtype")\n@DiscriminatorValue de\nlos subtipos: SONG,\nLESSON, GENRE,\nINSTRUMENT_GENRE\nComparten espacio\nde IDs
 
 enum "Item.Type" as ItemType <<enum>> {
     Song
@@ -92,31 +92,18 @@ class InstrumentGenre <<entity>> {
     --
     + setLessons(lessons : Collection<Lesson>) : void
 }
-note bottom of InstrumentGenre : setLessons une las lecciones en orden\n(su índice = su posición) y desvincula\nlas que salen. Dueño de la relación: Lesson
-
-class Instrument <<entity>> {
-    - id : Long {PK, asignado}
-    - name : String {unique}
-    # imageUrl : String
-    --
-    + equals(o : Object) : boolean
-    + hashCode() : int
-}
+note bottom of InstrumentGenre : setLessons une las\nlecciones en orden (su\níndice = su posición)\ny desvincula las que\nsalen. Dueño de la\nrelación: Lesson
 
 Identifiable <|.. Item
-Identifiable <|.. Instrument
 Item <|-- Song
 Item <|-- Lesson
 Item <|-- Genre
 Item <|-- InstrumentGenre
 Item --> ItemType
 
-Song "*" --> "*" Genre : genres
-Song "*" --> "*" Instrument : instruments
-Lesson "*" -- "0..1" Genre : genre / lessons
-Lesson "*" -- "0..1" InstrumentGenre : instrumentGenre / lessons\n{@OrderBy indexInInstrumentGenre}
-Lesson "*" --> "0..1" Instrument : instrument
-InstrumentGenre "*" --> "1" Instrument : instrument
-InstrumentGenre "*" --> "1" Genre : genre
+' Las asociaciones entre estas clases están en DCD-01b. Enlaces ocultos solo para
+' apilar los subtipos en dos filas (si no, el diagrama es demasiado ancho).
+Song -[hidden]down- Genre
+Lesson -[hidden]down- InstrumentGenre
 
 @enduml

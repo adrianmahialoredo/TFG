@@ -1,0 +1,56 @@
+@startuml DCD-05h
+title DCD-05h - Diagrama de clases de diseño: frontend (React Native),\nnivel 2: local (disco)
+
+' Continuación de DCD-05e/f/g: almacenamiento en disco (local) del patrón de canciones.
+' Partes: DCD-05a niveles 7-5 (pantalla de canción); DCD-05b dependencias de sus hooks con
+' los niveles 4 y 3; DCD-05c nivel 6 (AuthProvider); DCD-05d nivel 4 (Entity Stores);
+' DCD-05e/f/g nivel 3 (repositorios de canciones, de items con EntityCache y de
+' autenticación); DCD-05h nivel 2 (local); DCD-05i nivel 1 (services).
+' Fuentes: local/{song,storage}.local.ts.
+skinparam classAttributeIconSize 0
+skinparam roundcorner 6
+skinparam nodesep 12
+skinparam ranksep 45
+skinparam packageStyle rectangle
+skinparam class {
+    BackgroundColor<<store>> #F3EAFB
+    BorderColor<<store>> #7A4FA8
+    BackgroundColor<<repository>> #E6F5E6
+    BorderColor<<repository>> #3C8A3C
+    BackgroundColor<<local>> #FFF4E0
+    BorderColor<<local>> #B07A1F
+    BackgroundColor<<service>> #FDF7E3
+    BorderColor<<service>> #B07A1F
+    BackgroundColor<<utils>> #F3F3F3
+    BackgroundColor<<external>> #FFFFFF
+    BorderColor<<external>> #888888
+}
+hide empty members
+
+class "songRepository /\nauthRepository" as repos <<repository>> <<ver DCD-05e/f/g>>
+
+package "Nivel 2 - Local" {
+    class songLocal <<local>> {
+        + saveSingle(song : SongDTO) : Promise<void>
+        + getById(id : string) : Promise<SongDTO | null>
+        + saveBatch(songs : SongDTO[]) : Promise<void>
+        + getAllById(ids : string[]) : Promise<{cached, missing}>
+        + saveQueryIndex(key : string, ids : string[]) : Promise<void>
+        + getQueryIndex(key : string) : Promise<string[] | null>
+        + removeQueryIndexes(keys : string[]) : Promise<void>
+    }
+    class storageLocal <<local>> {
+        + storeData(key : string, value : T) : Promise<void>
+        + getData(key : string) : Promise<T | null>
+        + removeData(key : string) : Promise<void>
+    }
+}
+
+class AsyncStorage <<external>>
+
+repos --> songLocal
+songLocal --> storageLocal
+songLocal --> AsyncStorage : multiGet / multiSet,\níndices
+storageLocal --> AsyncStorage
+
+@enduml

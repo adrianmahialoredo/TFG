@@ -1,0 +1,83 @@
+@startuml DCD-05i
+title DCD-05i - Diagrama de clases de diseño: frontend (React Native),\nnivel 1: services (API)
+
+' Continuación de DCD-05e/f/g: acceso a la API (services) del patrón de canciones y de
+' autenticación.
+' Partes: DCD-05a niveles 7-5 (pantalla de canción); DCD-05b dependencias de sus hooks con
+' los niveles 4 y 3; DCD-05c nivel 6 (AuthProvider); DCD-05d nivel 4 (Entity Stores);
+' DCD-05e/f/g nivel 3 (repositorios de canciones, de items con EntityCache y de
+' autenticación); DCD-05h nivel 2 (local); DCD-05i nivel 1 (services).
+' Fuentes: services/{song,user,auth}.service.ts, services/apiClient.ts, config/apiConfig.ts.
+skinparam classAttributeIconSize 0
+skinparam roundcorner 6
+skinparam nodesep 12
+skinparam ranksep 45
+skinparam packageStyle rectangle
+skinparam class {
+    BackgroundColor<<store>> #F3EAFB
+    BorderColor<<store>> #7A4FA8
+    BackgroundColor<<repository>> #E6F5E6
+    BorderColor<<repository>> #3C8A3C
+    BackgroundColor<<local>> #FFF4E0
+    BorderColor<<local>> #B07A1F
+    BackgroundColor<<service>> #FDF7E3
+    BorderColor<<service>> #B07A1F
+    BackgroundColor<<utils>> #F3F3F3
+    BackgroundColor<<external>> #FFFFFF
+    BorderColor<<external>> #888888
+}
+hide empty members
+
+class "songRepository /\nauthRepository" as repos <<repository>> <<ver DCD-05e/f/g>>
+class "useAuthStore" as sessionStores <<store>> <<ver DCD-05d>>
+
+package "Nivel 1 - Services" {
+    class songService <<service>> {
+        + getById(id : string) : Promise<SongDTO>
+        + getAllById(ids : string[]) : Promise<SongDTO[]>
+        + getPopular(limit?) : Promise<SongDTO[]>
+        + getNewByGenreId(genreId : string) : Promise<SongDTO[]>
+        + getRecommendedFromSpotify(userId, limit) : Promise<SongDTO[]>
+        + getNewByArtists(artists : string[], limit) : Promise<SongDTO[]>
+        + getPopularByArtists(artists : string[], limit) : Promise<SongDTO[]>
+        {method} ...
+    }
+    class authService <<service>> {
+        + login(identifier, password) : Promise<{token, user}>
+        + register(user : UserDTO, code : string) : Promise<{token, user}>
+        + requestVerificationCode(email : string) : Promise<void>
+        + requestPasswordResetCode(email : string) : Promise<void>
+        + verifyPasswordResetCode(email, code) : Promise<void>
+        + resetPassword(email, code, newPassword) : Promise<void>
+        + logout() : Promise<void>
+    }
+    class userService <<service>> {
+        + getTopArtists(userId, totalArtists : number) : Promise<string[]>
+        {method} ...
+    }
+    class apiClient <<service>> {
+        + get / post / put / delete
+        --
+        interceptor petición: Authorization: Bearer <token>
+        interceptor respuesta: 401 con sesión -> clearAuth()
+    }
+    note left of apiClient : Instancia compartida de axios.\nTodas las URLs salen de\nconfig/apiConfig.ts (API_ENDPOINTS)
+}
+
+class "Backend REST\n(/api/...)" as Backend <<external>>
+
+repos --> songService
+repos --> userService : getTopArtists
+repos --> authService
+songService --> apiClient
+userService --> apiClient
+authService --> apiClient
+authService .up.> sessionStores : clearAuth
+apiClient .up.> sessionStores : token / clearAuth
+apiClient ..> Backend : HTTP / JSON
+
+' Solo para apilar los services (si no, el diagrama es demasiado ancho)
+songService -[hidden]down- authService
+authService -[hidden]down- userService
+
+@enduml

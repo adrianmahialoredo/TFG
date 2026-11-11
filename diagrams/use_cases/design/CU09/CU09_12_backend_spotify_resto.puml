@@ -1,0 +1,47 @@
+@startuml DSD-CU-09-12
+title DSD-CU-09 (12/12) - Recomendaciones:\nbackend de Spotify, resto
+
+' Continuación de DSD-CU-09 (11/12).
+' Fuentes: SpotifyRecommendationServiceImpl.java, model/User.java, LessonRepository.java,
+' InstrumentGenreRepository.java, utils/RecommendationConstants.java, utils/Utils.java.
+' - Cantidades (RecommendationConstants): N_SPOTIFY_RECOMMENDED_LESSONS = 3,
+'   _INSTRUMENT_GENRES = 2, _GENRES = 1; los instrument-genres cruzan los 5 géneros y los 5
+'   instrumentos más repetidos en las canciones (N_TOP_*_USED_IN_SPOTIFY_INSTRUMENT_GENRE_RECOMMENDATION).
+' - Géneros e instrumentos se sacan de las canciones (con repetidos);
+'   topGenres = getTopNMostRepeated(géneros).
+' - Lecciones: findByGenreIdInAndBelongsToGenreTrueAndIdNotIn(idsOf(topGenres),
+'   idsToExclude(user.getIdsExcludedFromRecommendationsOfType(Lesson.class)), Pageable(3)).
+' - Instrument-genres: findByGenreIdInAndInstrumentIdInAndIdNotIn(5 géneros top, 5 instrumentos
+'   top, idsToExclude(user.getIdsExcludedFromRecommendationsOfType(InstrumentGenre.class)),
+'   Pageable(2)).
+' - Género: el más repetido que no esté en 3 o más de sus listas (ya cargado: sin consulta).
+' - LinkedHashSet + Collections.shuffle y dtoMapper.itemsToItemDTOs(...): 200 OK
+'   [SongDTO, LessonDTO, InstrumentGenreDTO, GenreDTO...].
+!include ../_estilo.iuml
+
+participant "App" as app
+box "Backend" #FFF9F0
+    participant "SpotifyRec.\nController" as controller
+    participant "SpotifyRec.\nServiceImpl" as spotifyService
+    participant "Lesson / IG\nRepository" as repos
+end box
+
+alt 14a. Ninguna canción de\nSpotify está en la app
+    spotifyService --> controller : List.of()
+    controller --> app : 200 OK []
+else Hay canciones
+    spotifyService -> spotifyService : géneros e\ninstrumentos;\ntopGenres
+    opt Las canciones tienen géneros
+        spotifyService -> repos : lecciones de\nlos géneros top\n(Pageable(3))
+        opt Tienen instrumentos
+            spotifyService -> repos : IG de 5 géneros\ny 5 instrumentos\ntop (Pageable(2))
+        end
+        spotifyService -> spotifyService : género más\nrepetido no\nexcluido
+    end
+    spotifyService -> spotifyService : LinkedHashSet\n+ shuffle
+    spotifyService -> spotifyService : itemsTo\nItemDTOs(...)
+    spotifyService --> controller : List<ItemDTO>
+    controller --> app : 200 OK [SongDTO,\nLessonDTO, ...]
+end
+
+@enduml

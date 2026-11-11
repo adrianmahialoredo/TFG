@@ -1,0 +1,67 @@
+@startuml DCD-02f
+title DCD-02f - Diagrama de clases de diseño: capas del backend (6/6) -\nUtils, constantes y mappers
+
+' Utilidades sin estado que usan los XServiceImpl (DCD-02a-d).
+' Fuentes: utils/Utils.java, RecommendationConstants.java, utils/mapper/DtoMapper.java,
+'          EntityMapper.java
+' Seis partes: DCD-02a/b canciones (controlador e interfaz / implementación y repositorio),
+' DCD-02c/d listas de estudio (ídem), DCD-02e manejo de errores y EntityResolver,
+' DCD-02f Utils, constantes y mappers.
+skinparam classAttributeIconSize 0
+skinparam roundcorner 6
+skinparam nodesep 20
+skinparam ranksep 50
+skinparam packageStyle rectangle
+skinparam class {
+    BackgroundColor<<RestController>> #E3F0FF
+    BorderColor<<RestController>> #3D6FA8
+    BackgroundColor<<Repository>> #FFF4E0
+    BorderColor<<Repository>> #B07A1F
+    BackgroundColor<<Component>> #F3F3F3
+    BackgroundColor<<RestControllerAdvice>> #FDECEC
+    BorderColor<<RestControllerAdvice>> #B03A3A
+}
+hide empty members
+
+package "utils" {
+    class Utils {
+        + {static} idsToExclude(ids : Collection<Long>) : Collection<Long>
+        + {static} resolvePageable(limit : Integer) : Pageable
+        + {static} getTopNMostRepeated(items : List<T>, n : int) : List<T>
+        + {static} subtract(candidates, toRemove) : Set<T>
+    }
+
+    class RecommendationConstants <<final>> {
+        + {static} N_ITEM_LISTS_TO_EXCLUDE_FROM_RECOMMENDATIONS : int = 3
+        + {static} DEFAULT_N_SONGS_BY_ARTISTS : int = 10
+        + {static} MAX_N_SONGS_BY_ARTISTS : int = 50
+        + {static} MAX_N_ARTISTS_IN_SONGS_BY_ARTISTS : int = 10
+        {field} ... (resto de tamaños: DCD-03)
+    }
+
+    package "mapper" {
+        class DtoMapper <<Component>> {
+            + songToSongDto(song : Song) : SongDTO
+            + itemListToItemListDto(list : ItemList) : ItemListDTO
+            + itemToItemDto(item : Item) : ItemDTO
+            + itemsToItemDTOs(items : Collection<? extends Item>) : List<ItemDTO>
+            + itemToItemSummaryDto(item : Item) : ItemSummaryDTO
+            {method} ...
+        }
+        note bottom of DtoMapper : entidad -> DTO; las relaciones viajan\ncomo IDs (genreIds, lessonIds...)
+
+        class EntityMapper <<Component>> {
+            + songDtoToSong(dto, genres, instruments, lessons) : Song
+            + itemListDtoToItemList(dto, user, items) : ItemList
+            {method} ...
+        }
+        note bottom of EntityMapper : DTO -> entidad; recibe las relaciones\nya resueltas (Set<Genre>, Set<Instrument>,\nSet<SongLesson>; User, Collection<? extends\nItem>), sin repositorios
+    }
+}
+
+' Solo para apilar las clases (si no, el diagrama es demasiado ancho)
+Utils -[hidden]down- RecommendationConstants
+RecommendationConstants -[hidden]down- DtoMapper
+DtoMapper -[hidden]down- EntityMapper
+
+@enduml

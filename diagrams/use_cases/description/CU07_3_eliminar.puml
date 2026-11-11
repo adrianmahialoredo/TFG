@@ -1,0 +1,47 @@
+@startuml DS-CU-07-3
+title DS-CU-07 (3/3) - Gestionar listas de estudio:\neliminar
+
+' Diagrama de secuencia de análisis (patrón Boundary-Control-Entity)
+' Fuentes: ListScreen.tsx, useItemListDetail.ts, itemList.repository.ts, cloudinary.service.ts,
+' ItemListController.java
+' Partes: (1/3) consultar y crear (CU07_1_consultar_crear.puml); (2/3) renombrar y cambiar la
+' imagen (CU07_2_renombrar_imagen.puml); (3/3) eliminar (CU07_3_eliminar.puml).
+autonumber
+hide footbox
+skinparam sequenceMessageAlign center
+skinparam roundcorner 6
+skinparam maxMessageSize 130
+skinparam wrapWidth 170
+skinparam ParticipantPadding 2
+skinparam BoxPadding 2
+skinparam defaultFontSize 12
+
+actor "Músico" as musico
+boundary "PerfilScreen" as perfil
+boundary "ListaScreen" as pantalla
+control "GestorListas" as gestor
+entity "ItemList" as lista
+
+note over musico, pantalla : El músico tiene abierta una de\nsus listas (DS-CU-07 (1/3))
+
+group 3c. Eliminar la lista
+    musico -> pantalla : eliminarLista(id)
+    pantalla --> musico : solicitarConfirmacion("¿Seguro que quieres eliminar ...? No se puede deshacer.")
+    musico -> pantalla : confirmar()
+    pantalla -> gestor : eliminarLista(id)
+    note left of gestor : DELETE /api/\nitem-lists/{id}
+    gestor -> lista : verificarPropiedad(id, userId)
+    alt Error (404, 403 o sin red)
+        gestor --> pantalla : error
+        pantalla --> musico : mostrarError("No se pudo eliminar la lista")
+    else Propietario
+        gestor -> lista : eliminar(id)
+        gestor --> pantalla : 204 No Content
+        pantalla -> pantalla : purgarAlmacenLocal(id)
+        note right of pantalla : RAM y disco
+        pantalla -> perfil : volver()
+        perfil --> musico : mostrarCarrusel("Mis listas")
+    end
+end
+
+@enduml

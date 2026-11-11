@@ -1,16 +1,18 @@
 @startuml DCA-01a
-title DCA-01a - Diagrama de clases de análisis: entidades del catálogo
+title DCA-01a - Diagrama de clases de análisis: jerarquía Item y lecciones
 
-' Clases «entity» del modelo de análisis (parte 1/2: catálogo y contenido didáctico).
+' Clases «entity» del modelo de análisis (parte 1/3: jerarquía del catálogo y lecciones).
 ' La jerarquía de Item es el bloque central: cualquier elemento formativo puede
-' buscarse, recomendarse y añadirse a una lista. Usuario, listas y Spotify en
-' DCA-01b (01b_entidades_usuario.puml).
+' buscarse, recomendarse y añadirse a una lista. El contenido de las canciones
+' (SongLesson, acordes, afinaciones, instrumentos) está en DCA-01b
+' (01b_entidades_contenido.puml); usuario, listas y Spotify en DCA-01c
+' (01c_entidades_usuario.puml).
 ' Fuentes: src/main/java/com/uo289390/toco/model/*.java, dto/ItemDTO.java.
 skinparam classAttributeIconSize 0
 skinparam roundcorner 6
 
 skinparam nodesep 35
-skinparam ranksep 70
+skinparam ranksep 50
 skinparam class {
     BackgroundColor<<entity>> #FFF4E0
     BorderColor<<entity>> #B07A1F
@@ -72,16 +74,20 @@ enum TipoItem {
     InstrumentGenre
 }
 
-note right of TipoItem
-    En la tabla, la columna dtype guarda
-    SONG, LESSON, GENRE e INSTRUMENT_GENRE
-    (@DiscriminatorValue de cada subclase).
+note bottom of TipoItem
+    En la tabla, la columna
+    dtype guarda SONG, LESSON,
+    GENRE e INSTRUMENT_GENRE
+    (@DiscriminatorValue de
+    cada subclase).
 end note
 
 note left of Item
-    level {0..5}: se valida en ItemDTO
-    (0 = sin nivel, p. ej. canciones);
-    en Item la validación está comentada.
+    level {0..5}: se valida
+    en ItemDTO (0 = sin nivel,
+    p. ej. canciones); en Item
+    la validación está
+    comentada.
 end note
 
 Item <|-- Song
@@ -91,54 +97,8 @@ Item <|-- InstrumentGenre
 Item ..> TipoItem
 
 ' ---------------------------------------------------------------------
-' Contenido didáctico
+' Lecciones
 ' ---------------------------------------------------------------------
-
-class Instrument <<entity>> {
-    id
-    name
-    imageUrl
-}
-
-class SongLesson <<entity>> {
-    id
-    difficulty : Dificultad
-    chordedLyrics
-    videoUrl
-}
-
-enum Dificultad {
-    EASY
-    MEDIUM
-    ORIGINAL
-}
-
-class Chord <<entity>> {
-    id
-    name {único por instrumento}
-    notes [*] {ordered}
-    imageUrl
-    open
-    barre
-    powerChord
-    minor
-    major
-    seventh
-    capo
-    capoFret {0..12}
-}
-
-class Tune <<entity>> {
-    id
-    title
-    notes [1..*] {ordered}
-}
-
-class TabSection <<entity>> {
-    id
-    identifier
-    content
-}
 
 class LessonSection <<entity>> {
     id
@@ -148,18 +108,7 @@ class LessonSection <<entity>> {
     orderIndex
 }
 
-Song "1" *-- "0..*" SongLesson : se desglosa en >
-SongLesson "0..*" --> "0..*" Chord : usa {ordered}
-SongLesson "1" *-- "0..*" TabSection : contiene {ordered}
-SongLesson "0..*" --> "1" Instrument : para >
-Chord "0..*" --> "1" Instrument : para >
-note bottom of Chord
-  Un mismo acorde (p. ej. Do menor) existe una vez por
-  instrumento, con su propia digitación y diagrama.
-  {Los acordes de una SongLesson son del instrumento
-  de la lección}
-end note
-SongLesson ..> Dificultad
+class Instrument <<entity>> <<ver DCA-01b>>
 
 Song "0..*" --> "0..*" Genre : clasificada en >
 Song "0..*" --> "0..*" Instrument : se toca con >
@@ -169,7 +118,6 @@ Lesson "0..*" --> "0..1" Genre : adscrita a >
 Lesson "0..*" --> "0..1" Instrument : adscrita a >
 
 Genre "1" -- "0..*" InstrumentGenre
-Tune "0..*" --> "1" Instrument : afinación de >
 Instrument "1" -- "0..*" InstrumentGenre
 InstrumentGenre "0..1" o-- "0..*" Lesson : itinerario\n{ordered, unique}
 

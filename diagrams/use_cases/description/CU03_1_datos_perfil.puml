@@ -1,5 +1,5 @@
 @startuml DS-CU-03-1
-title DS-CU-03 (1/2) - Configurar perfil: consultar y modificar datos
+title DS-CU-03 (1/3) - Configurar perfil: consultar y modificar datos
 
 ' Diagrama de secuencia de análisis (patrón Boundary-Control-Entity)
 ' Fuentes: ProfileScreen.tsx, useProfile.ts, FavoritesPickerModal.tsx, user.repository.ts,
@@ -8,6 +8,11 @@ autonumber
 hide footbox
 skinparam sequenceMessageAlign center
 skinparam roundcorner 6
+skinparam maxMessageSize 190
+skinparam wrapWidth 170
+skinparam ParticipantPadding 2
+skinparam BoxPadding 2
+skinparam defaultFontSize 12
 
 actor "Músico" as musico
 boundary "PerfilScreen" as pantalla
@@ -17,10 +22,10 @@ entity "Usuario" as usuario
 musico -> pantalla : abrirPerfil()
 pantalla -> gestor : obtenerPerfil(userId)
 gestor -> usuario : obtener(userId)
-note right of usuario : RAM -> disco -> API\n(GET /api/users/{id})
-usuario --> gestor : usuario (con géneros e\ninstrumentos favoritos)
+note left of usuario : RAM -> disco -> API\n(GET /api/users/{id})
+usuario --> gestor : usuario (con géneros e instrumentos favoritos)
 gestor --> pantalla : perfil
-pantalla --> musico : mostrarPerfil(nombre, username, email de solo lectura,\nnivel 0-5, favoritos, foto)
+pantalla --> musico : mostrarPerfil(nombre, username, email de solo lectura, nivel 0-5, favoritos, foto)
 
 == Modificar datos del perfil ==
 
@@ -30,7 +35,7 @@ alt Menos de 2 géneros o 2 instrumentos favoritos
     pantalla --> musico : mostrarAviso("Faltan favoritos")
 else Mínimo cumplido
     pantalla -> pantalla : actualizarAlmacenLocal(cambios)
-    note right of pantalla : Optimista; se guarda backupUser
+    note right of pantalla : Optimista; se\nguarda backupUser
     pantalla -> gestor : guardarPerfil(userId, nombre, username, nivel)
     note right of gestor : PUT /api/users/{id}
     gestor -> gestor : comprobarPropiedad(userId)
@@ -40,7 +45,7 @@ else Mínimo cumplido
         pantalla --> musico : mostrarError("No se pudieron guardar los cambios")
     else Es el propietario y los datos son válidos
         gestor -> usuario : actualizar(nombre, username, nivel)
-        note right of usuario : El email no se cambia
+        note left of usuario : El email no\nse cambia
         usuario --> gestor : usuario
         gestor --> pantalla : 200 OK + usuarioActualizado
         pantalla -> pantalla : actualizarAlmacenLocal(usuario)
@@ -49,6 +54,6 @@ else Mínimo cumplido
     end
 end
 
-note over musico, pantalla : Favoritos, foto y cierre de sesión en DS-CU-03 (2/2)
+note over musico, pantalla : Favoritos en DS-CU-03 (2/3);\nfoto y cierre de sesión en DS-CU-03 (3/3)
 
 @enduml

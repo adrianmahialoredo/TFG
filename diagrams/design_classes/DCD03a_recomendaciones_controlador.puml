@@ -1,0 +1,68 @@
+@startuml DCD-03a
+title DCD-03a - Diagrama de clases de diseño: motor de recomendaciones (1/6) -\ncontrolador
+
+' Paquete service.recommendation: un servicio por tipo de item y un servicio combinador
+' (ItemRecommendationService).
+' Seis partes: DCD-03a controlador; DCD-03b servicio combinador e interfaces;
+' DCD-03c/d implementaciones de los subservicios (canciones y géneros / itinerarios y
+' lecciones); DCD-03e rankings de dominio; DCD-03f utilidades y constantes.
+' Las recomendaciones de Spotify están en DCD-04. Reglas: architecture.md §8 y
+' recommendations.md.
+' Fuentes: controller/RecommendationController.java, service/recommendation/*.java
+skinparam classAttributeIconSize 0
+skinparam roundcorner 6
+skinparam nodesep 20
+skinparam ranksep 45
+skinparam packageStyle rectangle
+skinparam class {
+    BackgroundColor<<RestController>> #E3F0FF
+    BorderColor<<RestController>> #3D6FA8
+    BackgroundColor<<Service>> #E6F5E6
+    BorderColor<<Service>> #3C8A3C
+    BackgroundColor<<interface>> #F4FBF4
+    BorderColor<<interface>> #3C8A3C
+    BackgroundColor<<Component>> #F3F3F3
+}
+hide empty members
+
+class RecommendationController <<RestController>> {
+    - dtoMapper : DtoMapper
+    --
+    + getForItemList(id : Long) : ResponseEntity<List<ItemDTO>>
+    + getForUser(id : Long) : ResponseEntity<List<ItemDTO>>
+    + getSongsForUser(id : Long, limit : int) : ResponseEntity<List<SongDTO>>
+    + getLessonsForUser(id : Long) : ResponseEntity<List<LessonDTO>>
+    + getForGenre(id : Long) : ResponseEntity<List<LessonDTO>>
+    + getFavouriteInstrumentGenreCombinationIds(id : Long) : ResponseEntity<List<Long>>
+    + getMostUsedGenreInItemListsIds(id : Long) : ResponseEntity<List<Long>>
+}
+note top of RecommendationController : @RequestMapping("/api/recommendations")\n.../by-item-list/{id}: @ownership.ownsItemList\n.../by-user/{id}: @ownership.isSelf
+
+package "service.recommendation" {
+    interface ItemRecommendationService <<interface>> <<ver DCD-03b>>
+    interface SongRecommendationService <<interface>> <<ver DCD-03b>>
+    interface GenreRecommendationService <<interface>> <<ver DCD-03b>>
+    interface InstrumentGenreRecommendationService <<interface>> <<ver DCD-03b>>
+    interface LessonRecommendationService <<interface>> <<ver DCD-03b>>
+}
+
+class "utils.mapper.DtoMapper" as DtoMapper <<Component>> {
+        + itemsToItemDTOs(items : Collection<? extends Item>) : List<ItemDTO>
+        {method} ...
+    }
+
+RecommendationController --> ItemRecommendationService
+RecommendationController --> SongRecommendationService
+RecommendationController --> GenreRecommendationService
+RecommendationController --> InstrumentGenreRecommendationService
+RecommendationController --> LessonRecommendationService
+RecommendationController --> DtoMapper
+
+' Solo para apilar las interfaces de dos en dos y DtoMapper debajo (si no, el diagrama es
+' demasiado ancho)
+ItemRecommendationService -[hidden]down- GenreRecommendationService
+SongRecommendationService -[hidden]down- InstrumentGenreRecommendationService
+GenreRecommendationService -[hidden]down- LessonRecommendationService
+LessonRecommendationService -[hidden]down- DtoMapper
+
+@enduml

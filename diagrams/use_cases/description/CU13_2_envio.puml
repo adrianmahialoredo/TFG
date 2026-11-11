@@ -1,0 +1,43 @@
+@startuml DS-CU-13-2
+title DS-CU-13 (2/4) - Recuperar contraseña\n("Olvidé mi contraseña"): generación y envío del código
+
+' Diagrama de secuencia de análisis (patrón Boundary-Control-Entity)
+' Fuentes: LoginScreen.tsx, ForgotPasswordScreen.tsx, EmailVerificationModal.tsx, useForgotPassword.ts,
+' auth.service.ts, AuthController.java, EmailVerificationServiceImpl.java, UserServiceImpl.java
+' Partes: (1/4) petición del código (CU13_1_codigo.puml); (2/4) generación y envío del código
+' (CU13_2_envio.puml); (3/4) comprobación del código (CU13_3_comprobar.puml); (4/4) nueva
+' contraseña (CU13_4_nueva_contrasena.puml).
+autonumber
+hide footbox
+skinparam sequenceMessageAlign center
+skinparam roundcorner 6
+skinparam maxMessageSize 130
+skinparam wrapWidth 170
+skinparam ParticipantPadding 2
+skinparam BoxPadding 2
+skinparam defaultFontSize 12
+
+actor "Visitante" as visitante
+boundary "Recuperar\nContrasena\nScreen" as pantalla
+boundary "Modal\nVerificacion\nEmail" as modal
+control "Gestor\nAutenticacion" as gestor
+entity "Codigo\nVerificacion\n(recuperación)" as codigo
+entity "Usuario" as usuario
+participant "Servidor\nCorreo\n<<sistema\nexterno>>" as correo
+
+note over pantalla, gestor : Viene de DS-CU-13 (1/4): email válido\ny sin otro código en los últimos 60 s
+
+gestor -> usuario : existeCuenta(email)
+gestor -> codigo : generarCodigo(email)
+note left of codigo : 6 dígitos, válido\n10 minutos, máximo\n5 intentos fallidos.\nIndependiente del\ncódigo de registro
+opt Hay una cuenta con ese email
+    gestor ->> correo : enviarCodigo\nRecuperacion(email,\ncodigo)
+end
+gestor --> pantalla : 204 No Content
+note right of pantalla : Misma respuesta exista o no\nla cuenta (sin cuenta, el código\nse guarda pero no se envía):\nno se revela qué emails\nestán registrados
+pantalla -> modal : abrir(email)
+modal --> visitante : pedirCodigo()
+
+note over visitante, pantalla : Continúa en DS-CU-13 (3/4)
+
+@enduml

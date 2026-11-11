@@ -1,0 +1,66 @@
+@startuml DSD-CU-05-1
+title DSD-CU-05 (1/5) - Consultar canción: carga de la canción (app)
+
+' Parte de la app de la realización de CU-05 (análisis en
+' diagrams/use_cases/description/CU05_1_carga.puml y CU05_2_detalle.puml). El backend se dibuja como una
+' sola línea de vida ("API REST"); lo que hace cada endpoint está en DSD-CU-05 (5/5).
+' Partes: (1/5) carga de la canción; (2/5) carga de lecciones, acordes y tablaturas;
+' (3/5) lección mostrada y dificultad; (4/5) instrumento y acordes; (5/5) backend.
+' Fuentes: screens/SongScreen.tsx, hooks/useSong.ts, stores/ui/songScreen.store.ts,
+' repositories/song.repository.ts, songLesson.repository.ts, chord.repository.ts,
+' tabSection.repository.ts, item.repository.ts, utils/entityCache.utils.ts,
+' stores/entities/recentItems.entities.store.ts, services/song, songLesson, chord,
+' tabSection .service.ts.
+' Para que quepa en A4:
+' - Los service (Nivel 1) no tienen línea de vida: cada flecha "Repositories -> API REST" es la
+'   llamada al service indicado, que hace la petición HTTP.
+' - useSongScreenStore (Nivel 5) y las Entity Stores (Nivel 4) comparten línea de vida.
+' Diferencias con el guion:
+' - La pantalla es SongScreen (no SongDetailScreen) y el hook useSong(songId).
+' - songRepository.getById no usa la caché genérica para la canción: mira RAM (useSongEntitiesStore),
+'   luego disco (songLocal.getById) y solo después songService.getById. Si la sirve de caché,
+'   cache.revalidate([id]) la vuelve a pedir en segundo plano (una vez por sesión).
+' - La pantalla no llama a ningún repositorio (Nivel 7): todo lo hace useSong.
+' - markAsAccessed lo llama useSong (no la pantalla) sin esperar, y escribe en useRecentItemsStore
+'   (zustand persist sobre AsyncStorage), sin backend. "Recientes" del Home: solo frontend, hasta
+'   MAX_RECENT_ITEMS (12).
+!include ../_estilo.iuml
+
+actor "Músico" as actor
+box "App (React Native)" #F3F8FF
+    participant "SongScreen\n<<Nivel 7>>" as screen
+    participant "useSong\n<<Nivel 6>>" as hook
+    participant "Repositories\n<<Nivel 3>>" as repos
+    participant "Stores\n<<Nivel 5 y 4>>" as stores
+end box
+participant "API REST" as api
+
+actor -> screen : abre una canción: navigate('SongScreen', { songId })
+screen -> hook : useSong(songId)
+hook -> stores : useSongScreenStore\n.reset(), setLoading(true)
+hook -> repos : songRepository\n.getById(songId)
+hook ->> repos : itemRepository\n.markAsAccessed(\nsongId) (sin esperar)
+repos ->> stores : useRecentItemsStore\n.markAsAccessed(\nuserId, id)
+
+group songRepository.getById(songId)
+    repos -> stores : useSongEntitiesStore\n.songs[id]
+    alt canción en RAM o en disco (songLocal.getById)
+        stores --> repos : SongDTO
+        repos ->> api : cache.revalidate(\n[id]): POST /api/songs/by-ids (en segundo plano)
+    else cache-miss
+        repos -> api : songService\n.getById(id): GET /api/songs/{id}
+        alt la canción existe
+            api --> repos : 200 SongDTO
+            repos -> repos : cache.markFresh([id]), songLocal\n.saveSingle(song)
+        else no existe
+            api --> repos : 404 Not Found (AxiosError)
+            repos --> hook : null
+            hook -> stores : setLoading(false)
+            screen --> actor : "Canción no encontrada"
+        end
+    end
+    repos -> stores : useSongEntitiesStore\n.setSongs([song])
+end
+note over repos : sigue en DSD-CU-05 (2/5)
+
+@enduml

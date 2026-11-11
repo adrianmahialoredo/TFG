@@ -1,0 +1,72 @@
+@startuml DCD-02b
+title DCD-02b - Diagrama de clases de diseño: capas del backend (2/6) -\ncanciones: implementación y repositorio
+
+' Continuación de DCD-02a (SongService se detalla allí).
+' Fuentes: service/SongServiceImpl.java, repository/SongRepository.java
+' Seis partes: DCD-02a/b canciones (controlador e interfaz / implementación y repositorio),
+' DCD-02c/d listas de estudio (ídem), DCD-02e manejo de errores y EntityResolver,
+' DCD-02f Utils, constantes y mappers.
+skinparam classAttributeIconSize 0
+skinparam roundcorner 6
+skinparam nodesep 20
+skinparam ranksep 50
+skinparam packageStyle rectangle
+skinparam class {
+    BackgroundColor<<RestController>> #E3F0FF
+    BorderColor<<RestController>> #3D6FA8
+    BackgroundColor<<Service>> #E6F5E6
+    BorderColor<<Service>> #3C8A3C
+    BackgroundColor<<interface>> #F4FBF4
+    BorderColor<<interface>> #3C8A3C
+    BackgroundColor<<Repository>> #FFF4E0
+    BorderColor<<Repository>> #B07A1F
+    BackgroundColor<<Component>> #F3F3F3
+}
+hide empty members
+
+package "service" {
+    interface SongService <<interface>> <<ver DCD-02a>>
+
+    class SongServiceImpl <<Service>> {
+        - songRepository : SongRepository
+        - genreRepository : GenreRepository
+        - instrumentRepository : InstrumentRepository
+        - userRepository : UserRepository
+        - itemListRepository : ItemListRepository
+        - dtoMapper : DtoMapper
+    }
+}
+
+package "repository" {
+    interface "JpaRepository<T, Long>" as JpaRepository <<interface>>
+
+    interface SongRepository <<Repository>> {
+        + findByDecade(decade : String) : List<Song>
+        + findByPopularTrue(pageable : Pageable) : List<Song>
+        + findByGenresIdAndGenreNewTrue(genreId : Long) : List<Song>
+        + findByArtistIgnoreCaseAndArtistNewTrueAndIdNotIn(artist, excludedIds, pageable) : List<Song>
+        + findByTitleAndArtistIn(pairs : Collection<TitleArtist>) : List<Song> {default}
+        {method} ...
+    }
+    note bottom of SongRepository : Consultas derivadas del nombre.\nfindByTitleAndArtistIn es un método default\ncon Specification (también extiende\nJpaSpecificationExecutor<Song>)
+}
+
+package "utils" {
+    class EntityResolver <<Component>> <<ver DCD-02e>>
+    class Utils <<ver DCD-02f>>
+    class RecommendationConstants <<ver DCD-02f>>
+    class "mapper.DtoMapper" as DtoMapper <<Component>> <<ver DCD-02f>>
+}
+
+SongService <|.. SongServiceImpl
+SongServiceImpl --> SongRepository
+SongServiceImpl ..> DtoMapper
+SongServiceImpl ..> EntityResolver : <<use>>
+SongServiceImpl ..> Utils : <<use>>
+SongServiceImpl ..> RecommendationConstants : <<use>>\nlímites by-artists
+JpaRepository <|-- SongRepository
+
+' Solo para colocar el repositorio debajo de utils (si no, el diagrama es demasiado ancho)
+RecommendationConstants -[hidden]down- JpaRepository
+
+@enduml

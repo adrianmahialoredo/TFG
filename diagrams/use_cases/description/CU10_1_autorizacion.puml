@@ -1,0 +1,45 @@
+@startuml DS-CU-10-1
+title DS-CU-10 (1/3) - Vincular cuenta de Spotify:\nautorización en Spotify
+
+' Diagrama de secuencia de análisis (patrón Boundary-Control-Entity)
+' Fuentes: SpotifyButton.tsx, useSpotifyConnect.ts, spotify.repository.ts, useHomeItems.ts, useFeedSongs.ts,
+' SpotifyAuthController.java, SpotifyAuthServiceImpl.java, SpotifyRecommendationServiceImpl.java
+' Partes: (1/3) autorización en Spotify (CU10_1_autorizacion.puml); (2/3) callback, tokens y vuelta
+' a la app (CU10_2_callback.puml); (3/3) renovación del token (CU10_3_renovacion.puml).
+autonumber
+hide footbox
+skinparam sequenceMessageAlign center
+skinparam roundcorner 6
+skinparam maxMessageSize 130
+skinparam wrapWidth 170
+skinparam ParticipantPadding 2
+skinparam BoxPadding 2
+skinparam defaultFontSize 12
+
+actor "Músico" as musico
+boundary "PerfilScreen" as perfil
+boundary "Navegador\nExterno" as navegador
+control "Gestor\nSpotifyAuth" as gestor
+participant "SpotifyAPI\n<<sistema\nexterno>>" as spotify
+
+musico -> perfil : iniciarVinculacion()
+note right of musico : Botón "Conectar\ncon Spotify" en\nPerfil, Inicio y\nCanciones
+perfil -> gestor : solicitarURLAutorizacion(jwt)
+note right of gestor : GET /api/\nspotify/login
+gestor -> gestor : generarState(userId)
+note right of gestor : Aleatorio, de un\nsolo uso, válido\n10 minutos
+gestor --> perfil : urlAutorizacion
+perfil -> navegador : abrirURLSpotify(url)
+navegador -> spotify : solicitarAutorizacion(clientId, scopes, state)
+spotify --> musico : pedirLoginYPermisos()
+musico -> spotify : concederPermisos()
+
+alt 5a. El músico rechaza los permisos
+    spotify -> gestor : callback(error, state)
+    gestor --> navegador : 400 + página HTML "No se ha conectado Spotify (...)"
+    navegador --> musico : vinculaciónNoRealizada
+else Permisos concedidos
+    note over gestor, spotify : Continúa en DS-CU-10 (2/3)
+end
+
+@enduml

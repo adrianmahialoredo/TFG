@@ -1,0 +1,41 @@
+@startuml DS-CU-04-2
+title DS-CU-04 (2/2) - Explorar catálogo de ítems:\ndetalle de un ítem
+
+' Diagrama de secuencia de análisis (patrón Boundary-Control-Entity)
+' Fuentes: SongsScreen.tsx, LearnScreen.tsx, GenresScreen.tsx, item.repository.ts
+' Partes: (1/2) pestañas y búsqueda (CU04_1_busqueda.puml); (2/2) este.
+autonumber
+hide footbox
+skinparam sequenceMessageAlign center
+skinparam roundcorner 6
+skinparam maxMessageSize 130
+skinparam wrapWidth 170
+skinparam ParticipantPadding 2
+skinparam BoxPadding 2
+skinparam defaultFontSize 12
+
+actor "Músico" as musico
+boundary "CatalogoView" as pantalla
+control "GestorCatalogo" as gestor
+entity "ItemDetallado" as detalle
+
+note over musico, pantalla : Viene de DS-CU-04 (1/2):\nel músico ve los ítems\nde una pestaña
+
+musico -> pantalla : seleccionarElemento(id)
+pantalla -> gestor : solicitarDetalleCompleto(id)
+gestor -> detalle : buscarEnCacheLocal(id)
+
+alt 6a. No está en la caché local (cache-miss)
+    detalle --> gestor : no encontrado
+    gestor -> detalle : obtenerDeAPI(id)
+    note right of detalle : GET /api/\n{recurso}/{id}
+    detalle --> gestor : DTO completo
+    gestor -> detalle : hidratarCache(DTO)
+else Encontrado en caché
+    detalle --> gestor : DTO completo
+end
+
+gestor --> pantalla : detalle
+pantalla --> musico : abrirDetalle()
+
+@enduml

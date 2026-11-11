@@ -1,0 +1,36 @@
+@startuml DSD-CU-06-6
+title DSD-CU-06 (6/8) - Consultar espacio de género: lección mostrada y navegación (app)
+
+' Sigue a DSD-CU-06 (5/8). Fuentes: screens/InstrumentGenreLessonScreen.tsx;
+' components/EdgePanel.tsx, LessonSectionViewer.tsx; hooks/useInstrumentGenreLesson.ts,
+' useLesson.ts. Cambiar de lección vuelve a ejecutar useLesson(id) como en DSD-CU-06 (5/8).
+!include ../_estilo.iuml
+
+actor "Músico" as actor
+box "App (React Native)" #F3F8FF
+    participant "Instrument\nGenreLesson\nScreen\n<<Nivel 7>>" as igScreen
+    participant "useInstrument\nGenreLesson\nuseLesson\n<<Nivel 6>>" as hooks
+end box
+
+alt el itinerario no tiene lecciones
+    igScreen --> actor : "Este itinerario aún no tiene lecciones"
+else no se pudo cargar la lección
+    igScreen --> actor : "No se pudo cargar el contenido"
+else
+    igScreen --> actor : lección activa (imagen, título, estrellas), LessonSectionViewer y EdgePanel con el itinerario
+end
+
+opt 6a. Selecciona otra lección del itinerario
+    actor -> igScreen : elige una lección en el EdgePanel
+    igScreen -> hooks : setActiveLessonId(id)
+    hooks -> hooks : useLesson(id): lección y secciones (DSD-CU-06 5/8)
+    hooks --> igScreen : nueva activeLesson, sections, primera sección
+    loop navega entre secciones
+        actor -> igScreen : siguiente / anterior
+        igScreen -> hooks : goToNext() / goToPrevious()
+        hooks --> igScreen : currentSection
+        igScreen --> actor : vídeo de YouTube (si tiene) y contenido HTML
+    end
+end
+
+@enduml

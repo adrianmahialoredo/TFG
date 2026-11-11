@@ -1,0 +1,52 @@
+@startuml DSD-CU-03-3
+title DSD-CU-03 (3/6) - Configurar perfil:\nfavoritos (app)
+
+' Fuentes: screens/ProfileScreen.tsx, components/FavoritesPickerModal.tsx, hooks/useProfile.ts,
+' repositories/user.repository.ts, services/user.service.ts, stores/entities/user.entities.store.ts,
+' local/user.local.ts. Backend en DSD-CU-03 (6/6).
+' userRepository (nivel 3) y userService (nivel 1) se dibujan juntos; las llamadas a los stores
+' (nivel 4) y a userLocal (nivel 2, disco) las hace userRepository.
+' Los favoritos se cambian con POST/DELETE /api/users/{id}/favorite-genres/{genreId}
+' (o favorite-instruments/{instrumentId}), uno por cambio: addFavoriteGenre(userId, genreId) |
+' removeFavoriteGenre(...) de userService (y los de instrumentos).
+' Se envían en serie: primero los añadidos y después los quitados.
+' Errores: 400 por debajo del mínimo, 403, 404 si el id no existe. Si alguno falla se restaura
+' la copia y se recarga el usuario en segundo plano (getById -> hydrateUsers): el backend
+' puede haber aplicado parte de los cambios.
+!include ../_estilo.iuml
+skinparam maxMessageSize 100
+
+actor "Músico" as actor
+box "App (React Native)" #F3F8FF
+    participant "ProfileScreen\n+ Modal\n<<Nivel 7>>" as screen
+    participant "useProfile\n<<Nivel 6>>" as hook
+    participant "Stores\n+ userLocal\n<<Niveles 4 y 2>>" as store
+    participant "userRepository\n→ userService\n<<Niveles 3 y 1>>" as repo
+end box
+participant "API REST\n(backend)" as api
+
+actor -> screen : elige favoritos en FavoritesPickerModal
+screen -> hook : handleSaveFavorites(ids) -> updateFavorite Genres | Instruments(ids)
+hook -> repo : updateFavorites (currentUserId, kind, ids)
+repo -> repo : diff con los actuales (toAdd, toRemove); sin cambios: devuelve el usuario
+repo -> store : updateUser(userId, { favouriteGenresIds: ids })
+loop Cada cambio (en serie)
+    repo -> api : POST | DELETE /api/users/{id} /favorite-genres/{genreId}
+    api --> repo : 200 UserDto
+end
+alt Todos correctos
+    repo -> store : hydrateUsers ([último UserDTO])
+    repo -> store : userLocal .saveBatch(...)
+    repo --> hook : UserDTO
+    hook --> screen : void
+    screen -> screen : setFavoritesKind(null) (cierra el modal)
+else Alguno falla (400, 403 o 404)
+    repo -> store : setUsers ([backupUser])
+    repo ->> api : getById(userId) (recarga en segundo plano)
+    repo --> hook : throw
+    hook -> hook : setError('Error al actualizar los favoritos')
+    hook --> screen : throw
+    screen --> actor : showAlert({ title: 'Error', message: 'No se pudieron guardar los favoritos' })
+end
+
+@enduml

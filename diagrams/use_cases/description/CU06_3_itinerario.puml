@@ -1,0 +1,54 @@
+@startuml DS-CU-06-3
+title DS-CU-06 (3/3) - Consultar espacio de género:\npestaña "Instrumentos" e itinerario
+
+' Diagrama de secuencia de análisis (patrón Boundary-Control-Entity)
+' Fuentes: GenreMainScreen.tsx, useGenreMain.ts, GenreDescriptionScreen.tsx, GenreSongsScreen.tsx,
+' useGenreSongs.ts, GenreInstrumentsScreen.tsx, useGenreInstruments.ts,
+' InstrumentGenreLessonScreen.tsx, useInstrumentGenre.ts, useInstrumentGenreLesson.ts, useLesson.ts
+' Partes: (1/3) abrir el género (CU06_1_genero.puml); (2/3) pestaña "Canciones"
+' (CU06_2_canciones.puml); (3/3) pestaña "Instrumentos" e itinerario (CU06_3_itinerario.puml).
+autonumber
+hide footbox
+skinparam sequenceMessageAlign center
+skinparam roundcorner 6
+skinparam maxMessageSize 130
+skinparam wrapWidth 170
+skinparam ParticipantPadding 2
+skinparam BoxPadding 2
+skinparam defaultFontSize 12
+
+actor "Músico" as musico
+boundary "GenreScreen" as pantalla
+boundary "Itinerario\nInstrumento\nScreen" as itinerario
+control "GestorGeneros" as gestor
+entity "Lesson" as lesson
+
+note over musico, pantalla : Viene de DS-CU-06 (1/3):\ngénero abierto
+
+opt Pestaña "Instrumentos"
+    musico -> pantalla : abrirPestanaInstrumentos()
+    pantalla -> gestor : obtenerInstrumentGenres(\ngenreId)
+    note right of gestor : Sin peticiones: ya\nse cargaron al abrir\nel género
+    gestor --> pantalla : módulos
+    pantalla --> musico : mostrarModulosInstrumento()
+
+    musico -> pantalla : seleccionarInstrumento(\ninstrumentGenreId)
+    pantalla -> itinerario : mostrar(\ninstrumentGenreId)
+    itinerario -> gestor : cargarLeccionesItinerario(\ninstrumentGenreId)
+    gestor -> lesson : obtenerTodas(\ninstrumentGenre.lessonIds)
+    note left of lesson : RAM -> disco -> API.\nEn el orden del backend\n(el cliente no ordena)
+    lesson --> gestor : LessonDTO[] + LessonSection[]
+    gestor ->> gestor : marcarRecienteLocal(\ninstrumentGenreId)
+    gestor --> itinerario : itinerario
+    itinerario --> musico : mostrarLeccion(primera lección, secciones)
+    note right of itinerario : Cada sección muestra\nsu vídeo de apoyo de\nYouTube (si tiene) y\nsu contenido HTML;\nflechas entre secciones
+
+    opt 6a. El músico elige otra lección en el panel lateral
+        musico -> itinerario : abrirPanelLateral()
+        itinerario --> musico : mostrarLecciones()
+        musico -> itinerario : seleccionarLeccion(lessonId)
+        itinerario --> musico : mostrarLeccion(lessonId, secciones)
+    end
+end
+
+@enduml

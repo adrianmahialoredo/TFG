@@ -1,0 +1,43 @@
+@startuml DSD-CU-13-3
+title DSD-CU-13 (3/5) - Recuperar contraseña:\ncontraseña nueva (app)
+
+' Continuación de DSD-CU-13 (2/5). El backend es una sola línea de vida; el endpoint está en
+' DSD-CU-13 (5/5).
+' Fuentes: screens/ForgotPasswordScreen.tsx, hooks/useForgotPassword.ts,
+' utils/password.utils.ts, repositories/auth.repository.ts, services/auth.service.ts.
+' Notas:
+'  - Las dos contraseñas deben coincidir y passwordError(password) === null (mismas reglas que
+'    el registro); si no, se lanza Error con la primera regla incumplida.
+'  - useForgotPassword llama a authService a través de authRepository (passthrough).
+'  - Si el código caducó mientras tanto (400 por el código), step = 'email' para pedir otro.
+!include ../_estilo.iuml
+
+actor "Visitante" as actor
+box "App" #F3F8FF
+    participant "Login\nScreen\n<<Nivel 7>>" as login
+    participant "ForgotPassword\nScreen\n<<Nivel 7>>" as screen
+    participant "useForgot\nPassword\n<<Nivel 6>>" as hook
+    participant "auth\nService\n<<Nivel 1>>" as service
+end box
+participant "API\nREST" as api
+
+actor -> screen : pulsa "Cambiar\ncontraseña"
+screen -> hook : resetPassword\n(password,\nconfirm)
+hook -> hook : coinciden y\npasswordError\n(password) === null
+alt Inválida
+    hook --> screen : throw Error(primera\nregla incumplida)
+    screen --> actor : showAlert\n({ title: 'Error',\nmessage })
+else Válida
+    hook -> service : resetPassword\n(email, code,\npassword)
+    service -> api : POST /api/auth/\npassword-reset\n{ email, code,\nnewPassword }
+    alt 400 por el código
+        api --> service : 400
+        hook -> hook : step = 'email'
+        screen --> actor : showAlert(error)
+    else 204
+        api --> service : 204
+        screen --> actor : showAlert('Contraseña\ncambiada', 'Ya puedes\niniciar sesión con tu\nnueva contraseña')
+        screen -> login : navigation\n.goBack()
+    end
+end
+@enduml

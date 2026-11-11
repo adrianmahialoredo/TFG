@@ -1,0 +1,48 @@
+@startuml DS-CU-08-4
+title DS-CU-08 (4/4) - Añadir/eliminar ítems en listas:\n1a. quitar un ítem de la lista
+
+' Diagrama de secuencia de análisis (patrón Boundary-Control-Entity)
+' Fuentes: SearchResults.tsx, AddToListModal.tsx, ItemListPickerModal.tsx, useAddToList.ts,
+' ListScreen.tsx, useItemListDetail.ts, itemList.repository.ts, ItemListController.java
+' Partes: (1/4) recomendaciones y búsqueda en "Añadir" (CU08_1_recomendaciones.puml); (2/4) añadir
+' el ítem elegido (CU08_2_anadir.puml); (3/4) añadir desde el buscador (CU08_3_buscador.puml);
+' (4/4) quitar un ítem de la lista (CU08_4_quitar.puml).
+autonumber
+hide footbox
+skinparam sequenceMessageAlign center
+skinparam roundcorner 6
+skinparam maxMessageSize 130
+skinparam wrapWidth 170
+skinparam ParticipantPadding 2
+skinparam BoxPadding 2
+skinparam defaultFontSize 12
+
+actor "Músico" as musico
+boundary "ListaScreen" as listaScreen
+control "GestorListas" as gestor
+entity "ItemList" as lista
+
+musico -> listaScreen : quitarItem(itemId)
+listaScreen --> musico : solicitarConfirmacion("Quitar de la lista")
+
+alt El músico cancela
+    musico -> listaScreen : cancelar()
+else El músico confirma
+    musico -> listaScreen : confirmar()
+    listaScreen -> gestor : eliminarItem(listId, itemId)
+    note right of gestor : DELETE /api/item-lists/\n{listId}/items/{itemId}
+    gestor -> lista : comprobarPropiedad(listId, userId)
+    alt La petición falla (sin red, 403 o lista inexistente)
+        gestor --> listaScreen : error
+        listaScreen --> musico : mostrarError("No se pudo quitar el item de la lista")
+    else Éxito
+        gestor -> lista : desvincularItem(itemId)
+        lista --> gestor : ItemListDTO
+        gestor --> listaScreen : 200 OK + ItemListDTO
+        listaScreen -> listaScreen : actualizarEstadoLocal(lista)
+        note right of listaScreen : RAM y disco
+        listaScreen --> musico : refrescarVista()
+    end
+end
+
+@enduml

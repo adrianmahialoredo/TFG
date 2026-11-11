@@ -1,0 +1,39 @@
+@startuml DS-CU-11-1
+title DS-CU-11 (1/4) - Utilizar afinador cromático:\ncarga de las afinaciones
+
+' Diagrama de secuencia de análisis (patrón Boundary-Control-Entity)
+' Fuentes: TunerScreen.tsx, useTunes.ts, useTuner.ts, microphone.utils.ts, pitch.utils.ts, tuner.utils.ts
+' Partes: (1/4) carga de las afinaciones (CU11_1_carga.puml); (2/4) arranque de la escucha
+' (CU11_2_arranque_escucha.puml); (3/4) análisis de cada bloque (CU11_3_analisis.puml);
+' (4/4) acciones durante la escucha y salida (CU11_4_acciones_y_salida.puml).
+autonumber
+hide footbox
+skinparam sequenceMessageAlign center
+skinparam roundcorner 6
+skinparam maxMessageSize 130
+skinparam wrapWidth 170
+skinparam ParticipantPadding 2
+skinparam BoxPadding 2
+skinparam defaultFontSize 12
+
+actor "Músico" as musico
+boundary "AfinadorScreen" as pantalla
+control "Gestor\nAfinaciones" as gestor
+entity "Afinacion" as afinacion
+
+musico -> pantalla : abrirAfinador()
+pantalla -> gestor : obtenerAfinaciones()
+gestor -> afinacion : obtenerTodas()
+afinacion --> gestor : afinaciones (instrumento, nombre, notas por cuerda)
+gestor -> gestor : seleccionarPorDefecto(instrumentos favoritos)
+note right of gestor : La primera afinación\nde un instrumento\nfavorito (si no,\nla primera)
+gestor --> pantalla : afinaciones ordenadas por instrumento + por defecto
+pantalla --> musico : mostrarCuerdas(), mostrarRuedaAfinaciones()
+
+alt No hay afinaciones (sin conexión ni caché)
+    pantalla --> musico : avisar("No hay afinaciones disponibles. Comprueba tu conexión.")
+end
+
+note over musico, pantalla : La escucha empieza al abrir la\npantalla: DS-CU-11 (2/4)
+
+@enduml

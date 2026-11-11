@@ -1,0 +1,43 @@
+@startuml DSD-CU-04-4
+title DSD-CU-04 (4/4) - Explorar catálogo de ítems:\nendpoints del backend
+
+' Lo que hace el backend en las peticiones de DSD-CU-04 (1/4 y 3/4).
+' Fuentes: ItemController.java, ItemServiceImpl.java, GenreController.java, GenreServiceImpl.java,
+' utils/mapper/DtoMapper.java, dto/ItemSummaryDTO.java, config/SecurityConfig.java.
+' JwtAuthenticationFilter: cualquier usuario autenticado (anyRequest().authenticated()).
+' XRepository consulta PostgreSQL (SELECT).
+' itemToItemSummaryDto: id, title, imageUrl, type, level y, según el subtipo
+' (Hibernate.unproxy): artist, decade, genreIds, instrumentIds (metadatos de búsqueda).
+!include ../_estilo.iuml
+skinparam maxMessageSize 110
+
+participant "App\n(services)" as app
+box "Backend (Spring Boot)" #FFF9F0
+    participant "XController\n<<controller>>" as ctrl
+    participant "XServiceImpl\n<<service>>" as svc
+    participant "XRepository\n(PostgreSQL)" as repo
+    participant "DtoMapper\n<<mapper>>" as mapper
+end box
+
+group GET /api/items
+    app -> ctrl : ItemController.getAll()
+    ctrl -> svc : ItemServiceImpl.findAll()
+    svc -> repo : ItemRepository.findAll()
+    repo --> svc : List<Item> (Song, Lesson, Genre, InstrumentGenre)
+    svc -> mapper : itemsToItemSummary DTOs(items)
+    loop Por cada item
+        mapper -> mapper : itemToItem SummaryDto (item)
+    end
+    mapper --> svc : List<ItemSummaryDTO>
+    ctrl --> app : 200 List<ItemSummaryDTO>
+end
+
+group GET /api/genres
+    app -> ctrl : GenreController.getAll()
+    ctrl -> svc : GenreServiceImpl.findAll()
+    svc -> repo : GenreRepository.findAll()
+    svc -> mapper : genreToGenreDto(genre)
+    ctrl --> app : 200 List<GenreDTO>
+end
+
+@enduml

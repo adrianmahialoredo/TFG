@@ -1,0 +1,47 @@
+@startuml DSD-CU-09-5
+title DSD-CU-09 (5/12) - Recomendaciones:\nbackend por usuario
+
+' GET /api/recommendations/items/by-user/{id}, pedido desde DSD-CU-09 (2/12).
+' Fuentes: RecommendationController.java, ItemRecommendationServiceImpl.java (findForUser),
+' Song/Genre/InstrumentGenre/LessonRecommendationServiceImpl.java (findForUser), model/User.java,
+' utils/RecommendationConstants.java, utils/EntityResolver.java, utils/mapper/DtoMapper.java.
+' - @PreAuthorize(hasRole('ADMIN') or @ownership.isSelf(#id)). Otro usuario: 403. Usuario
+'   inexistente (EntityResolver.resolveUser): EntityNotFoundException -> 404.
+' - Por usuario: rankings de todas sus listas (User.getTop...FromItemLists), favoritos
+'   (getPreferences().getFavorite...()) y nivel de dificultad (getDifficultyLevel()).
+' - Cantidades: songs N_HOME_RECOMMENDED_SONGS = 6, genres 1, instrument-genres 2, lessons 3.
+' - Exclusión por usuario: lo que ya está en N_ITEM_LISTS_TO_EXCLUDE_FROM_RECOMMENDATIONS (3) o más de sus
+'   listas (User.getIdsExcludedFromRecommendationsOfType(tipo)); lo que está en 1 o 2 listas sí se recomienda.
+' - Consultas por niveles: find...LevelLessThanEqualAndIdNotIn(..., idsToExclude(excluding), Pageable).
+' - Igual que por lista, el resultado (LinkedHashSet<Item>) se baraja (Collections.shuffle)
+'   antes de mapearlo con DtoMapper.itemsToItemDTOs.
+!include ../_estilo.iuml
+
+participant "App" as app
+box "Backend" #FFF9F0
+    participant "Recommen-\ndation\nController" as controller
+    participant "ItemRecom-\nmendation\nServiceImpl" as itemRec
+    participant "Song / Genre\n/ IG / Lesson\nRecommen-\ndationService" as subRec
+    participant "User\n<<entity>>" as user
+    participant "Song / ...\nRepository" as repos
+end box
+
+app -> controller : GET .../items/\nby-user/{id}
+controller -> itemRec : findForUser(id)
+loop songs (6), genres (1),\ninstrument-genres (2),\nlessons (3)
+    itemRec -> subRec : findForUser\n(id, n)
+    subRec -> subRec : resolveUser(id)
+    subRec -> user : getIdsExcluded\nFromRecommen-\ndationsOfType
+    user --> subRec : ids en 3 o\nmás listas
+    subRec -> user : top de sus listas,\nfavoritos y nivel
+    user --> subRec : candidatos\ny nivel
+    subRec -> repos : find...LevelLess\nThanEqualAnd\nIdNotIn(...)
+    repos --> subRec : entidades
+    subRec --> itemRec : SequencedSet
+    itemRec -> itemRec : items.addAll(...)
+end
+itemRec -> itemRec : shuffle +\nitemsToItemDTOs
+itemRec --> controller : List<ItemDTO>
+controller --> app : 200 OK\nList<ItemDTO>
+
+@enduml

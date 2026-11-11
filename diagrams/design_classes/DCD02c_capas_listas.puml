@@ -1,0 +1,79 @@
+@startuml DCD-02c
+title DCD-02c - Diagrama de clases de diseño: capas del backend (3/6) -\nlistas: controlador e interfaz del servicio
+
+' Continuación de DCD-02a/b: segundo recurso representativo, las listas de estudio
+' (propiedad del usuario + método de dominio ItemList.addItem). Utilidades: DCD-02e/f.
+' Fuentes: controller/ItemListController.java, service/ItemListService.java,
+'          ItemListServiceImpl.java, repository/ItemListRepository.java, ItemRepository.java,
+'          security/OwnershipChecker.java, config/SecurityConfig.java
+' Seis partes: DCD-02a/b canciones (controlador e interfaz / implementación y repositorio),
+' DCD-02c/d listas de estudio (ídem), DCD-02e manejo de errores y EntityResolver,
+' DCD-02f Utils, constantes y mappers.
+skinparam classAttributeIconSize 0
+skinparam roundcorner 6
+skinparam nodesep 20
+skinparam ranksep 50
+skinparam packageStyle rectangle
+skinparam class {
+    BackgroundColor<<RestController>> #E3F0FF
+    BorderColor<<RestController>> #3D6FA8
+    BackgroundColor<<Service>> #E6F5E6
+    BorderColor<<Service>> #3C8A3C
+    BackgroundColor<<interface>> #F4FBF4
+    BorderColor<<interface>> #3C8A3C
+    BackgroundColor<<Repository>> #FFF4E0
+    BorderColor<<Repository>> #B07A1F
+    BackgroundColor<<Component>> #F3F3F3
+}
+hide empty members
+
+package "controller" {
+    class ItemListController <<RestController>> {
+        + getAll() : ResponseEntity<List<ItemListDTO>>
+        + getByIds(ids : List<Long>) : ResponseEntity<List<ItemListDTO>>
+        + getById(id : Long) : ResponseEntity<ItemListDTO>
+        + getIdsForUser(userId : Long) : ResponseEntity<List<Long>>
+        + create(dto : ItemListDTO) : ResponseEntity<ItemListDTO>
+        + update(id : Long, dto : ItemListDTO) : ResponseEntity<ItemListDTO>
+        + delete(id : Long) : ResponseEntity<Void>
+        + addItem(listId : Long, itemId : Long) : ResponseEntity<ItemListDTO>
+        + removeItem(listId : Long, itemId : Long) : ResponseEntity<ItemListDTO>
+    }
+    note top of ItemListController
+      @RequestMapping("/api/item-lists")
+      @PreAuthorize por método:
+      "hasRole('ADMIN') or ..."
+        getById, delete:
+          @ownership.ownsItemList(#id, authentication)
+        addItem, removeItem:
+          @ownership.ownsItemList(#listId, authentication)
+        getByIds:
+          @ownership.ownsAllItemLists(#ids, authentication)
+        getIdsForUser:
+          @ownership.isSelf(#userId, authentication)
+        create:
+          @ownership.isSelf(#dto.userId, authentication)
+        update: ownsItemList(#id) and isSelf(#dto.userId)
+      GET /api/item-lists (getAll): solo ADMIN (SecurityConfig)
+    end note
+}
+
+package "service" {
+    interface ItemListService <<interface>> {
+        + findAll() : List<ItemListDTO>
+        + findIdsForUser(userId : Long) : List<Long>
+        + findByIds(ids : List<Long>) : List<ItemListDTO>
+        + findById(id : Long) : Optional<ItemListDTO>
+        + create(dto : ItemListDTO) : ItemListDTO
+        + update(id : Long, dto : ItemListDTO) : Optional<ItemListDTO>
+        + delete(id : Long) : boolean
+        + addItem(listId : Long, itemId : Long) : Optional<ItemListDTO>
+        + removeItem(listId : Long, itemId : Long) : Optional<ItemListDTO>
+    }
+    class ItemListServiceImpl <<Service>> <<ver DCD-02d>>
+}
+
+ItemListController --> ItemListService
+ItemListService <|.. ItemListServiceImpl
+
+@enduml

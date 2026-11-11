@@ -1,65 +1,61 @@
 @startuml DSD-CU-07-1
-title DSD-CU-07 (1/5) - Gestionar listas de estudio: consultar "Mis listas" (app)
+title DSD-CU-07 (1/6) - Gestionar listas de estudio: consultar "Mis listas" (app)
 
 ' Diagrama de secuencia de diseño: realización de CU-07 (análisis en
-' diagrams/use_cases/description/CU07_1_consultar_crear.puml y CU07_2_editar_eliminar.puml). Parte de la app: el backend se dibuja
-' como una sola línea de vida ("API REST"); lo que hace cada endpoint está en DSD-CU-07 (5/5).
+' diagrams/use_cases/description/CU07_1_consultar_crear.puml, CU07_2_renombrar_imagen.puml y CU07_3_eliminar.puml). Parte de la app: el backend se dibuja
+' como una sola línea de vida ("API REST"); lo que hace cada endpoint está en DSD-CU-07 (5/6 y 6/6).
 ' Fuentes: frontend/src/screens/ProfileScreen.tsx, hooks/useItemLists.ts,
 ' repositories/itemList.repository.ts, services/itemList.service.ts,
 ' stores/entities/itemList.entities.store.ts, local/itemList.local.ts, config/apiConfig.ts.
+' Para que quepa en A4, itemListService (Nivel 1) no tiene línea de vida: cada flecha
+' "itemListRepository -> API REST" es la llamada al service indicado, que hace la petición HTTP.
+' itemListLocal es el disco (AsyncStorage, con índice por usuario).
 ' Diferencias con el análisis:
 ' - "Mis listas" no es una pantalla propia: es el carrusel de ProfileScreen; editar y borrar se hacen
-'   en ListScreen (DSD-CU-07 3/5 y 4/5).
+'   en ListScreen (DSD-CU-07 3/6 y 4/6).
 ' - hydrateItemLists es una función privada del repositorio: setItemLists (RAM) + cache.markFresh +
 '   itemListLocal.saveBatchWithUserIndex (disco). Toda escritura pasa por ella.
+' - Si la petición falla (sin red, 401, 403), getByUserId captura el error y devuelve []; se
+'   mantiene lo que hubiera en la Store.
 !include ../_estilo.iuml
 
 actor "Músico" as actor
 box "App (React Native)" #F3F8FF
     participant "ProfileScreen\n<<Nivel 7>>" as profile
     participant "useItemLists\n<<Nivel 6>>" as useLists
-    participant "itemListRepository\n<<Nivel 3>>" as repo
-    participant "useItemListEntitiesStore\n<<Nivel 4>>" as store
-    participant "itemListService\n<<Nivel 1>>" as service
+    participant "itemList\nRepository\n<<Nivel 3>>" as repo
+    participant "useItemList\nEntitiesStore\n<<Nivel 4>>" as store
 end box
-participant "API REST\n(backend)" as api
+participant "API REST" as api
 
 actor -> profile : abre Perfil (carrusel "Mis listas")
 profile -> useLists : useItemLists(user.id)
 useLists -> repo : getByUserId(userId)
-repo -> repo : itemListLocal.getByUserId(userId)
-note right of repo : Disco (AsyncStorage,\níndice por usuario)
+repo -> repo : itemListLocal\n.getByUserId(userId)
 
 alt Hay listas guardadas en disco
-    repo -> store : setItemLists(localLists)
+    repo -> store : setItemLists(\nlocalLists)
     repo --> useLists : ids locales (al instante)
-    note right of repo : La sincronización de abajo va en segundo\nplano (stale-while-revalidate)
+    note right of repo : la sincronización de abajo\nva en segundo plano\n(stale-while-revalidate)
 else Sin datos locales
-    note right of repo : Se espera a la sincronización
+    note right of repo : se espera a la\nsincronización
 end
 
-repo ->> service : getUserIds(userId)
-service -> api : GET /api/item-lists/by-user/{userId}/ids
-api --> service : 200 List<Long>
-service --> repo : remoteIds
+repo ->> api : getUserIds(userId): GET /api/item-lists/by-user\n/{userId}/ids
+api --> repo : 200 List<Long> (remoteIds)
 
 opt Hay listas locales que ya no existen en el backend
-    repo -> store : removeItemLists(staleIds)
-    repo -> repo : itemListLocal.removeById(id, userId)
+    repo -> store : removeItemLists(\nstaleIds)
+    repo -> repo : itemListLocal\n.removeById(id, userId)
 end
 
-repo -> service : getAllById(remoteIds)
-service -> api : POST /api/item-lists/by-ids [ids]
-api --> service : 200 List<ItemListDTO>
-service --> repo : ItemListDTO[] (toAppItemListDTO)
-repo -> repo : hydrateItemLists(lists)
+repo -> api : getAllById(remoteIds): POST /api/item-lists/by-ids [ids]
+api --> repo : 200 List<ItemListDTO> (toAppItemListDTO)
+repo -> repo : hydrateItemLists(\nlists)
 repo -> store : setItemLists(lists)
-note right of store : + cache.markFresh y\nitemListLocal.saveBatchWithUserIndex (disco)
 store --> useLists : itemLists (suscripción Zustand)
 useLists -> useLists : useMemo: filtra por userId
 useLists --> profile : lists
 profile --> actor : muestra el carrusel "Mis listas"
-
-note over profile, service : Si la petición falla (sin red, 401, 403), getByUserId captura el\nerror y devuelve []; se mantiene lo que hubiera en la Store
 
 @enduml

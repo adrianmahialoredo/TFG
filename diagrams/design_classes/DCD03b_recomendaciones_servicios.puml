@@ -1,0 +1,88 @@
+@startuml DCD-03b
+title DCD-03b - Diagrama de clases de diseño: motor de recomendaciones (2/6) -\nservicio combinador e interfaces
+
+' Continuación de DCD-03a.
+' Seis partes: DCD-03a controlador; DCD-03b servicio combinador e interfaces;
+' DCD-03c/d implementaciones de los subservicios (canciones y géneros / itinerarios y
+' lecciones); DCD-03e rankings de dominio; DCD-03f utilidades y constantes.
+' Las recomendaciones de Spotify están en DCD-04. Reglas: architecture.md §8 y
+' recommendations.md.
+' Fuentes: service/recommendation/*.java
+skinparam classAttributeIconSize 0
+skinparam roundcorner 6
+skinparam nodesep 20
+skinparam ranksep 45
+skinparam packageStyle rectangle
+skinparam class {
+    BackgroundColor<<RestController>> #E3F0FF
+    BorderColor<<RestController>> #3D6FA8
+    BackgroundColor<<Service>> #E6F5E6
+    BorderColor<<Service>> #3C8A3C
+    BackgroundColor<<interface>> #F4FBF4
+    BorderColor<<interface>> #3C8A3C
+    BackgroundColor<<Component>> #F3F3F3
+}
+hide empty members
+
+package "service.recommendation" {
+    interface ItemRecommendationService <<interface>> {
+        + findForItemList(id : Long) : List<ItemDTO>
+        + findForUser(id : Long) : List<ItemDTO>
+    }
+
+    class ItemRecommendationServiceImpl <<Service>> {
+        - songRecommendationService : SongRecommendationService
+        - genreRecommendationService : GenreRecommendationService
+        - instrumentGenreRecommendationService : InstrumentGenreRecommendationService
+        - lessonRecommendationService : LessonRecommendationService
+        - dtoMapper : DtoMapper
+    }
+    note top of ItemRecommendationServiceImpl
+        Junta los cuatro resultados en un LinkedHashSet<Item>
+        (sin duplicados): canciones / géneros /
+        instrument-genres / lecciones
+        - lista: 10 / 1 / 3 / 6
+        - usuario (Inicio): 6 / 1 / 2 / 3
+        En los dos casos Collections.shuffle para mezclar
+        los tipos; después DtoMapper.itemsToItemDTOs
+        (DTO de cada subtipo)
+    end note
+
+    interface SongRecommendationService <<interface>> {
+        + findForItemList(id : Long, limit : int) : SequencedSet<Song>
+        + findForUser(id : Long, limit : int) : SequencedSet<Song>
+    }
+    interface GenreRecommendationService <<interface>> {
+        + findForItemList(id : Long, limit : int) : SequencedSet<Genre>
+        + findForUser(id : Long, limit : int) : SequencedSet<Genre>
+        + findMostUsedInItemListsForUser(id : Long, limit : int) : SequencedSet<Genre>
+    }
+    interface InstrumentGenreRecommendationService <<interface>> {
+        + findForItemList(id : Long, limit : int) : SequencedSet<InstrumentGenre>
+        + findForUser(id : Long, limit : int) : SequencedSet<InstrumentGenre>
+        + findFavouriteCombinationsForUser(id : Long, limit : int) : SequencedSet<InstrumentGenre>
+    }
+    interface LessonRecommendationService <<interface>> {
+        + findForItemList(id : Long, limit : int) : SequencedSet<Lesson>
+        + findForUser(id : Long, limit : int) : SequencedSet<Lesson>
+        + findForGenre(id : Long, limit : int) : List<LessonDTO>
+    }
+}
+
+class "utils.mapper.DtoMapper" as DtoMapper <<Component>> <<ver DCD-03a>>
+
+ItemRecommendationService <|.. ItemRecommendationServiceImpl
+ItemRecommendationServiceImpl --> SongRecommendationService
+ItemRecommendationServiceImpl --> GenreRecommendationService
+ItemRecommendationServiceImpl --> InstrumentGenreRecommendationService
+ItemRecommendationServiceImpl --> LessonRecommendationService
+ItemRecommendationServiceImpl --> DtoMapper
+
+' Solo para apilar las interfaces en una columna y DtoMapper debajo (si no, el diagrama es
+' demasiado ancho)
+SongRecommendationService -[hidden]down- GenreRecommendationService
+GenreRecommendationService -[hidden]down- InstrumentGenreRecommendationService
+InstrumentGenreRecommendationService -[hidden]down- LessonRecommendationService
+LessonRecommendationService -[hidden]down- DtoMapper
+
+@enduml

@@ -1,0 +1,78 @@
+@startuml DCA-02b
+title DCA-02b - Diagrama de clases de análisis: fronteras\ny controles (listas y catálogo)
+
+' Vista BCE en cinco partes: DCA-02a cuenta y perfil; DCA-02b listas y catálogo;
+' DCA-02c recomendaciones y Spotify; DCA-02d canciones y géneros; DCA-02e afinador
+' y metrónomo. Los controles de otra parte aparecen vacíos con <<ver DCA-02x>>.
+' Las operaciones de los controles salen de los diagramas de secuencia de los casos de uso
+' (diagrams/use_cases); entre corchetes, las entidades de DCA-01a/01b/01c que maneja cada uno.
+' Fuentes: frontend/src/screens, hooks, repositories (item, itemList), services/cloudinary.service.ts.
+skinparam roundcorner 6
+skinparam classAttributeIconSize 0
+skinparam nodesep 20
+skinparam ranksep 40
+skinparam class {
+    BackgroundColor<<boundary>> #E3F0FF
+    BorderColor<<boundary>> #3D6FA8
+    BackgroundColor<<control>> #E6F5E6
+    BorderColor<<control>> #3C8A3C
+}
+hide empty members
+left to right direction
+
+package "Fronteras con el músico" {
+    class CatalogoView <<boundary>>
+    class AnadirItemsScreen <<boundary>>
+    class ListaScreen <<boundary>>
+    class LeccionScreen <<boundary>>
+}
+
+package "Controles" {
+    class GestorCatalogo <<control>> {
+        [Item, Lesson, LessonSection]
+        --
+        filtrarEnMemoriaLocal(query, tipo)
+        solicitarDetalleCompleto(id)
+    }
+    class GestorListas <<control>> {
+        [ItemList, Item, User]
+        --
+        obtenerListas(userId)
+        crearLista(userId, nombre)
+        actualizarLista(id, nombre)
+        cambiarImagenLista(id, imagen)
+        eliminarLista(id)
+        anadirItem(listId, itemId)
+        eliminarItem(listId, itemId)
+    }
+    class MotorRecomendacion <<control>> <<ver DCA-02c>>
+    class GestorSpotifyAuth <<control>> <<ver DCA-02c>>
+}
+
+package "Fronteras con\nsistemas externos" {
+    class ServicioImagenesGateway <<boundary>>
+}
+
+' Frontera -> control
+CatalogoView --> GestorCatalogo
+CatalogoView --> GestorListas : añadir a lista\ndesde el\nbuscador
+CatalogoView --> GestorSpotifyAuth : vincular\nSpotify
+AnadirItemsScreen --> GestorCatalogo : búsqueda
+AnadirItemsScreen --> GestorListas
+AnadirItemsScreen --> MotorRecomendacion : "Para ti"
+ListaScreen --> GestorListas
+LeccionScreen --> GestorCatalogo
+
+' Control -> sistemas externos
+GestorListas -[norank]-> ServicioImagenesGateway : sube la\nimagen\n(Cloudinary)
+
+note bottom of CatalogoView
+    No hay un buscador global:
+    cada pestaña de exploración
+    (Aprender, Canciones, Géneros)
+    tiene su barra de búsqueda y
+    filtra en local el catálogo
+    de su tipo de ítem.
+end note
+
+@enduml

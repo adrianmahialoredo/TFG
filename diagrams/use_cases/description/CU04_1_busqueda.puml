@@ -1,0 +1,60 @@
+@startuml DS-CU-04-1
+title DS-CU-04 (1/2) - Explorar catálogo de ítems:\npestañas y búsqueda
+
+' Diagrama de secuencia de análisis (patrón Boundary-Control-Entity)
+' Fuentes: SongsScreen.tsx, LearnScreen.tsx, GenresScreen.tsx, useCatalogSearch.ts, useGenres.ts,
+' search.utils.ts, SearchResults.tsx, item.repository.ts
+' Partes: (1/2) este; (2/2) detalle de un ítem (CU04_2_detalle.puml).
+autonumber
+hide footbox
+skinparam sequenceMessageAlign center
+skinparam roundcorner 6
+skinparam maxMessageSize 130
+skinparam wrapWidth 170
+skinparam ParticipantPadding 2
+skinparam BoxPadding 2
+skinparam defaultFontSize 12
+
+actor "Músico" as musico
+boundary "CatalogoView" as pantalla
+control "GestorCatalogo" as gestor
+entity "ItemResumen\nLocal" as resumen
+
+musico -> pantalla : abrirExploracion(Canciones | Aprender | Géneros)
+pantalla -> gestor : obtenerCatalogo()
+gestor -> resumen : obtenerTodos()
+resumen --> gestor : ItemSummaryDTO[]
+gestor --> pantalla : itemsPorTipo
+pantalla --> musico : mostrarCarruselesDeLaPestana()
+
+loop Por cada cambio en la barra de búsqueda
+    musico -> pantalla : ingresarTextoBusqueda(query)
+    pantalla -> gestor : filtrarEnMemoriaLocal(query, tipo)
+    note right of gestor
+        Sin peticiones HTTP.
+        Cada pestaña busca un solo tipo:
+        Canciones: canciones por título,
+        artista, género, instrumento y década
+        Aprender: lecciones por título,
+        género e instrumento
+        (sin mayúsculas, tildes,
+        espacios ni signos)
+        Géneros: géneros por título
+        (solo ignora mayúsculas)
+    end note
+    gestor -> resumen : obtenerTodos(tipo)
+    resumen --> gestor : ItemSummaryDTO[]
+    gestor --> pantalla : coincidencias agrupadas
+
+    alt 4a. Sin coincidencias
+        pantalla --> musico : mostrarAviso("No hay canciones/lecciones que coincidan con tu búsqueda")
+        note right of pantalla : En Géneros la lista\nqueda vacía, sin aviso
+    else Hay coincidencias
+        pantalla --> musico : mostrarCoincidencias(grupos "Por título / artista / género / instrumento / década")
+        note right of pantalla : Cada ítem en un solo\ngrupo (el de más\nprioridad); dentro,\nprimero los que\nempiezan por la\nbúsqueda
+    end
+end
+
+note over musico, pantalla : Al elegir un ítem:\nDS-CU-04 (2/2)
+
+@enduml

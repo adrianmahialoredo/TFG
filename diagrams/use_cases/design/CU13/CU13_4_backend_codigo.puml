@@ -1,0 +1,46 @@
+@startuml DSD-CU-13-4
+title DSD-CU-13 (4/5) - Recuperar contraseña:\nenvío del código (backend)
+
+' Lo que hace el backend en POST /api/auth/password-reset/code (DSD-CU-13 1/5).
+' Fuentes: AuthController.java, EmailVerificationServiceImpl.java, EmailServiceImpl.java,
+' UserRepository.java, PasswordResetCodeDto.java (VerificationCodeRequestDto).
+' Notas:
+'  - /api/auth/** es público (SecurityConfig). @Valid: email con formato (400 con errors.campo).
+'  - Los códigos de recuperación viven en memoria en su propio mapa (resetCodes), separado de
+'    los del registro, con las mismas reglas (6 dígitos con SecureRandom, 10 min, 5 intentos,
+'    60 s entre envíos). 429 con ResponseStatusException.
+'  - Emails con y sin cuenta reciben las mismas respuestas (204, 429 si se repite antes de 60 s,
+'    "Invalid verification code" al comprobar un código): sin cuenta se guarda un código que
+'    no se envía, así no se puede averiguar qué emails están registrados.
+'  - El envío va en applicationTaskExecutor con la plantilla password-reset (.html y .txt). Si
+'    falla, se descarta ese código (resetCodes.remove(key, pending)).
+!include ../_estilo.iuml
+
+participant "App" as app
+box "Backend" #FFF9F0
+    participant "Auth\nController" as ctrl
+    participant "EmailVerification\nServiceImpl" as verification
+    participant "User\nRepository" as userRepo
+    participant "Email\nServiceImpl" as emailService
+end box
+participant "SMTP" as smtp
+
+app -> ctrl : sendPassword\nResetCode\n(@Valid dto)
+ctrl -> verification : sendPassword\nResetCode(email)
+verification -> verification : ensureCooldown\nElapsed(resetCodes,\nkey)
+alt Código previo de\nhace menos de 60 s
+    verification --> ctrl : ResponseStatus\nException(429)
+    ctrl --> app : 429 Too Many\nRequests
+else
+    verification -> userRepo : existsByEmail\nIgnoreCase(key)
+    alt Sin cuenta
+        verification -> verification : resetCodes.put(key,\ncódigo que no\nse envía)
+    else Hay cuenta
+        verification -> verification : issueCode(resetCodes,\nkey, sender)
+        verification ->> emailService : sendPassword\nResetCode(email,\ncode, 10)
+        emailService -> smtp : plantilla\npassword-reset
+    end
+    verification --> ctrl : void
+    ctrl --> app : 204 No Content\n(igual en los\ndos casos)
+end
+@enduml

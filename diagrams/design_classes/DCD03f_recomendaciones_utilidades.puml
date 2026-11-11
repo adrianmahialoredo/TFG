@@ -1,0 +1,69 @@
+@startuml DCD-03f
+title DCD-03f - Diagrama de clases de diseño: motor de recomendaciones (6/6) -\nutilidades y constantes
+
+' Continuación de DCD-03e: utilidades y constantes que usan los subservicios
+' (y los rankings de ItemList / User).
+' Seis partes: DCD-03a controlador; DCD-03b servicio combinador e interfaces;
+' DCD-03c/d implementaciones de los subservicios (canciones y géneros / itinerarios y
+' lecciones); DCD-03e rankings de dominio; DCD-03f utilidades y constantes.
+' Las recomendaciones de Spotify están en DCD-04. Reglas: architecture.md §8 y
+' recommendations.md.
+' Fuentes: utils/Utils.java, utils/RecommendationConstants.java
+skinparam classAttributeIconSize 0
+skinparam roundcorner 6
+skinparam nodesep 20
+skinparam ranksep 45
+skinparam packageStyle rectangle
+skinparam class {
+    BackgroundColor<<Service>> #E6F5E6
+    BorderColor<<Service>> #3C8A3C
+    BackgroundColor<<entity>> #FFF4E0
+    BorderColor<<entity>> #B07A1F
+    BackgroundColor<<Component>> #F3F3F3
+}
+hide empty members
+
+class "SongRecommendationServiceImpl\n(y Genre-, InstrumentGenre-,\nLessonRecommendationServiceImpl)" as XImpl <<Service>> <<ver DCD-03c/d>>
+
+package "utils" {
+    class Utils {
+        + {static} getTopNMostRepeated(items : List<T>, n : int) : List<T>
+        + {static} idsToExclude(ids : Collection<Long>) : Collection<Long>
+        + {static} resolvePageable(limit : Integer) : Pageable
+    }
+    class RecommendationConstants <<final>> {
+        + {static} N_ITEM_LISTS_TO_EXCLUDE_FROM_RECOMMENDATIONS : int = 3
+        + {static} N_RECOMMENDED_SONGS : int = 10
+        + {static} N_RECOMMENDED_GENRES : int = 1
+        + {static} N_RECOMMENDED_INSTRUMENT_GENRES : int = 3
+        + {static} N_RECOMMENDED_LESSONS : int = 6
+        + {static} N_HOME_RECOMMENDED_SONGS : int = 6
+        + {static} N_HOME_RECOMMENDED_GENRES : int = 1
+        + {static} N_HOME_RECOMMENDED_INSTRUMENT_GENRES : int = 2
+        + {static} N_HOME_RECOMMENDED_LESSONS : int = 3
+        + {static} N_SPOTIFY_RECOMMENDED_SONGS : int = 6
+        + {static} N_SPOTIFY_RECOMMENDED_LESSONS : int = 3
+        + {static} N_SPOTIFY_RECOMMENDED_INSTRUMENT_GENRES : int = 2
+        + {static} N_SPOTIFY_RECOMMENDED_GENRES : int = 1
+        {field} ...
+    }
+    note bottom of RecommendationConstants
+        Nomenclatura (N = número de):
+        N_[CONTEXTO_]RECOMMENDED_<ITEMS>:
+          cuántos devuelve una recomendación.
+        N_<ITEMS>_USED_IN_[CONTEXTO_]<TIPO>_RECOMMENDATION:
+          cuántos usa un algoritmo.
+        DEFAULT_N_... / MAX_N_...: valor por
+          defecto y máximo de un parámetro.
+        Las N_SPOTIFY_* las usa
+        SpotifyRecommendationServiceImpl (DCD-04).
+    end note
+}
+
+XImpl ..> RecommendationConstants
+XImpl ..> Utils
+
+' Solo para apilar (si no, el diagrama es demasiado ancho)
+Utils -[hidden]down- RecommendationConstants
+
+@enduml

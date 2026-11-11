@@ -1,23 +1,24 @@
 @startuml DSD-CU-07-2
-title DSD-CU-07 (2/5) - Gestionar listas de estudio: crear lista (app)
+title DSD-CU-07 (2/6) - Gestionar listas de estudio: crear lista (app)
 
 ' Fuentes: frontend/src/screens/ProfileScreen.tsx (handleCreateList, CreateListMiniModal),
 ' hooks/useItemLists.ts, repositories/itemList.repository.ts, services/itemList.service.ts.
-' Backend en DSD-CU-07 (5/5).
+' Backend en DSD-CU-07 (5/6 y 6/6). itemListService (Nivel 1) no tiene línea de vida: la flecha
+' a la API es su llamada.
 ' - Crear una lista solo pide el nombre; la imagen se añade después desde ListScreen
-'   (subida a Cloudinary + PUT, DSD-CU-07 3/5). Tras crearla, la app navega a ListScreen.
+'   (subida a Cloudinary + PUT, DSD-CU-07 3/6). Tras crearla, la app navega a ListScreen
+'   (navigate('ListScreen', { itemListId: created.id })), que muestra la lista nueva (vacía).
+' - hydrateItemLists guarda en RAM y disco, sin recargar las listas de la red.
 !include ../_estilo.iuml
 
 actor "Músico" as actor
 box "App (React Native)" #F3F8FF
-    participant "ProfileScreen\n<<Nivel 7>>" as profile
-    participant "ListScreen\n<<Nivel 7>>" as listScreen
+    participant "ProfileScreen\n(-> ListScreen)\n<<Nivel 7>>" as profile
     participant "useItemLists\n<<Nivel 6>>" as useLists
-    participant "itemListRepository\n<<Nivel 3>>" as repo
-    participant "useItemListEntitiesStore\n<<Nivel 4>>" as store
-    participant "itemListService\n<<Nivel 1>>" as service
+    participant "itemList\nRepository\n<<Nivel 3>>" as repo
+    participant "useItemList\nEntitiesStore\n<<Nivel 4>>" as store
 end box
-participant "API REST\n(backend)" as api
+participant "API REST" as api
 
 actor -> profile : pulsa "Crear lista" e introduce el nombre
 profile -> profile : handleCreateList()
@@ -26,21 +27,16 @@ alt Nombre de menos de 2 caracteres
 else Nombre válido
     profile -> useLists : createList({ name })
     useLists -> repo : createItemList({ name, userId })
-    repo -> service : createItemList(payload)
-    service -> api : POST /api/item-lists\n{ userId, name, itemIds: [] }
+    repo -> api : itemListService\n.createItemList(\npayload): POST /api/item-lists { userId, name, itemIds: [] }
     alt Creada
-        api --> service : 201 Created ItemListDTO
-        service --> repo : ItemListDTO
-        repo -> repo : hydrateItemLists([created])
-        repo -> store : setItemLists([created])
-        note right of store : RAM + disco, sin recargar\nlas listas de la red
+        api --> repo : 201 Created ItemListDTO
+        repo -> repo : hydrateItemLists(\n[created])
+        repo -> store : setItemLists(\n[created])
         repo --> useLists : created
         useLists --> profile : created
-        profile -> listScreen : navigate('ListScreen', { itemListId: created.id })
-        listScreen --> actor : muestra la lista nueva (vacía)
+        profile --> actor : navigate a ListScreen: muestra la lista nueva (vacía)
     else Error (403 no es tuya, 400, 401, sin red)
-        api --> service : 4xx / error de red
-        service --> repo : throw
+        api --> repo : 4xx / error de red (throw)
         repo --> useLists : null
         useLists --> profile : null
         profile --> actor : "No se pudo crear la lista"

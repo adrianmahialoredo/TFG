@@ -1,0 +1,48 @@
+@startuml DS-CU-09-5
+title DS-CU-09 (5/5) - Consultar recomendaciones adaptativas:\n"Basado en tu Spotify": ítems del carrusel
+
+' Diagrama de secuencia de análisis (patrón Boundary-Control-Entity)
+' Fuentes: HomeScreen.tsx (SPOTIFY_TITLE), useHomeItems.ts, itemFeed.repository.ts,
+' SpotifyRecommendationController.java, SpotifyRecommendationServiceImpl.java,
+' SpotifyAuthServiceImpl.getValidAccessToken, RecommendationConstants.java
+' Partes: (1/5) petición y nivel del algoritmo (CU09_1_recomendaciones.puml); (2/5) cupo por
+' tipo y resultado (CU09_2_cupo.puml); (3/5) artistas favoritos (CU09_3_artistas.puml);
+' (4/5) "Basado en tu Spotify": token y tops (CU09_4_spotify.puml); (5/5) "Basado en tu
+' Spotify": ítems del carrusel (CU09_5_spotify_items.puml).
+autonumber
+hide footbox
+skinparam sequenceMessageAlign center
+skinparam roundcorner 6
+skinparam maxMessageSize 130
+skinparam wrapWidth 170
+skinparam ParticipantPadding 2
+skinparam BoxPadding 2
+skinparam defaultFontSize 12
+
+actor "Músico" as musico
+boundary "Recomendaciones\nView" as vista
+control "Motor\nRecomendacion" as motor
+entity "Usuario" as usuario
+entity "Item" as item
+
+note over vista, motor : Viene de DS-CU-09 (4/5): canciones\nde Spotify que existen en la app
+
+alt 15a. Ninguna canción de Spotify está en la app
+    motor --> vista : sin ítems
+    vista --> musico : mostrarAvisoSinRecomendaciones()
+    note right of vista : "Escucha música en\nSpotify para que te\nrecomendemos canciones,\nlecciones y géneros"
+else Hay canciones
+    motor -> motor : calcularTopGenerosEInstrumentos(canciones)
+    motor -> item : buscarLecciones(géneros, 3, filtrarExclusiones(idsEnListas))
+    item --> motor : lecciones
+    motor -> item : buscarInstrumentGenres(topGéneros, topInstrumentos, 2, filtrarExclusiones(idsEnListas))
+    item --> motor : instrument-genres
+    motor -> usuario : obtenerGenerosEn3OMasListas()
+    usuario --> motor : géneros excluidos
+    motor -> motor : elegirGeneroMasRepetidoNoExcluido()
+    motor -> motor : unificarYBarajar()
+    motor --> vista : retornarItemsPolimorficos()
+    vista --> musico : mostrarCarrusel("Basado en tu Spotify")
+end
+
+@enduml

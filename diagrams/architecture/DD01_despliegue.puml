@@ -1,5 +1,5 @@
-@startuml DD-01
-title DD-01 - Diagrama de despliegue del sistema (producción)
+@startuml DD-01-1
+title DD-01 (1/2) - Despliegue (producción): móvil y servicios que usa la app
 
 ' Despliegue real de la aplicación publicada. Datos tomados del proyecto:
 '   - frontend/package.json, app.json y eas.json: Expo SDK 58, React Native 0.88.1,
@@ -18,9 +18,11 @@ title DD-01 - Diagrama de despliegue del sistema (producción)
 '     (applicationTaskExecutor).
 ' El entorno de desarrollo (backend y PostgreSQL en localhost, development build
 ' con Metro) no se dibuja.
+' Dos partes para que quepa en una página: (1/2) el móvil y lo que usa directamente la app;
+' (2/2) el backend en Render y sus servicios (DD01_despliegue_2.puml).
 skinparam roundcorner 6
-skinparam nodesep 50
-skinparam ranksep 70
+skinparam nodesep 12
+skinparam ranksep 40
 skinparam defaultTextAlignment center
 skinparam node {
     BackgroundColor<<device>> #F3F8FF
@@ -45,6 +47,10 @@ skinparam ArrowColor #555555
 ' Cliente
 ' ---------------------------------------------------------------------
 
+cloud "Expo EAS Build" as eas {
+    artifact "APK\n(perfil preview)" as apk
+}
+
 node "Móvil Android" <<device>> as phone {
     node "React Native\n(Expo SDK 58, RN 0.88.1)" <<executionEnvironment>> as rn {
         artifact "TOCO app\n(APK com.uo289390.toco)" as app
@@ -54,39 +60,17 @@ node "Móvil Android" <<device>> as phone {
     component "Micrófono" <<hardware>> as mic
 }
 
-app --> async
-app --> mic : react-native-audio-api\n(afinador)
-app ..> browser : abre la URL de\nautorización de Spotify
-
-cloud "Expo EAS Build" as eas {
-    artifact "APK\n(perfil preview)" as apk
-}
 apk ..> app : <<deploy>>\ninstalación
+app --> async
+app --> mic : react-native-\naudio-api\n(afinador)
+app ..> browser : abre la URL\nde autorización\nde Spotify
 
 ' ---------------------------------------------------------------------
-' Backend en Render
+' Servicios externos que usa la app (el backend se detalla en DD-01 2/2)
 ' ---------------------------------------------------------------------
 
-cloud "Render (plan free, frankfurt)" as render {
-    node "Proxy HTTPS :443\n(terminación TLS)" <<executionEnvironment>> as proxy
-    node "Contenedor Docker\n(eclipse-temurin:23-jre)" <<executionEnvironment>> as docker {
-        node "Tomcat embebido\n:${PORT}" <<executionEnvironment>> as tomcat {
-            artifact "app.jar\n(TOCO-0.0.1-SNAPSHOT.jar,\nSpring Boot 3.4.3)" as jar
-        }
-    }
-}
-proxy --> tomcat : HTTP
-
-' ---------------------------------------------------------------------
-' Servicios externos
-' ---------------------------------------------------------------------
-
-cloud "Neon" as neon {
-    database "PostgreSQL" as pg
-}
-
-cloud "Brevo" as brevo {
-    component "SMTP\nsmtp-relay.brevo.com:2525" as smtp
+cloud "Render" as render {
+    node "toco-backend\n(ver DD-01 2/2)" <<executionEnvironment>> as backend
 }
 
 cloud "Cloudinary" as cloudinary {
@@ -94,26 +78,21 @@ cloud "Cloudinary" as cloudinary {
 }
 
 cloud "YouTube" as youtube {
-    component "Reproductor embebido" as youtube_player
+    component "Reproductor\nembebido" as youtube_player
 }
 
 cloud "Spotify" as spotify {
     component "Spotify Accounts\n(accounts.spotify.com)" as spotify_accounts
-    component "Spotify Web API\n(api.spotify.com)" as spotify_api
 }
 
-' ---------------------------------------------------------------------
-' Comunicaciones
-' ---------------------------------------------------------------------
+' Solo para colocar: Cloudinary y YouTube debajo de Spotify y Render (si no, la fila es muy ancha)
+spotify_accounts -[hidden]down- cloudinary_api
+backend -[hidden]down- youtube_player
 
-app --> proxy : HTTPS :443 / JSON REST\nAuthorization: Bearer <JWT>
-jar --> pg : JDBC sobre TLS\n(sslmode=require, HikariCP máx. 10)
-jar --> smtp : SMTP STARTTLS\n(código de verificación, asíncrono)
-jar --> spotify_accounts : HTTPS :443\nOAuth2 (tokens)
-jar --> spotify_api : HTTPS :443\nREST (Bearer de Spotify)
-browser --> spotify_accounts : HTTPS :443\nAuthorization Code Flow
-browser --> proxy : HTTPS (redirect_uri)\nGET /api/spotify/callback
-app --> cloudinary_api : HTTPS :443\n(subida directa de imágenes\nde perfil y de listas)
-app --> youtube_player : HTTPS :443\n(vídeos de canciones,\nlecciones y géneros)
+app --> backend : HTTPS :443\nJSON REST\nBearer <JWT>
+browser --> spotify_accounts : HTTPS :443\nAuthorization\nCode Flow
+browser --> backend : HTTPS (redirect_uri)\nGET /api/spotify/\ncallback
+app --> cloudinary_api : HTTPS :443\n(subida\ndirecta de\nimágenes de\nperfil y listas)
+app --> youtube_player : HTTPS\n:443\n(vídeos de\ncanciones,\nlecciones\ny géneros)
 
 @enduml

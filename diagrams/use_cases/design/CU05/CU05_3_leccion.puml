@@ -1,0 +1,43 @@
+@startuml DSD-CU-05-3
+title DSD-CU-05 (3/5) - Consultar canción: lección mostrada y dificultad (app)
+
+' Fuentes: screens/SongScreen.tsx, components/InstrumentCarousel.tsx, OptionSelector.tsx,
+' DifficultyStars.tsx, YoutubeVideo.tsx; hooks/useSong.ts, useInstruments.ts;
+' stores/ui/songScreen.store.ts; constants/Preferences.ts; utils/song.utils.ts.
+' Además del análisis: elección de la lección inicial según los instrumentos favoritos y el
+' nivel del usuario. Todo se deriva con useMemo de las Entity Stores ya cargadas en
+' DSD-CU-05 (1/5 y 2/5): sin peticiones.
+!include ../_estilo.iuml
+
+actor "Músico" as actor
+box "App (React Native)" #F3F8FF
+    participant "SongScreen\n<<Nivel 7>>" as screen
+    participant "useSong\n<<Nivel 6>>" as hook
+    participant "useSongScreen\nStore <<Nivel 5>>" as uiStore
+    participant "Entity Stores\n<<Nivel 4>>" as stores
+end box
+
+hook -> stores : songs[songId], songLessons, chords, tabSections (selectores) y usuario actual
+hook -> hook : allLessons = song.lessonIds -> SongLessonDTO
+hook -> hook : useMemo: instrumento = el elegido, si no el primer instrumento favorito con lecciones, si no el de la 1.ª lección
+hook -> hook : useMemo: dificultad = la elegida, si no ORIGINAL si nivel >= ORIGINAL_LESSON_MIN_LEVEL (y existe), si no la de la 1.ª lección del instrumento
+hook -> hook : selectedLesson, chords, tabSections, parseLyrics(\nchordedLyrics)
+hook --> screen : { song, selectedLesson, chords, tabSections, availableInstruments, availableDifficulties, parsedLyrics, ... }
+
+alt sin lecciones para la canción
+    screen --> actor : "No hay lecciones disponibles para esta canción"
+else
+    screen --> actor : carátula, título, artista, DifficultyStars, YoutubeVideo(\nvideoUrl), InstrumentCarousel (si hay más de un instrumento), OptionSelector de dificultad, acordes, letra con acordes y tabs
+end
+
+opt 3a. La canción tiene varias dificultades (EASY, MEDIUM, ORIGINAL)
+    actor -> screen : elige dificultad en OptionSelector
+    screen -> hook : changeDifficulty(\ndifficulty)
+    hook -> uiStore : setDifficulty(\ndifficulty)
+    uiStore --> hook : selectedDifficulty
+    hook -> hook : useMemo: nueva selectedLesson, chords, tabSections y parsedLyrics
+    hook --> screen : lección seleccionada
+    screen --> actor : actualiza vídeo, acordes, letra y tablaturas
+end
+
+@enduml

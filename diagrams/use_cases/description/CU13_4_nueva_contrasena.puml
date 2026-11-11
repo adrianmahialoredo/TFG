@@ -1,0 +1,45 @@
+@startuml DS-CU-13-4
+title DS-CU-13 (4/4) - Recuperar contraseña\n("Olvidé mi contraseña"): nueva contraseña
+
+' Diagrama de secuencia de análisis (patrón Boundary-Control-Entity)
+' Fuentes: LoginScreen.tsx, ForgotPasswordScreen.tsx, EmailVerificationModal.tsx, useForgotPassword.ts,
+' auth.service.ts, AuthController.java, EmailVerificationServiceImpl.java, UserServiceImpl.java
+' Partes: (1/4) petición del código (CU13_1_codigo.puml); (2/4) generación y envío del código
+' (CU13_2_envio.puml); (3/4) comprobación del código (CU13_3_comprobar.puml); (4/4) nueva
+' contraseña (CU13_4_nueva_contrasena.puml).
+autonumber
+hide footbox
+skinparam sequenceMessageAlign center
+skinparam roundcorner 6
+skinparam maxMessageSize 130
+skinparam wrapWidth 170
+skinparam ParticipantPadding 2
+skinparam BoxPadding 2
+skinparam defaultFontSize 12
+
+actor "Visitante" as visitante
+boundary "LoginScreen" as login
+boundary "Recuperar\nContrasena\nScreen" as pantalla
+control "Gestor\nAutenticacion" as gestor
+entity "Codigo\nVerificacion\n(recuperación)" as codigo
+entity "Usuario" as usuario
+
+note over visitante, pantalla : Viene de DS-CU-13 (3/4):\ncódigo correcto
+
+visitante -> pantalla : cambiarContrasena(nueva, repetir)
+pantalla -> pantalla : validarPolitica(nueva, repetir)
+alt No coinciden o no cumple la política
+    pantalla --> visitante : mostrarError(primera regla incumplida)
+else Válida
+    pantalla -> gestor : restablecerContrasena(email, código, nueva)
+    note right of gestor : POST /api/auth/\npassword-reset
+    gestor -> codigo : comprobar(email, código)
+    gestor -> usuario : cambiarPassword(hash(nueva))
+    gestor -> codigo : consumir(email)
+    gestor --> pantalla : 204 No Content
+    pantalla --> visitante : mostrarAviso("Contraseña cambiada")
+    pantalla -> login : volver()
+    note right of login : El visitante inicia\nsesión con la nueva\ncontraseña (CU-02)
+end
+
+@enduml

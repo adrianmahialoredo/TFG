@@ -1,0 +1,74 @@
+@startuml DCD-05f
+title DCD-05f - Diagrama de clases de diseño: frontend (React Native),\nnivel 3: repositorio de items y EntityCache
+
+' Partes: DCD-05a niveles 7-5 (pantalla de canción); DCD-05b dependencias de sus hooks con
+' los niveles 4 y 3; DCD-05c nivel 6 (AuthProvider); DCD-05d nivel 4 (Entity Stores);
+' DCD-05e/f/g nivel 3 (repositorios de canciones, de items con EntityCache y de
+' autenticación); DCD-05h nivel 2 (local); DCD-05i nivel 1 (services).
+' Cada recurso (genre, lesson, itemList, tune...) repite el patrón
+' <x>Service -> <x>Local -> <x>Repository -> use<X>EntitiesStore; aquí se muestra
+' el de canciones, el de items (catálogo, feeds, recientes) y el de autenticación.
+' Fuentes: repositories/item.repository.ts, utils/entityCache.utils.ts.
+skinparam classAttributeIconSize 0
+skinparam roundcorner 6
+skinparam nodesep 12
+skinparam ranksep 45
+skinparam packageStyle rectangle
+skinparam class {
+    BackgroundColor<<store>> #F3EAFB
+    BorderColor<<store>> #7A4FA8
+    BackgroundColor<<repository>> #E6F5E6
+    BorderColor<<repository>> #3C8A3C
+    BackgroundColor<<local>> #FFF4E0
+    BorderColor<<local>> #B07A1F
+    BackgroundColor<<service>> #FDF7E3
+    BorderColor<<service>> #B07A1F
+    BackgroundColor<<utils>> #F3F3F3
+    BackgroundColor<<external>> #FFFFFF
+    BorderColor<<external>> #888888
+}
+hide empty members
+
+package "Nivel 3 - Repositories" {
+    class itemRepository <<repository>> {
+        + getCatalog(onFresh?) : Promise<string[]>
+        + getAllById(ids : string[]) : Promise<ItemSummaryDTO[]>
+        + hydrateSummaries(summaries) : string[]
+        + getFeed(cacheKey, fetchIds, onFresh?) : Promise<string[]>
+        + getCustomFeed(cacheKey, load, onFresh?) : Promise<string[]>
+        + markAsAccessed(id : string) : void
+    }
+    class "EntityCache<T>" as EntityCache <<utils>> {
+        + getAllById(ids : string[]) : Promise<T[]>
+        + hydrate(entities : T[], cacheKey?) : string[]
+        + list(cacheKey, fetchList, onFresh?) : Promise<string[]>
+        + idList(cacheKey, fetchIds, onFresh?) : Promise<string[]>
+        + feed(cacheKey, load, onFresh?) : Promise<string[]>
+        + readIndex(cacheKey) : Promise<string[]>
+        + markFresh(ids : string[]) : void
+        + revalidate(ids : string[]) : void
+    }
+    note right of EntityCache
+        utils/entityCache.utils.
+        createEntityCache(config).
+        Por id: RAM -> disco -> API.
+        Listas: índice guardado al
+        instante y la red refresca
+        después avisando con onFresh
+        (stale-while-revalidate).
+    end note
+}
+
+package "Nivel 4 - Entity Stores (ver DCD-05d)" {
+    class "useItemEntitiesStore /\nuseRecentItemsStore" as itemStores <<store>>
+    class "useAuthStore /\nuseUserEntitiesStore /\nuseItemListEntitiesStore" as sessionStores <<store>>
+}
+
+itemRepository --> EntityCache
+itemRepository --> itemStores
+itemRepository --> sessionStores : currentUserId
+
+' Solo para colocar las stores debajo (si no, el diagrama es demasiado ancho)
+EntityCache -[hidden]down- itemStores
+
+@enduml

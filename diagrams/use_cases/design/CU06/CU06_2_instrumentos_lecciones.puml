@@ -1,0 +1,44 @@
+@startuml DSD-CU-06-2
+title DSD-CU-06 (2/8) - Consultar espacio de género: instrumentos, lecciones y descripción (app)
+
+' Sigue a DSD-CU-06 (1/8): las otras dos cargas de useGenreMain (en el mismo
+' Promise.allSettled) y la pestaña "Género". Mismas fuentes y simplificaciones.
+' instrumentGenreRepository.getByGenreId usa cache.list('genre_{genreId}'): con índice guardado
+' devuelve los IDs al instante. Los lessonIds llegan ya ordenados del backend.
+' Promise.allSettled no rechaza: si el género no se carga, genre queda a null y la pestaña sale vacía.
+!include ../_estilo.iuml
+
+actor "Músico" as actor
+box "App (React Native)" #F3F8FF
+    participant "GenreMain\nScreen\n<<Nivel 7>>" as screen
+    participant "useGenreMain\nuseGenre\nDescription\n<<Nivel 6>>" as hooks
+    participant "Repositories\n<<Nivel 3>>" as repos
+    participant "Entity Stores\n<<Nivel 4>>" as stores
+end box
+participant "API REST" as api
+
+group instrumentGenreRepository.getByGenreId(genreId)
+    repos -> api : instrumentGenreService\n.getByGenreId(\ngenreId): GET /api/instrument-genres\n/by-genre/{genreId}
+    api --> repos : 200 List<InstrumentGenreDTO> (lessonIds ya ordenados)
+    repos -> stores : setInstrumentGenres(\nigs) (RAM + disco + índice)
+    opt hay lessonIds
+        repos ->> api : lessonRepository\n.getAllById(\nallLessonIds): POST /api/lessons/by-ids (precarga)
+    end
+end
+
+group lessonRepository.getByGenreId(genreId)
+    repos -> api : lessonService\n.getByGenreId(\ngenreId): GET /api/lessons/by-genre\n/{genreId}
+    api --> repos : 200 List<LessonDTO>
+    repos -> stores : setLessons(lessons) + índice
+end
+
+hooks ->> repos : itemRepository\n.markAsAccessed(\ngenreId)
+repos ->> stores : useRecentItemsStore\n.markAsAccessed(\nuserId, genreId)
+hooks --> screen : { genre, loading, error, selectedTab = 'Género' }
+
+screen -> hooks : useGenreDescription(\ngenreId)
+hooks -> stores : genres[genreId]
+hooks --> screen : { description, bannerUrl, welcomeVideoId, welcomeSongId }
+screen --> actor : pestañas (Instrumentos, Canciones, Género), banner, descripción y vídeos de bienvenida
+
+@enduml

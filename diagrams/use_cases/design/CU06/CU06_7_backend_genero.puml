@@ -1,0 +1,53 @@
+@startuml DSD-CU-06-7
+title DSD-CU-06 (7/8) - Consultar espacio de género: backend (género, instrumentos y lecciones)
+
+' Lo que hace el backend en las peticiones de DSD-CU-06 (1/8 y 2/8).
+' Fuentes: GenreController, InstrumentGenreController, LessonController;
+' Genre/InstrumentGenre/LessonServiceImpl; utils/EntityResolver.java, utils/mapper/DtoMapper.java,
+' model/InstrumentGenre.java.
+' InstrumentGenre.lessons lleva @OrderBy("indexInInstrumentGenre ASC"), y DtoMapper lo vuelca
+' en lessonIds: el cliente no ordena.
+' GenreDTO lleva description, bannerUrl, welcomeIntroVideoId y welcomeSongVideoId;
+' InstrumentGenreDTO, instrumentId, genreId y lessonIds (por indexInInstrumentGenre).
+' DtoMapper (<<mapper>>) no tiene línea de vida: sus llamadas son mensajes del servicio a sí mismo.
+!include ../_estilo.iuml
+
+participant "App\n(services)" as app
+box "Backend (Spring Boot)" #FFF9F0
+    participant "XController\n<<controller>>" as ctrl
+    participant "XServiceImpl\n<<service>>" as svc
+    participant "XRepository /\nEntityResolver" as repo
+end box
+database "PostgreSQL" as db
+
+group GET /api/genres/{id}
+    app -> ctrl : GenreController\n.getById(id)
+    ctrl -> svc : GenreServiceImpl\n.findById(id)
+    svc -> repo : EntityResolver\n.findGenre(id)
+    repo -> db : GenreRepository\n.findById(id)
+    db --> repo : Genre
+    repo --> svc : Optional<Genre>
+    svc -> svc : DtoMapper\n.genreToGenreDto(genre)
+    ctrl --> app : 200 GenreDTO / 404 (ResponseEntity.of)
+end
+
+group GET /api/instrument-genres/by-genre/{genreId}
+    app -> ctrl : InstrumentGenre\nController\n.getForGenre(genreId)
+    ctrl -> svc : InstrumentGenre\nServiceImpl\n.findForGenre(genreId)
+    svc -> repo : InstrumentGenre\nRepository\n.findByGenreId(\ngenreId)
+    repo -> db : SELECT
+    db --> repo : List<InstrumentGenre>
+    svc -> svc : DtoMapper\n.instrumentGenreTo\nInstrumentGenreDto(ig)
+    ctrl --> app : 200 List<InstrumentGenreDTO>
+end
+
+group GET /api/lessons/by-genre/{genreId}
+    app -> ctrl : LessonController\n.getForGenre(genreId)
+    ctrl -> svc : LessonServiceImpl\n.findForGenre(genreId)
+    svc -> repo : LessonRepository\n.findByGenreIdAnd\nBelongsToGenreTrue(\ngenreId)
+    repo -> db : SELECT
+    svc -> svc : DtoMapper\n.lessonToLessonDto(\nlesson)
+    ctrl --> app : 200 List<LessonDTO>
+end
+
+@enduml

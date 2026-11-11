@@ -1,0 +1,37 @@
+@startuml DSD-CU-03-6
+title DSD-CU-03 (6/6) - Configurar perfil:\nfavoritos (backend)
+
+' Lo que hace el backend en POST | DELETE /api/users/{id}/favorite-genres/{genreId}
+' (o favorite-instruments/{instrumentId}) (DSD-CU-03 3/6).
+' Fuentes: UserController.java, OwnershipChecker.java, UserServiceImpl.java, UserRepository.java,
+' utils/EntityResolver.java, DtoMapper.java, GlobalExceptionHandler.java.
+' Mismo @PreAuthorize que en DSD-CU-03 (5/6): ADMIN o el propio usuario; si no, 403.
+' Un id de usuario, género o instrumento inexistente da 404 (EntityNotFoundException de
+' EntityResolver).
+!include ../_estilo.iuml
+
+participant "App\n(services)" as app
+box "Backend (Spring Boot)" #FFF9F0
+    participant "UserController\n<<controller>>" as ctrl
+    participant "OwnershipChecker\n<<security>>" as ownership
+    participant "UserServiceImpl\n<<service>>" as svc
+    participant "UserRepository\nEntityResolver\n(PostgreSQL)" as repo
+end box
+
+group POST | DELETE /api/users/{id}/favorite-genres/{genreId}
+    app -> ctrl : addFavoriteGenre | removeFavoriteGenre(id, genreId)
+    ctrl -> ownership : isSelf(id, authentication)
+    ownership --> ctrl : true (si no, 403)
+    ctrl -> svc : addFavoriteGenre | removeFavoriteGenre(id, genreId)
+    svc -> repo : findUser(id); resolveGenre(genreId) (al añadir)
+    alt Quitar dejaría menos del mínimo
+        svc --> ctrl : IllegalArgumentException ("A user must have at least N favourite genres")
+        ctrl --> app : 400 { message }
+    else
+        svc -> repo : save(user) (UPDATE)
+        svc -> svc : dtoMapper .userToUserDto(saved)
+        ctrl --> app : 200 UserDto (404 si el id no existe)
+    end
+end
+
+@enduml

@@ -1,0 +1,47 @@
+@startuml DSD-CU-13-5
+title DSD-CU-13 (5/5) - Recuperar contraseña:\ncomprobación y cambio (backend)
+
+' Lo que hace el backend en POST /api/auth/password-reset/verify (DSD-CU-13 2/5) y
+' POST /api/auth/password-reset (DSD-CU-13 3/5).
+' Fuentes: AuthController.java, EmailVerificationServiceImpl.java, UserServiceImpl.java,
+' UserRepository.java, PasswordResetCodeDto.java, PasswordResetDto.java.
+' Notas:
+'  - /api/auth/** es público (SecurityConfig). IllegalArgumentException -> 400.
+'    @Valid: email con formato, código no vacío y newPassword con la política del registro
+'    (400 con errors.campo).
+'  - checkPasswordResetCode no consume el código: lo consume el cambio de contraseña al final.
+'  - Si el código falla en POST /api/auth/password-reset: 400 y la contraseña no cambia.
+'  - Un email sin cuenta tiene un código que nunca se envió: responde "Invalid verification
+'    code", igual que un código erróneo de una cuenta.
+!include ../_estilo.iuml
+
+participant "App" as app
+box "Backend" #FFF9F0
+    participant "Auth\nController" as ctrl
+    participant "EmailVerification\nServiceImpl" as verification
+    participant "User\nServiceImpl" as users
+    participant "User\nRepository" as userRepo
+end box
+
+group POST .../verify
+    app -> ctrl : verifyPassword\nResetCode\n(@Valid dto)
+    ctrl -> verification : checkPassword\nResetCode\n(email, code)
+    alt Sin pedir, caducado,\nincorrecto o 5.º fallo
+        verification --> ctrl : IllegalArgument\nException\n(mensaje)
+        ctrl --> app : 400 { message }
+    else Correcto
+        ctrl --> app : 204 No Content
+    end
+end
+
+group POST /api/auth/password-reset
+    app -> ctrl : resetPassword\n(@Valid dto)
+    ctrl -> verification : checkPassword\nResetCode\n(email, code)
+    ctrl -> users : resetPassword(email,\nnewPassword)
+    users -> userRepo : findByEmail\nIgnoreCase(email)
+    users -> users : setPassword\n(encode(\nnewPassword))
+    users -> userRepo : save(user)
+    ctrl -> verification : consumePassword\nResetCode(email)
+    ctrl --> app : 204 No Content
+end
+@enduml

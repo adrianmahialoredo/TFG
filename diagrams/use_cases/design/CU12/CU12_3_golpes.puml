@@ -1,0 +1,57 @@
+@startuml DSD-CU-12-3
+title DSD-CU-12 (3/4) - Metrónomo:\nsonido y golpes (app)
+
+' Continuación de DSD-CU-12 (2/4). Solo frontend.
+' Fuentes: frontend/src/screens/MetronomeScreen.tsx, hooks/useMetronome.ts,
+' components/metronome/(MetronomePulse, MetronomeBeatIndicator, MetronomeActionButton).tsx.
+' Diferencias con el análisis:
+'  - No se puede elegir el compás: es fijo de 4 tiempos (BEATS_PER_BAR = 4), con el primero acentuado.
+'  - El sonido solo alterna entre 'click' y 'hihat' (botón "Hi-Hat").
+'  - El temporizador no es de alta precisión ni de audio: es setTimeout de JS que calcula cada golpe
+'    a partir del instante teórico del anterior (Date.now()), así el retraso no se acumula.
+'  - La animación no va por el estado de la pantalla: se lanza por ref (pulse / setBeat) en cada golpe.
+' Notas:
+'  - Cada golpe: sounds[soundRef].accent (1.er tiempo) o .normal → seekTo(0).then(play()). No
+'    se espera a la reproducción para no retrasar el siguiente golpe.
+'  - La onda de MetronomePulse (Reanimated) es mayor en el 1.er tiempo.
+'  - El siguiente tick se programa desde el instante teórico del golpe anterior, no desde
+'    "ahora": setTimeout(tick, max(0, nextBeatAtRef - Date.now())).
+!include ../_estilo.iuml
+
+actor "Músico" as actor
+box "App" #F3F8FF
+    participant "Metronome\nScreen\n<<Nivel 7>>" as screen
+    participant "Metronome\nPulse\n<<Nivel 7>>" as pulse
+    participant "Metronome\nBeat\nIndicator\n<<Nivel 7>>" as beats
+    participant "use\nMetronome\n<<Nivel 6>>" as metro
+end box
+participant "expo-audio" as audio
+
+opt Alternar Hi-Hat
+    actor -> screen : pulsa "Hi-Hat"
+    screen -> screen : setSound(click\n<-> hihat)
+    screen -> metro : soundRef.current\n= sound
+end
+
+actor -> pulse : toca el círculo\n(play)
+pulse -> screen : onToggle() ->\nhandleToggle()
+screen -> metro : toggle()
+metro -> metro : start(): beatRef = 0;\nnextBeatAtRef = now;\nisPlaying = true
+metro -> metro : tick()
+loop Hasta que se detiene
+    metro -> metro : beatInBar =\nbeatRef % 4
+    alt beatInBar === 0
+        metro ->> audio : accent.play()
+    else
+        metro ->> audio : normal.play()
+    end
+    metro -> screen : onBeat(beatInBar)
+    screen -> pulse : pulse(beatInBar)
+    pulse --> actor : onda
+    screen -> beats : setBeat\n(beatInBar)
+    beats --> actor : ilumina el\ntiempo actual
+    metro -> metro : beatRef += 1;\nnextBeatAtRef +=\n60000 / tempoRef
+    metro ->> metro : timerRef =\nsetTimeout(tick, ...)
+end
+
+@enduml

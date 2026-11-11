@@ -1,0 +1,81 @@
+@startuml DCD-05d
+title DCD-05d - Diagrama de clases de diseño: frontend (React Native),\nnivel 4 (Entity Stores de Zustand)
+
+' Partes: DCD-05a niveles 7-5 (pantalla de canción); DCD-05b dependencias de sus hooks con
+' los niveles 4 y 3; DCD-05c nivel 6 (AuthProvider); DCD-05d nivel 4 (Entity Stores);
+' DCD-05e/f/g nivel 3 (repositorios de canciones, de items con EntityCache y de
+' autenticación); DCD-05h nivel 2 (local); DCD-05i nivel 1 (services).
+' Cada Entity Store es la RAM de un recurso: un Record<id, DTO> y sus setters.
+' Solo la escriben los repositorios (DCD-05e/f/g) y la leen los hooks y el contexto (DCD-05a-c).
+' Las dos únicas stores persistidas (middleware persist de Zustand) son
+' useAuthStore y useRecentItemsStore; el resto se rehidrata desde los <x>Local.
+' Fuentes: frontend/src/stores/entities/*.entities.store.ts.
+skinparam classAttributeIconSize 0
+skinparam roundcorner 6
+skinparam nodesep 8
+skinparam ranksep 50
+skinparam packageStyle rectangle
+skinparam class {
+    BackgroundColor<<store>> #F3EAFB
+    BorderColor<<store>> #7A4FA8
+    BackgroundColor<<external>> #FFFFFF
+    BorderColor<<external>> #888888
+}
+hide empty members
+
+package "Nivel 4 - Entity Stores" {
+    class useSongEntitiesStore <<store>> {
+        songs : Record<string, SongDTO>
+        setSongs(songs : SongDTO[]) : void
+        updateSong(id : string, data : Partial<SongDTO>) : void
+        removeSongs(ids : string[]) : void
+        clearSongs() : void
+    }
+    class "useSongLessonEntitiesStore /\nuseChordEntitiesStore /\nuseTabSectionEntitiesStore /\nuseInstrumentEntitiesStore" as contentStores <<store>> {
+        songLessons / chords / tabSections /\ninstruments : Record<string, T>
+        set<T>s(list : T[]) : void
+    }
+    class useUserEntitiesStore <<store>> {
+        users : Record<string, UserDTO>
+        setUsers(users : UserDTO[]) : void
+        clearUsers() : void
+    }
+    class useItemEntitiesStore <<store>> {
+        items : Record<string, ItemSummaryDTO>
+        setItems(items : ItemSummaryDTO[]) : void
+        clearItems() : void
+    }
+    note right of useItemEntitiesStore : Resúmenes del\ncatálogo y de los\nfeeds; setItems\nfusiona con el\nresumen previo
+
+    class useRecentItemsStore <<store>> {
+        byUser : Record<string, string[]>
+        markAsAccessed(userId : string, itemId : string) : void
+        removeItems(itemIds : string[]) : void
+    }
+    note bottom of useRecentItemsStore : persist (AsyncStorage\n'recent-items-store').\nMáx. 12 IDs por usuario\n(MAX_RECENT_ITEMS), del más\nreciente al más antiguo;\nlas tarjetas se pintan con\nuseItemEntitiesStore
+
+    class useAuthStore <<store>> {
+        token : string | null
+        currentUserId : string | null
+        isAuthenticated : boolean
+        isHydrated : boolean
+        setAuth(token : string, userId : string) : void
+        clearAuth() : void
+        setHydrated(hydrated : boolean) : void
+    }
+    note bottom of useAuthStore : persist (AsyncStorage\n'auth-store'). Al hidratarse\ndescarta el token caducado\ny llama a setHydrated(true).\ncurrentUserId es la clave\nen useUserEntitiesStore
+}
+
+class AsyncStorage <<external>>
+
+' Solo para colocar las stores en dos columnas (si no, el diagrama es demasiado ancho)
+useSongEntitiesStore -[hidden]down- useItemEntitiesStore
+useItemEntitiesStore -[hidden]down- useRecentItemsStore
+useUserEntitiesStore -[hidden]down- contentStores
+contentStores -[hidden]down- useAuthStore
+useAuthStore -[hidden]down- AsyncStorage
+
+useRecentItemsStore -[norank]-> AsyncStorage : persist
+useAuthStore -[norank]-> AsyncStorage : persist
+
+@enduml

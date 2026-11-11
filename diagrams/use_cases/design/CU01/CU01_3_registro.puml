@@ -1,0 +1,61 @@
+@startuml DSD-CU-01-3
+title DSD-CU-01 (3/6) - Registrar usuario:\nregistro con el código (app)
+
+' Fuentes: screens/RegisterScreen.tsx, components/EmailVerificationModal.tsx, hooks/useRegister.ts,
+' context/AuthContext.tsx, repositories/auth.repository.ts, services/auth.service.ts,
+' stores/entities/auth.entities.store.ts, user.entities.store.ts, navigation/AppNavigator.tsx.
+' Backend en DSD-CU-01 (6/6).
+' authRepository (nivel 3) y authService (nivel 1) se dibujan juntos; las llamadas a los
+' stores (nivel 4) y a userLocal (nivel 2, disco) las hace authRepository.
+' La AuthStore se persiste en AsyncStorage ('auth-store', persist sin partialize): token,
+' currentUserId, isAuthenticated e isHydrated. userLocal.saveBatch guarda el usuario en disco.
+' Errores del backend (400) y su mensaje en español (AuthServiceError):
+' - código vacío, no pedido, caducado, incorrecto o 5 fallos: 'El código no es correcto',
+'   'El código ha caducado...'. El modal muestra el error y vacía el campo (puede reintentar
+'   o pedir otro código);
+' - "Email already registered" | "Username already taken": 'Ya existe una cuenta con ese email' |
+'   'Ese nombre de usuario ya está en uso'. El código no se ha consumido: se puede corregir el
+'   usuario y reintentar;
+' - campo inválido (@Validated(OnCreate)), 400 { errors: { campo } }: REGISTER_FIELD_MESSAGES[campo].
+' La precarga del catálogo no la lanza la pantalla de registro, sino el efecto de AuthProvider
+' al guardarse el token: loadInitialData() con itemRepository.getCatalog() en segundo plano
+' (GET /api/items) y genreRepository.getAll() (GET /api/genres), como en DSD-CU-02.
+!include ../_estilo.iuml
+skinparam maxMessageSize 110
+
+actor "Visitante" as actor
+box "App (React Native)" #F3F8FF
+    participant "RegisterScreen\n+ Modal\n<<Nivel 7>>" as screen
+    participant "useRegister\n<<Nivel 6>>" as hook
+    participant "Stores\n+ userLocal\n<<Niveles 4 y 2>>" as store
+    participant "authRepository\n→ authService\n<<Niveles 3 y 1>>" as service
+end box
+participant "API REST\n(backend)" as api
+
+actor -> screen : escribe el código de 6 dígitos
+screen -> screen : handleChange(value): 6 cifras -> onSubmit(code)
+screen -> hook : handleCodeSubmit(code) -> register(form, code)
+hook -> hook : validate(form)
+hook -> service : register({ ...form, email: email.trim() }, code) (quita confirmPassword)
+service -> api : POST /api/auth/register { email, username, name, password, favouriteGenresIds, favouriteInstrumentsIds, verificationCode }
+
+alt Código erróneo, email o usuario en uso, o campo inválido
+    api --> service : 400 { message } o { errors }
+    service --> hook : AuthServiceError(mensaje en español, 400)
+    hook --> screen : throw
+    screen -> screen : setCodeError(error.message)
+    screen --> actor : el modal muestra el error
+else Registro correcto
+    api --> service : 201 Created LoginResponse { token, user }
+    service -> store : useUserEntitiesStore .setUsers([user])
+    service -> store : userLocal .saveBatch([user])
+    service -> store : useAuthStore .setAuth(token, userId)
+    service --> hook : { token, user }
+    hook --> screen : { token, user }
+    screen -> screen : setVerifying(false)
+    screen --> actor : showAlert({ title: 'Exito', message: 'Creando tu perfil musical...' })
+    store ->> screen : isAuthenticated = true
+    screen --> actor : AppNavigator cambia a BottomTab (sin navegar a mano)
+end
+
+@enduml

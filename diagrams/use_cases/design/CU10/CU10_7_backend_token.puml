@@ -1,0 +1,74 @@
+@startuml DSD-CU-10-7
+title DSD-CU-10 (7/7) - Vincular Spotify:\nusuario y renovación del token (backend)
+
+' Lo que hace el backend en las peticiones de la vuelta a la app (DSD-CU-10 3/7 y 4/7).
+' Fuentes: UserController.java, UserServiceImpl.java, DtoMapper.java,
+' SpotifyRecommendationController.java, SpotifyRecommendationServiceImpl.java,
+' SpotifyAuthServiceImpl.java, SpotifyUserRepository.java.
+' Notas de diseño:
+'  - GET /api/users/{id} (@ownership.isSelf): UserController.getById -> UserServiceImpl.findById
+'    -> userRepository.findById -> DtoMapper.userToUserDto: UserDto con spotifyConnected =
+'    user.getSpotifyUser() != null. 200 UserDto / 404.
+'  - GET /api/spotify/recommendations/items | songs/{userId}: getItemsForUser(userId) |
+'    getSongsForUser(userId, limit) -> findItemsForUser | findSongsForUser
+'    (@Transactional(readOnly = true)) -> authorizedRequest(userId) -> getValidAccessToken(userId).
+'  - getValidAccessToken(userId) no lo invoca el flujo de vinculación: lo llama
+'    SpotifyRecommendationServiceImpl (authorizedRequest) cada vez que consulta la API de Spotify.
+'  - Es @Transactional(propagation = REQUIRES_NEW): el llamante es de solo lectura y no
+'    guardaría el token renovado.
+'  - El token es válido si caduca en más de 1 min (dura 1 h). Renovación: POST /api/token con
+'    Basic(client_id, client_secret) y { grant_type=refresh_token, refresh_token }; responde
+'    { access_token, expires_in, [refresh_token] }: setAccessToken, setTokenExpiration y
+'    setRefreshToken solo si llega uno nuevo.
+'  - Si Spotify rechaza la renovación (acceso revocado, 4xx, 400 invalid_grant):
+'    IllegalStateException ("Vuelve a vincular tu cuenta"). Un 5xx o error de red también da
+'    IllegalStateException ("Inténtalo más tarde"), pero se conserva la vinculación.
+'  - Después: GET /v1/me/top/tracks | /v1/me/top/artists ?limit&time_range (Bearer accessToken)
+'    y DtoMapper (songToSongDto | item DTOs): 200 List<ItemDTO> | List<SongDTO>.
+!include ../_estilo.iuml
+
+participant "App" as app
+box "Backend" #FFF9F0
+    participant "User /\nSpotifyRec.\nController" as ctrl
+    participant "User /\nSpotifyRec.\nServiceImpl" as svc
+    participant "Spotify\nAuth\nServiceImpl" as auth
+    participant "Repos /\nDtoMapper" as repo
+end box
+participant "Spotify\n<<externo>>" as spotify
+
+group GET /api/users/{id}
+    app -> ctrl : getById(id)
+    ctrl -> svc : findById(id)
+    svc -> repo : findById(id);\nuserToUserDto
+    ctrl --> app : 200 UserDto\n{ spotifyConnected }\n/ 404
+end
+
+group GET .../spotify/recommendations/...
+    app -> ctrl : getItems / Songs\nForUser(userId)
+    ctrl -> svc : findItems /\nSongsForUser
+    svc -> auth : getValidAccess\nToken(userId)
+    activate auth
+    auth -> repo : findByUserId\n(userId)
+    alt Sin cuenta vinculada
+        auth --> svc : EntityNotFound\nException (404)
+    else Token válido
+        auth --> svc : accessToken
+    else 9a. Caducado o\na punto de caducar
+        auth -> spotify : POST /api/token\n(refresh_token)
+        alt Rechaza la renovación
+            spotify --> auth : 400 invalid_grant
+            auth --> svc : IllegalState\nException
+        else Renovado
+            spotify --> auth : { access_token,\nexpires_in }
+            auth -> repo : save\n(spotifyUser)
+            auth --> svc : nuevo\naccessToken
+        end
+    end
+    deactivate auth
+    svc -> spotify : GET /v1/me/top/\ntracks | artists
+    spotify --> svc : tops del usuario
+    svc -> repo : DtoMapper
+    ctrl --> app : 200 List<ItemDTO>\n| List<SongDTO>
+end
+
+@enduml

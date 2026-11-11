@@ -1,0 +1,62 @@
+@startuml DS-CU-09-3
+title DS-CU-09 (3/5) - Consultar recomendaciones adaptativas:\nartistas favoritos (solo en Inicio)
+
+' Diagrama de secuencia de análisis (patrón Boundary-Control-Entity)
+' Fuentes: HomeScreen.tsx, useHomeItems.ts, useAddItemScreen.ts, song.repository.ts,
+' ItemRecommendationServiceImpl.java, Song/Lesson/Genre/InstrumentGenreRecommendationServiceImpl.java,
+' User.getIdsExcludedFromRecommendationsOfType, RecommendationConstants.java
+' Partes: (1/5) petición y nivel del algoritmo (CU09_1_recomendaciones.puml); (2/5) cupo por
+' tipo y resultado (CU09_2_cupo.puml); (3/5) artistas favoritos (CU09_3_artistas.puml);
+' (4/5) "Basado en tu Spotify": token y tops (CU09_4_spotify.puml); (5/5) "Basado en tu
+' Spotify": ítems del carrusel (CU09_5_spotify_items.puml).
+autonumber
+hide footbox
+skinparam sequenceMessageAlign center
+skinparam roundcorner 6
+skinparam maxMessageSize 130
+skinparam wrapWidth 170
+skinparam ParticipantPadding 2
+skinparam BoxPadding 2
+skinparam defaultFontSize 12
+
+actor "Músico" as musico
+boundary "Recomendaciones\nView" as vista
+control "Motor\nRecomendacion" as motor
+entity "Usuario" as usuario
+entity "Song" as cancion
+
+vista -> motor : pedirCancionesDe\nArtistasFavoritos(userId)
+motor -> usuario : obtenerArtistasFavoritos(userId, 5)
+note right of usuario : Los artistas que más\nse repiten en las\ncanciones de sus listas
+usuario --> motor : artistas
+
+alt 9a. Sus listas no tienen canciones
+    motor --> vista : sin artistas
+    vista --> musico : mostrarAviso\nListasVacias()
+    note right of vista : Sin tarjetas; los dos\ncarruseles muestran\n"Añade canciones a tus\nlistas para..."
+else Hay artistas
+    par Novedades y populares
+        motor -> cancion : buscarNuevas(artistas, 12)
+        cancion --> motor : canciones nuevas
+    else
+        motor -> cancion : buscarPopulares(artistas, 12)
+        cancion --> motor : canciones populares
+    end
+    motor -> motor : intercalarPorTurnos(artistas)
+    note right of motor : Una canción de cada\nartista por turno, en\norden de importancia\ndel artista
+    motor --> vista : canciones nuevas y populares
+    vista --> musico : mostrarTarjetas\nYCarruseles()
+    note right of vista
+        Tarjeta "Lo nuevo de <artista>"
+        + carrusel "Novedades de tus artistas"
+        Tarjeta "Lo más popular de <artista>"
+        + carrusel "Populares de tus artistas"
+        Las tarjetas no repiten lo que ya
+        sale en Recientes, "Para ti" ni
+        "Basado en tu Spotify".
+        Un carrusel sin canciones no se
+        muestra si hay alguna tarjeta.
+    end note
+end
+
+@enduml

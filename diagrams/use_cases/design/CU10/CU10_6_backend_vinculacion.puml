@@ -1,0 +1,48 @@
+@startuml DSD-CU-10-6
+title DSD-CU-10 (6/7) - Vincular Spotify:\nvinculación en el callback (backend)
+
+' Continuación de DSD-CU-10 (5/7): handleCallback con state válido y usuario existente.
+' Fuentes: SpotifyAuthController.java, SpotifyAuthServiceImpl.java, SpotifyUserRepository.java,
+' UserRepository.java.
+' Diferencias con el guion:
+'  - client_id/client_secret no van en el body: van en la cabecera Basic (headers.setBasicAuth);
+'    el body lleva grant_type=authorization_code, code y redirect_uri.
+'  - Tras obtener los tokens se llama a GET https://api.spotify.com/v1/me (Bearer access_token)
+'    para conocer el spotifyUserId, y se desvincula la cuenta de otro usuario si la tenía (con flush).
+'  - handleCallback es @Transactional; un fallo de Spotify o de red -> RuntimeException -> 500.
+' Notas:
+'  - 7a. unlinkFromOtherUser: findBySpotifyUserId(spotifyUserId); si estaba vinculada a otro
+'    usuario, previousUser.setSpotifyUser(null) y save(previousUser) (orphanRemoval); si estaba
+'    huérfana, delete(existing). Después flush(): Hibernate ejecuta los inserts antes que los
+'    deletes y el flush libera el spotifyUserId único.
+'  - spotifyUser = appUser.getSpotifyUser() ?? new SpotifyUser(); setSpotifyUserId,
+'    setAccessToken, setRefreshToken, setTokenExpiration(now + expires_in); enlaza
+'    user <-> spotifyUser y guarda los dos (INSERT / UPDATE).
+'  - Respuesta: 200 (text/html) "¡Spotify conectado! Ya puedes volver a la app."
+!include ../_estilo.iuml
+
+participant "Navegador" as app
+box "Backend" #FFF9F0
+    participant "Spotify\nAuth\nController" as ctrl
+    participant "Spotify\nAuth\nServiceImpl" as svc
+    participant "User /\nSpotifyUser\nRepository" as repo
+end box
+participant "Spotify\n<<externo>>" as spotify
+
+activate svc
+svc -> spotify : POST /api/token\nBasic(client_id,\nclient_secret)\n{ code, ... }
+spotify --> svc : { access_token,\nrefresh_token,\nexpires_in }
+svc -> spotify : GET /v1/me
+spotify --> svc : { id } ->\nspotifyUserId
+svc -> repo : findBySpotify\nUserId(id)
+opt 7a. Vinculada a otro\nusuario (o huérfana)
+    svc -> repo : desvincula o\nborra la anterior
+    svc -> repo : flush()
+end
+svc -> svc : spotifyUser con\ntokens y caducidad;\nenlaza user <->\nspotifyUser
+svc -> repo : save(spotifyUser);\nsave(appUser)
+svc --> ctrl : void
+deactivate svc
+ctrl --> app : 200 (text/html)\n"¡Spotify\nconectado!"
+
+@enduml

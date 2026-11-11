@@ -1,0 +1,52 @@
+@startuml DS-CU-08-1
+title DS-CU-08 (1/4) - Añadir/eliminar ítems en listas:\nrecomendaciones y búsqueda en "Añadir"
+
+' Diagrama de secuencia de análisis (patrón Boundary-Control-Entity)
+' Fuentes: ListScreen.tsx, AddItemScreen.tsx, useAddItemScreen.ts, itemList.repository.ts,
+' ItemListController.java, ItemListServiceImpl.java, ItemRecommendationServiceImpl.java
+' Partes: (1/4) recomendaciones y búsqueda en "Añadir" (CU08_1_recomendaciones.puml); (2/4) añadir
+' el ítem elegido (CU08_2_anadir.puml); (3/4) añadir desde el buscador (CU08_3_buscador.puml);
+' (4/4) quitar un ítem de la lista (CU08_4_quitar.puml).
+autonumber
+hide footbox
+skinparam sequenceMessageAlign center
+skinparam roundcorner 6
+skinparam maxMessageSize 130
+skinparam wrapWidth 170
+skinparam ParticipantPadding 2
+skinparam BoxPadding 2
+skinparam defaultFontSize 12
+
+actor "Músico" as musico
+boundary "ListaScreen" as listaScreen
+boundary "AnadirItems\nScreen" as anadirScreen
+control "Gestor\nCatalogo" as catalogo
+control "Motor\nRecomendacion" as motor
+
+musico -> listaScreen : abrirLista(listId)
+listaScreen --> musico : mostrarItemsDeLaLista()
+musico -> listaScreen : solicitarAnadir()
+listaScreen -> anadirScreen : abrir(listId)
+
+anadirScreen -> motor : pedirRecomendaciones(listId)
+note left of motor : GET /api/\nrecommendations/items/\nby-item-list/{id}\n(ver DS-CU-09)
+motor --> anadirScreen : recomendaciones (barajadas)
+anadirScreen -> catalogo : obtenerCatalogo()
+note right of catalogo : Resumen del catálogo\nya en caché desde el\narranque (ver DS-CU-04)
+catalogo --> anadirScreen : ItemSummaryDTO[]
+anadirScreen -> anadirScreen : ocultarItemsYaEnLaLista()
+anadirScreen --> musico : mostrarRecomendaciones("Para ti")
+note right of anadirScreen : 5 visibles a la vez; al\nañadir una, entra la\nsiguiente tras la animación\ndel tic (600 ms)
+
+opt 3a. El músico busca un ítem concreto
+    musico -> anadirScreen : ingresarTextoBusqueda(query)
+    anadirScreen -> catalogo : filtrarEnMemoriaLocal(query)
+    note right of catalogo : Todos los tipos de\nítem; por título y\nartista, sin mayúsculas\nni tildes. Máximo\n50 resultados
+    catalogo --> anadirScreen : coincidencias
+    anadirScreen -> anadirScreen : ocultarItemsYaEnLaLista()
+    anadirScreen --> musico : mostrarResultados()
+end
+
+note over musico, anadirScreen : Al elegir un ítem: DS-CU-08 (2/4)
+
+@enduml

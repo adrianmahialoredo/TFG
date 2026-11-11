@@ -1,0 +1,33 @@
+@startuml DSD-CU-01-5
+title DSD-CU-01 (5/6) - Registrar usuario:\nenvío del email con el código (backend)
+
+' Tarea en segundo plano que lanza EmailVerificationServiceImpl (DSD-CU-01 4/6) después de
+' responder 204 a la app.
+' Fuentes: EmailVerificationServiceImpl.java, EmailServiceImpl.java.
+' Sin JavaMailSender (sin MAIL_HOST) no se envía nada: el código va al log.
+' Si el envío falla solo se descarta este código (no uno más nuevo que haya pedido otra
+' petición). La app no recibe error: ya tiene su 204.
+!include ../_estilo.iuml
+
+box "Backend (Spring Boot)" #FFF9F0
+    participant "EmailVerification\nServiceImpl\n<<service>>" as verification
+    participant "applicationTask\nExecutor" as executor
+    participant "EmailServiceImpl\n<<service>>" as emailService
+end box
+participant "Servidor SMTP\n<<sistema externo>>" as smtp
+actor "Visitante" as actor
+
+verification ->> executor : execute(() -> sendVerificationCode(...))
+executor -> emailService : sendVerificationCode(email, code, 10)
+emailService -> emailService : fill(plantillas .txt y .html, { code, minutes })
+emailService -> smtp : JavaMailSender.send(message)
+alt Fallo SMTP (MessagingException / MailException)
+    smtp --> emailService : error
+    emailService --> executor : IllegalStateException
+    executor -> verification : pendingCodes.remove(key, pending)
+else Enviado
+    smtp --> emailService : ok
+    smtp ->> actor : entrega el email con el código
+end
+
+@enduml

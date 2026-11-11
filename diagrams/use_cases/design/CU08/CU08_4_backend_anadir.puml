@@ -1,0 +1,64 @@
+@startuml DSD-CU-08-4
+title DSD-CU-08 (4/5) - Añadir/eliminar ítems en listas: backend (seguridad y añadir)
+
+' Lo que hace el backend en la petición de DSD-CU-08 (2/5); quitar, en (5/5).
+' Fuentes: JwtAuthenticationFilter.java, SecurityConfig.java, ItemListController.java, OwnershipChecker.java,
+' ItemListServiceImpl.java, EntityResolver.java, model/ItemList.java, DtoMapper.java, GlobalExceptionHandler.java.
+' Diferencias con el guion:
+' - La regla es @PreAuthorize("hasRole('ADMIN') or @ownership.ownsItemList(#listId, authentication)"),
+'   no "@ownershipChecker.isItemListOwner". Una lista inexistente pasa la comprobación y acaba en 404.
+' - El 401 y el 403 se deciden antes de llegar al servicio: el filtro deja sin autenticar un token
+'   inválido y SecurityConfig responde 401; @PreAuthorize lanza AccessDeniedException -> 403
+'   (GlobalExceptionHandler). La petición lleva Authorization: Bearer <JWT>.
+' - doFilterInternal(): extractUserId, validateToken, extractRole -> SecurityContextHolder.
+' - addItem no usa resolveItemList: usa EntityResolver.findItemList(listId) y el controlador responde
+'   con ResponseEntity.of(...): 200 + ItemListDTO, o 404. Un itemId inexistente: resolveItem lanza
+'   EntityNotFoundException -> 404. resolveItem devuelve el subtipo polimórfico (Song, Lesson,
+'   Genre, InstrumentGenre).
+' - Si el ítem ya estaba (7a), ItemList.addItem devuelve false y se ignora (conserva su posición);
+'   si es nuevo, items.add(item) lo pone al final.
+' - DtoMapper no tiene línea de vida: su llamada es un mensaje del servicio a sí mismo.
+!include ../_estilo.iuml
+
+participant "App\n(services)" as app
+box "Backend (Spring Boot)" #FFF9F0
+    participant "JwtAuthentication\nFilter" as filter
+    participant "ItemList\nController\n(@PreAuthorize)" as controller
+    participant "ItemList\nServiceImpl" as listService
+    participant "ItemList\n<<entity>>" as itemList
+    participant "ItemList\nRepository /\nEntityResolver" as listRepo
+end box
+
+app -> filter : POST /api/item-lists/{listId}\n/items/{itemId}
+filter -> filter : doFilterInternal()
+alt Token ausente o inválido
+    filter --> app : 401 Unauthorized
+else Token válido
+    filter -> controller : addItem(listId, itemId)
+    controller -> controller : @PreAuthorize: ownsItemList(listId)
+    alt 6a. La lista es de otro usuario
+        controller --> app : 403 Forbidden
+    else Es el propietario (o la lista no existe)
+        controller -> listService : addItem(listId,\nitemId)\n@Transactional
+        listService -> listRepo : findItemList(listId)
+        alt La lista no existe
+            listService --> controller : Optional.empty()
+            controller --> app : 404 Not Found
+        else La lista existe
+            listService -> listRepo : resolveItem(itemId)
+            listService -> itemList : addItem(item)
+            alt 7a. El ítem ya estaba en la lista
+                itemList --> listService : false
+            else Ítem nuevo
+                itemList -> itemList : items.add(item)
+                itemList --> listService : true
+            end
+            listService -> listRepo : save(list)
+            listService -> listService : DtoMapper\n.itemListTo\nItemListDto(list)
+            listService --> controller : Optional<ItemListDTO>
+            controller --> app : 200 OK ItemListDTO
+        end
+    end
+end
+
+@enduml

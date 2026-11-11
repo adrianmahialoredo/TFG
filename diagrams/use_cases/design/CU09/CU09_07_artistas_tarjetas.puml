@@ -1,0 +1,36 @@
+@startuml DSD-CU-09-7
+title DSD-CU-09 (7/12) - Recomendaciones:\nartistas favoritos, tarjetas (app)
+
+' Continuación de DSD-CU-09 (6/12).
+' Fuentes: frontend/src/screens/HomeScreen.tsx, hooks/useHomeItems.ts.
+' Notas:
+' - shownIds = Recientes + "Para ti" + "Basado en tu Spotify".
+' - pickSuggestion(newSongs, shownIds): la primera que no se vea ya (si todas, la primera).
+'   pickSuggestion(popularSongs) sin la de la tarjeta anterior; los carruseles llevan el resto.
+' - Con alguna tarjeta: tarjeta "Lo nuevo de <artista>" + carrusel "Novedades de tus artistas";
+'   tarjeta "Lo más popular de <artista>" + carrusel "Populares de tus artistas". Un carrusel
+'   vacío no se pinta (su aviso "Añade canciones" sería falso).
+' - Sin canciones (listas sin canciones, o error sin caché): sin tarjetas; los dos carruseles
+'   con su aviso: "Añade canciones a tus listas para descubrir las novedades / ver los éxitos de
+'   tus artistas favoritos".
+!include ../_estilo.iuml
+
+actor "Músico" as actor
+box "App" #F3F8FF
+    participant "HomeScreen\n<<Nivel 7>>" as screen
+    participant "useHomeItems\n<<Nivel 6>>" as hook
+end box
+
+hook -> hook : shownIds = Recientes\n+ "Para ti" + Spotify
+hook -> hook : pickSuggestion\n(newSongs, shownIds)
+hook -> hook : pickSuggestion\n(popularSongs);\ncarruseles = el resto
+hook --> screen : tarjetas y\ncarruseles
+
+alt Hay alguna tarjeta
+    screen --> actor : "Lo nuevo de <artista>"\n+ "Novedades de\ntus artistas"
+    screen --> actor : "Lo más popular de\n<artista>" + "Populares\nde tus artistas"
+else Sin canciones
+    screen --> actor : sin tarjetas; carruseles\ncon el aviso "Añade\ncanciones a tus listas..."
+end
+
+@enduml

@@ -1,0 +1,48 @@
+@startuml DSD-CU-04-3
+title DSD-CU-04 (3/4) - Explorar catálogo de ítems:\npestaña "Géneros" (app)
+
+' Fuentes: screens/GenresScreen.tsx, components/VerticalButtonsCarousel.tsx, hooks/useGenres.ts,
+' repositories/genre.repository.ts, services/genre.service.ts, utils/entityCache.utils.ts.
+' genreRepository (nivel 3) y genreService (nivel 1) se dibujan juntos. Backend en DSD-CU-04 (4/4).
+' A diferencia de Canciones y Aprender, la búsqueda de géneros no usa useCatalogSearch: filtra
+' por título y solo ignora mayúsculas (no tildes ni signos):
+' allGenres.filter(g => g.title.toLowerCase().includes(query.toLowerCase())).
+' Si no hay ninguno, la lista queda vacía, sin aviso. Espacio del género: DSD-CU-06.
+!include ../_estilo.iuml
+
+actor "Músico" as actor
+box "App (React Native)" #F3F8FF
+    participant "GenresScreen\n<<Nivel 7>>" as screen
+    participant "useGenres\n<<Nivel 6>>" as hook
+    participant "useGenre\nEntitiesStore\n<<Nivel 4>>" as store
+    participant "genreRepository\n→ genreService\n<<Niveles 3 y 1>>" as repo
+end box
+participant "API REST\n(backend)" as api
+
+actor -> screen : abre la pestaña "Géneros"
+screen -> hook : useGenres(query = '')
+hook -> repo : getAll() (useEffect)
+repo -> repo : cache.list('all', genreService.getAll)
+opt Sin índice guardado o primera vez (Cache-First)
+    repo -> api : GET /api/genres
+    api --> repo : 200 List<GenreDTO>
+    repo -> store : setGenres(genres) + índice 'all'
+end
+hook -> store : genres
+hook --> screen : { genres (todos), loading }
+screen --> actor : VerticalButtonsCarousel con la portada de cada género
+
+loop Por cada cambio en la barra de búsqueda
+    actor -> screen : escribe en SearchBar (setQuery)
+    screen -> hook : useGenres(query)
+    opt query.trim() no vacío
+        hook -> hook : filtra por título (sin mayúsculas)
+    end
+    hook --> screen : genres
+    screen --> actor : géneros que coinciden
+end
+
+actor -> screen : pulsa un género
+screen -> screen : navigation.navigate ('GenreMainScreen', { genreId })
+
+@enduml

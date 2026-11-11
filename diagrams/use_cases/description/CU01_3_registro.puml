@@ -1,0 +1,51 @@
+@startuml DS-CU-01-3
+title DS-CU-01 (3/3) - Registrar nuevo usuario:\nalta del usuario e inicio de sesión
+
+' Diagrama de secuencia de análisis (patrón Boundary-Control-Entity)
+' Fuentes: RegisterScreen.tsx, EmailVerificationModal.tsx, useRegister.ts, auth.service.ts,
+' AuthContext.tsx, AuthController.java, EmailVerificationServiceImpl.java, UserServiceImpl.java
+' Partes: (1/3) CU01_1_codigo_verificacion.puml; (2/3) CU01_2_envio_codigo.puml; (3/3) este.
+autonumber
+hide footbox
+skinparam sequenceMessageAlign center
+skinparam roundcorner 6
+skinparam maxMessageSize 130
+skinparam wrapWidth 170
+skinparam ParticipantPadding 2
+skinparam BoxPadding 2
+skinparam defaultFontSize 12
+
+actor "Visitante" as visitante
+boundary "Modal\nVerificacionEmail" as modal
+control "Gestor\nAutenticacion" as gestor
+entity "Codigo\nVerificacion" as codigo
+entity "Usuario" as usuario
+entity "Almacen\nSeguro" as almacen
+entity "DatosGlobales\n(catálogo,\ngéneros)" as datos
+
+note over modal, codigo : Viene de DS-CU-01 (2/3): POST /api/auth/register\ncon un código correcto
+
+gestor -> usuario : comprobarEmailYUsernameUnicos()
+alt Username ocupado
+    usuario --> gestor : ocupado
+    gestor --> modal : 400 "Username already taken"
+    modal --> visitante : mostrarError("Ese nombre de usuario ya está en uso")
+    note right of modal : El código no se\nconsume: se corrige\ny se reintenta
+else Libres
+    usuario --> gestor : ok
+    gestor -> gestor : cifrarPassword(pass)
+    gestor -> usuario : persistirUsuario(datos, rol = USER)
+    usuario --> gestor : usuario
+    gestor -> codigo : consumir(email)
+    gestor -> gestor : generarJWT(id, rol)
+    gestor --> modal : 201 Created + LoginResponse(token, perfil)
+    modal -> almacen : guardarSesionLocal(token, perfil)
+    note left of almacen : AuthStore +\nUserEntitiesStore\n(en RAM y disco)
+    note over gestor, datos : AuthProvider detecta la sesión y precarga los datos globales
+    gestor ->> datos : precargarCatalogoItems()
+    note left of datos : GET /api/items\n(en segundo\nplano)
+    gestor -> datos : precargarGeneros()
+    datos --> gestor : géneros
+    modal --> visitante : redirigirPantallaPrincipal()
+end
+@enduml

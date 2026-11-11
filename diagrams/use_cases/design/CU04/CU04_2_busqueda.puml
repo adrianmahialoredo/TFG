@@ -1,0 +1,57 @@
+@startuml DSD-CU-04-2
+title DSD-CU-04 (2/4) - Explorar catálogo de ítems:\nbúsqueda local y apertura del detalle (app)
+
+' Continuación de DSD-CU-04 (1/4). La búsqueda no hace peticiones HTTP.
+' Fuentes: screens/SongsScreen.tsx, LearnScreen.tsx, components/SearchResults.tsx,
+' hooks/useCatalogSearch.ts, utils/search.utils.ts, constants/search.ts,
+' stores/entities/item.entities.store.ts, utils/navigation.
+' Notas de diseño:
+' - SongsScreen busca canciones (campos title, artist, genre, instrument, decade); LearnScreen,
+'   lecciones (title, genre, instrument). Se dibuja SongsScreen.
+' - El análisis habla de "mostrar ítems por tipo": en el código cada pantalla filtra por un único
+'   tipo y agrupa los resultados por el campo con el que coinciden.
+' - Sin texto en la barra, las pantallas muestran sus carruseles (useFeedSongs / useHomeLessons),
+'   que no forman parte de este caso de uso.
+' - createSearchMatcher / normalizeSearchText: minúsculas, sin tildes ni signos. Traduce
+'   géneros/instrumentos/décadas con los vocabularios ("ochenta" -> "1980s"). Fuerza 2 = empieza
+'   por, 1 = contiene. Búsqueda vacía -> null -> [].
+' - Con coincidencias: una lista por campo ("Por título", "Por artista", "Por género",
+'   "Por instrumento", "Por década") con ListItem (imagen, título, artista).
+' - navigateToItem: SONG -> 'SongScreen' { songId }; LESSON -> 'LessonScreen' { lessonId };
+'   GENRE -> 'GenreMainScreen' { genreId }; INSTRUMENT_GENRE -> 'InstrumentGenreLesson'.
+' - El detalle lo carga la pantalla de destino con <entidad>Repository.getById(id): RAM -> disco
+'   -> API (GET /api/<recurso>/{id}); si se sirvió de caché, cache.revalidate([id]) lo vuelve a
+'   pedir en segundo plano (POST /api/<recurso>/by-ids). Canción en DSD-CU-05; género,
+'   InstrumentGenre y lección en DSD-CU-06.
+' - La pestaña Géneros está en DSD-CU-04 (3/4).
+!include ../_estilo.iuml
+
+actor "Músico" as actor
+box "App (React Native)" #F3F8FF
+    participant "SongsScreen\n(+ SearchResults)\n<<Nivel 7>>" as screen
+    participant "useCatalogSearch\n<<Nivel 6>>" as hook
+    participant "Entity Stores\n<<Nivel 4>>" as store
+end box
+
+loop Por cada cambio en la barra de búsqueda
+    actor -> screen : escribe en SearchBar (onChangeText = setQuery)
+    screen -> hook : useCatalogSearch(query, ItemType.SONG, SEARCH_FIELDS)
+    hook -> store : items (useItemEntitiesStore), genres, instruments (nombres)
+    hook -> hook : createSearchMatcher (query, fields, vocabularies)
+    opt query.trim() no vacío
+        hook -> hook : filtra type === SONG, agrupa por el primer campo que coincide y ordena (fuerza, título)
+        hook --> screen : SearchSection[]
+        screen -> screen : <SearchResults sections emptyText />
+        alt 4a. Sin coincidencias (sections.length === 0)
+            screen --> actor : "No hay canciones que coincidan con tu búsqueda"
+        else Hay coincidencias
+            screen --> actor : una lista por campo con ListItem
+        end
+    end
+end
+
+actor -> screen : pulsa un ListItem
+screen -> screen : navigateToItem (navigation, item)
+screen --> actor : pantalla de detalle (DSD-CU-05 / DSD-CU-06)
+
+@enduml

@@ -1,0 +1,36 @@
+@startuml DS-CU-10-3
+title DS-CU-10 (3/3) - Vincular cuenta de Spotify:\n9a. más tarde, el token de acceso caduca (1 h)
+
+' Diagrama de secuencia de análisis (patrón Boundary-Control-Entity)
+' Fuentes: SpotifyButton.tsx, useSpotifyConnect.ts, spotify.repository.ts, useHomeItems.ts, useFeedSongs.ts,
+' SpotifyAuthController.java, SpotifyAuthServiceImpl.java, SpotifyRecommendationServiceImpl.java
+' Partes: (1/3) autorización en Spotify (CU10_1_autorizacion.puml); (2/3) callback, tokens y vuelta
+' a la app (CU10_2_callback.puml); (3/3) renovación del token (CU10_3_renovacion.puml).
+autonumber
+hide footbox
+skinparam sequenceMessageAlign center
+skinparam roundcorner 6
+skinparam maxMessageSize 130
+skinparam wrapWidth 170
+skinparam ParticipantPadding 2
+skinparam BoxPadding 2
+skinparam defaultFontSize 12
+
+control "Motor\nRecomendacion" as motor
+control "Gestor\nSpotifyAuth" as gestor
+entity "SpotifyUser\nCredencial" as credencial
+participant "SpotifyAPI\n<<sistema\nexterno>>" as spotify
+
+motor -> gestor : obtenerTokenValido(userId)
+note left of motor : Al pedir\nrecomendaciones\nde Spotify\n(DS-CU-09)
+gestor -> credencial : obtenerTokens(userId)
+credencial --> gestor : accessToken, caducidad
+opt Caduca en menos de 1 minuto
+    gestor -> spotify : renovarToken(refreshToken)
+    spotify --> gestor : nuevo accessToken
+    gestor -> credencial : actualizarToken()
+    note right of gestor : Renovación silenciosa\n(Propagation.\nREQUIRES_NEW)
+end
+gestor --> motor : accessToken
+
+@enduml

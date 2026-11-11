@@ -1,0 +1,69 @@
+@startuml DCD-03e
+title DCD-03e - Diagrama de clases de diseño: motor de recomendaciones (5/6) -\nrankings de dominio
+
+' Continuación de DCD-03a-d. Cada subservicio resuelve la lista o el usuario con EntityResolver,
+' excluye lo que el usuario ya tiene en 3 o más listas
+' (User.getIdsExcludedFromRecommendationsOfType) y calcula los atributos dominantes con los
+' rankings de dominio de ItemList / User (getTop...From..., getMain...From...), que usan
+' Utils.getTopNMostRepeated. Se dibuja SongRecommendationServiceImpl como ejemplo: Genre-,
+' InstrumentGenre- y LessonRecommendationServiceImpl tienen las mismas dependencias.
+' Fuentes: service/recommendation/*ServiceImpl.java, utils/RecommendationConstants.java,
+'          utils/EntityResolver.java, utils/Utils.java, model/ItemList.java, model/User.java
+' Seis partes: DCD-03a controlador; DCD-03b servicio combinador e interfaces;
+' DCD-03c/d implementaciones de los subservicios (canciones y géneros / itinerarios y
+' lecciones); DCD-03e rankings de dominio; DCD-03f utilidades y constantes.
+' Las recomendaciones de Spotify están en DCD-04. Reglas: architecture.md §8 y
+' recommendations.md.
+skinparam classAttributeIconSize 0
+skinparam roundcorner 6
+skinparam nodesep 20
+skinparam ranksep 45
+skinparam packageStyle rectangle
+skinparam class {
+    BackgroundColor<<Service>> #E6F5E6
+    BorderColor<<Service>> #3C8A3C
+    BackgroundColor<<entity>> #FFF4E0
+    BorderColor<<entity>> #B07A1F
+    BackgroundColor<<Component>> #F3F3F3
+}
+hide empty members
+
+class "SongRecommendationServiceImpl\n(y Genre-, InstrumentGenre-,\nLessonRecommendationServiceImpl)" as XImpl <<Service>> <<ver DCD-03c/d>>
+
+package "model" {
+    class ItemList <<entity>> {
+        + getOnlyGenre() : Optional<Genre>
+        + getMainGenreFromItems() : Optional<Genre>
+        + getMainInstrumentFromItems() : Optional<Instrument>
+        + getTopGenresFromItems(topN : int) : List<Genre>
+        + getTopInstrumentsFromItems(topN : int) : List<Instrument>
+        {method} ...
+    }
+    class User <<entity>> {
+        + getTopGenresFromItemLists(topN : int) : List<Genre>
+        + getTopInstrumentsFromItemLists(topN : int) : List<Instrument>
+        + getIdsExcludedFromRecommendationsOfType(type : Class<T>) : Set<Long>
+        {method} ...
+    }
+}
+
+package "utils" {
+    class EntityResolver <<Component>> {
+        + {static} resolveItemList(id : Long) : ItemList
+        + {static} resolveUser(id : Long) : User
+    }
+    class Utils <<ver DCD-03f>>
+    class RecommendationConstants <<final>> <<ver DCD-03f>>
+}
+
+XImpl ..> EntityResolver : <<use>>
+XImpl ..> ItemList : rankings
+XImpl ..> User : rankings
+ItemList ..> Utils : getTopN\nMostRepeated
+User ..> Utils : getTopN\nMostRepeated
+User ..> RecommendationConstants : N_ITEM_LISTS_\nTO_EXCLUDE...
+
+' Solo para apilar (si no, el diagrama es demasiado ancho)
+ItemList -[hidden]down- User
+
+@enduml

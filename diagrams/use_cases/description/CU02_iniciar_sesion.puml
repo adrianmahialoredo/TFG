@@ -7,18 +7,23 @@ autonumber
 hide footbox
 skinparam sequenceMessageAlign center
 skinparam roundcorner 6
+skinparam maxMessageSize 130
+skinparam wrapWidth 170
+skinparam ParticipantPadding 2
+skinparam BoxPadding 2
+skinparam defaultFontSize 12
 
 actor "Visitante" as visitante
 boundary "LoginScreen" as pantalla
 control "GestorAutenticacion" as gestor
 entity "Usuario" as usuario
-entity "DatosGlobales\n(catálogo, géneros)" as datos
+entity "DatosGlobales\n(catálogo,\ngéneros)" as datos
 
 visitante -> pantalla : abrirFormularioLogin()
 visitante -> pantalla : introducirCredenciales(email o usuario, pass)
 
 alt Campo vacío
-    pantalla --> visitante : mostrarError("Por favor ingresa tu email o tu usuario"\no "Por favor ingresa tu contraseña")
+    pantalla --> visitante : mostrarError("Por favor ingresa tu email o tu usuario" o "Por favor ingresa tu contraseña")
 else Campos rellenos
     pantalla -> gestor : autenticar(identificador, pass)
     note right of gestor : POST /api/auth/login
@@ -39,7 +44,7 @@ else Campos rellenos
         note right of pantalla : AuthStore + UserEntitiesStore\n(el interceptor HTTP añade el token\na las peticiones siguientes)
         note over gestor, datos : AuthProvider detecta la sesión y precarga los datos globales
         gestor ->> datos : precargarCatalogoItems()
-        note right of datos : GET /api/items\n(en segundo plano, no bloquea)
+        note left of datos : GET /api/items\n(en segundo plano,\nno bloquea)
         gestor -> datos : precargarGeneros()
         datos --> gestor : géneros
         pantalla --> visitante : redirigirInicio()

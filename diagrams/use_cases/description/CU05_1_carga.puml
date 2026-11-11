@@ -1,0 +1,60 @@
+@startuml DS-CU-05-1
+title DS-CU-05 (1/2) - Consultar detalle de\ncanción y lección: carga y lección por defecto
+
+' Diagrama de secuencia de análisis (patrón Boundary-Control-Entity)
+' Fuentes: SongScreen.tsx, useSong.ts, song.repository.ts, songScreen.store.ts, ChordModal.tsx
+' Partes: (1/2) este; (2/2) detalle, cambio de lección y acordes (CU05_2_detalle.puml).
+autonumber
+hide footbox
+skinparam sequenceMessageAlign center
+skinparam roundcorner 6
+skinparam maxMessageSize 130
+skinparam wrapWidth 170
+skinparam ParticipantPadding 2
+skinparam BoxPadding 2
+skinparam defaultFontSize 12
+
+actor "Músico" as musico
+boundary "SongDetail\nScreen" as pantalla
+control "Gestor\nCanciones" as gestor
+entity "Song" as song
+entity "SongLesson" as leccion
+entity "Chord" as chord
+entity "TabSection" as tab
+
+musico -> pantalla : seleccionarCancion(id)
+pantalla -> gestor : solicitarCancion(id)
+gestor ->> gestor : marcarRecienteLocal(id)
+note left of gestor : Al entrar, para\n"Recientes" del\nInicio (en segundo\nplano)
+gestor -> song : obtener(id)
+note right of song : RAM -> disco\n-> API (GET\n/api/songs/{id})
+
+alt Canción no encontrada (404 o error)
+    song --> gestor : nada
+    gestor --> pantalla : sin canción
+    pantalla --> musico : mostrarAviso("Canción no encontrada")
+else Canción encontrada
+    song --> gestor : SongDTO
+    gestor -> leccion : obtenerTodas(\nsong.lessonIds)
+    leccion --> gestor : SongLessonDTO[]
+    par Dependencias de todas las lecciones
+        gestor -> chord : obtenerAcordes(\nchordIds)
+        chord --> gestor : ChordDto[]
+    else
+        gestor -> tab : obtenerTabSections(\ntabSectionsIds)
+        tab --> gestor : TabSectionDTO[]
+    end
+    gestor -> gestor : seleccionarLeccionPorDefecto(\nfavoritos, nivel)
+    note right of gestor
+        Instrumento: el primero favorito
+        del usuario que tenga lecciones
+        (si no, el de la primera).
+        Dificultad: ORIGINAL si el nivel
+        es >= 4 y existe; si no, la de la
+        primera lección de ese instrumento.
+    end note
+    gestor --> pantalla : canción + lecciones + lección seleccionada
+    note over musico, pantalla : Continúa en\nDS-CU-05 (2/2)
+end
+
+@enduml

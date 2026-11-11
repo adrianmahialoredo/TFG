@@ -1,0 +1,64 @@
+@startuml DCD-03c
+title DCD-03c - Diagrama de clases de diseño: motor de recomendaciones (3/6) -\nimplementaciones: canciones y géneros
+
+' Continuación de DCD-03b: implementaciones de los subservicios y sus repositorios.
+' Sus dependencias comunes (EntityResolver, Utils, RecommendationConstants, ItemList, User)
+' se dibujan en DCD-03e/f.
+' Seis partes: DCD-03a controlador; DCD-03b servicio combinador e interfaces;
+' DCD-03c/d implementaciones de los subservicios (canciones y géneros / itinerarios y
+' lecciones); DCD-03e rankings de dominio; DCD-03f utilidades y constantes.
+' Las recomendaciones de Spotify están en DCD-04. Reglas: architecture.md §8 y
+' recommendations.md.
+' Fuentes: service/recommendation/*RecommendationServiceImpl.java, repository/*Repository.java
+skinparam classAttributeIconSize 0
+skinparam roundcorner 6
+skinparam nodesep 20
+skinparam ranksep 45
+skinparam packageStyle rectangle
+skinparam class {
+    BackgroundColor<<Service>> #E6F5E6
+    BorderColor<<Service>> #3C8A3C
+    BackgroundColor<<interface>> #F4FBF4
+    BorderColor<<interface>> #3C8A3C
+    BackgroundColor<<Repository>> #FFF4E0
+    BorderColor<<Repository>> #B07A1F
+    BackgroundColor<<Component>> #F3F3F3
+}
+hide empty members
+
+package "service.recommendation" {
+    interface SongRecommendationService <<interface>> <<ver DCD-03b>>
+    interface GenreRecommendationService <<interface>> <<ver DCD-03b>>
+
+    class SongRecommendationServiceImpl <<Service>> {
+        - songRepository : SongRepository
+    }
+    class GenreRecommendationServiceImpl <<Service>> {
+        - genreRepository : GenreRepository
+    }
+}
+
+note bottom of SongRecommendationServiceImpl
+    Algoritmo por niveles: cada
+    nivel completa lo que falta
+    del anterior y se para al
+    llegar al límite. Exclusiones
+    acumuladas como Set<Long>
+    (consultas ...IdNotIn con
+    Utils.idsToExclude). Por
+    usuario, solo los niveles 1-2
+    filtran por level <=
+    User.difficultyLevel.
+end note
+
+package "repository" {
+    interface SongRepository <<Repository>>
+    interface GenreRepository <<Repository>>
+}
+
+SongRecommendationService <|.. SongRecommendationServiceImpl
+SongRecommendationServiceImpl --> SongRepository
+GenreRecommendationService <|.. GenreRecommendationServiceImpl
+GenreRecommendationServiceImpl --> GenreRepository
+
+@enduml

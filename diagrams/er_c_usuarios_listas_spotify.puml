@@ -102,36 +102,44 @@ entity "instruments" as instruments <<ver ER-b>> {
 ' Relaciones
 ' ---------------------------------------------------------------------
 
-users |o--o| spotify_users : spotify_user_id -> id
-users ||--|| preferences : user_id
-users ||--o{ item_lists : user_id
+users |o-right-o| spotify_users : spotify_user_id
+users ||-down-|| preferences : user_id
+users ||-down-o{ item_lists : user_id
 
-preferences ||--o{ user_favorite_genres : user_id
-user_favorite_genres }o--|| genres
-preferences ||--o{ user_favorite_instruments : user_id
-user_favorite_instruments }o--|| instruments
+preferences ||-down-o{ user_favorite_genres : user_id
+user_favorite_genres }o-down-|| genres
+preferences ||-down-o{ user_favorite_instruments : user_id
+user_favorite_instruments }o-down-|| instruments
 
-item_lists ||--o{ itemlist_items : itemlist_id
-itemlist_items }o--|| item : item_id
+item_lists ||-down-o{ itemlist_items : itemlist_id
+itemlist_items }o-down-|| item : item_id
+
+' Solo para colocar: item_lists bajo spotify_users y settings al final (sin relaciones)
+spotify_users -[hidden]down- item_lists
+item -[hidden]down- settings
 
 ' ---------------------------------------------------------------------
 ' Notas
 ' ---------------------------------------------------------------------
 
-note bottom of preferences
-    PK compartida con users.id (@MapsId).
-    Las tablas de favoritos referencian
+note left of preferences
+    PK compartida con
+    users.id (@MapsId).
+    Los favoritos
+    referencian
     preferences.user_id.
 end note
 
 note bottom of itemlist_items
-    Sin PK: ItemList.items es una List
-    (conserva el orden de inserción).
+    Sin PK.
+    item_position:
+    orden de la lista
+    (@OrderColumn).
 end note
 
 note bottom of settings
-    Entidad sin relaciones
-    con el resto del modelo.
+    Sin relaciones con
+    el resto del modelo.
 end note
 
 @enduml

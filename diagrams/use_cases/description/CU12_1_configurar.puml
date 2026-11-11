@@ -1,0 +1,60 @@
+@startuml DS-CU-12-1
+title DS-CU-12 (1/2) - Utilizar metrónomo:\napertura, tempo y sonido
+
+' Diagrama de secuencia de análisis (patrón Boundary-Control-Entity)
+' Fuentes: MetronomeScreen.tsx, useMetronome.ts (useMetronome, useTapTempo), MetronomeSlider.tsx,
+' MetronomePulse.tsx, MetronomeBeatIndicator.tsx
+' Partes: (1/2) apertura, tempo y sonido (CU12_1_configurar.puml); (2/2) en marcha y parada
+' (CU12_2_marcha.puml).
+autonumber
+hide footbox
+skinparam sequenceMessageAlign center
+skinparam roundcorner 6
+skinparam maxMessageSize 130
+skinparam wrapWidth 170
+skinparam ParticipantPadding 2
+skinparam BoxPadding 2
+skinparam defaultFontSize 12
+
+actor "Músico" as musico
+boundary "Metronomo\nScreen" as pantalla
+control "MotorRitmo" as motor
+
+musico -> pantalla : abrirMetronomo()
+pantalla -> motor : cargarSonidos(click, hihat)
+note right of pantalla : Sin configuración guardada:\nestado de la pantalla, empieza\nen 120 BPM y sonido click
+pantalla --> musico : mostrarControles(BPM 30-300, -10/-1/+1/+10, TAP TEMPO, Hi-Hat)
+
+opt Ajustar el tempo
+    alt Deslizador o botones -10 / -1 / +1 / +10
+        musico -> pantalla : ajustarBPM(bpm)
+        pantalla -> pantalla : acotar(bpm, 30, 300)
+    else 3a. Tap Tempo
+        loop Por cada toque
+            musico -> pantalla : pulsarTapTempo()
+            pantalla -> motor : registrarPulsacion(instante)
+            note right of motor
+                Si pasan más de 2 s desde
+                el toque anterior, empieza
+                de nuevo.
+                Con al menos 2 toques:
+                promedio de los últimos
+                4 intervalos.
+            end note
+            motor --> pantalla : bpmCalculado (o nada)
+            pantalla -> pantalla : acotar(bpm, 30, 300)
+        end
+    end
+    pantalla -> motor : fijarBPM(bpm)
+    pantalla --> musico : mostrarBPM()
+end
+
+opt Cambiar sonido (click | hihat)
+    musico -> pantalla : pulsarHiHat()
+    pantalla -> motor : fijarSonido(click | hihat)
+end
+note over pantalla, motor : Compás fijo de 4 tiempos, el primero\nacentuado. Con el metrónomo en marcha,\nlos cambios se aplican desde el\nsiguiente golpe
+
+note over musico, pantalla : En marcha y parada:\nDS-CU-12 (2/2)
+
+@enduml

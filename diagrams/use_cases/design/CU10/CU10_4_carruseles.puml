@@ -1,0 +1,53 @@
+@startuml DSD-CU-10-4
+title DSD-CU-10 (4/7) - Vincular Spotify:\ncarruseles de Spotify (app)
+
+' Continuación de DSD-CU-10 (3/7), cuando spotifyConnected pasa a true. Los endpoints están en
+' DSD-CU-10 (7/7).
+' Fuentes: hooks/useHomeItems.ts, hooks/useFeedSongs.ts, repositories/itemFeed.repository.ts,
+' repositories/song.repository.ts, services/item.service.ts, services/song.service.ts,
+' screens/HomeScreen.tsx, screens/SongsScreen.tsx.
+' Notas de diseño:
+'  - useHomeItems y useFeedSongs leen spotifyConnected de UserEntitiesStore: al cambiar,
+'    vuelven a pedir su carrusel de Spotify (si falla solo se queda vacío ese carrusel).
+'  - Inicio: itemFeedRepository.getFromSpotifyForUser(userId, apply) ->
+'    itemService.getRecommendedFromSpotify(userId); hidrata los items y el índice
+'    'items_spotify_user'.
+'  - Canciones: songRepository.getFromSpotify(userId, apply) ->
+'    songService.getRecommendedFromSpotify(userId, limit); setSongs y el índice 'spotify'.
+'  - Las dos pantallas muestran el carrusel "Basado en tu Spotify".
+!include ../_estilo.iuml
+
+actor "Músico" as actor
+box "App" #F3F8FF
+    participant "Home /\nSongs\nScreen\n<<Nivel 7>>" as screen
+    participant "useHome\nItems /\nuseFeed\nSongs" as hooks
+    participant "itemFeed /\nsong\nRepository" as repos
+    participant "Entity\nStores" as stores
+    participant "item /\nsong\nService" as services
+end box
+participant "API\nREST" as api
+
+group Inicio: useHomeItems
+    hooks -> repos : getFromSpotify\nForUser(userId)
+    repos -> services : getRecommended\nFromSpotify\n(userId)
+    services -> api : GET .../spotify/\nrecommendations\n/items/{userId}
+    api --> services : 200 List\n<ItemDTO>
+    services --> repos : items
+    repos -> stores : hidrata items\n+ índice
+    repos --> hooks : ids
+    hooks --> screen : spotify
+    screen --> actor : "Basado en\ntu Spotify"
+end
+group Canciones: useFeedSongs
+    hooks -> repos : getFromSpotify\n(userId)
+    repos -> services : getRecommended\nFromSpotify\n(userId, limit)
+    services -> api : GET .../spotify/\nrecommendations/\nsongs/{userId}\n?limit
+    api --> services : 200 List\n<SongDTO>
+    services --> repos : songs
+    repos -> stores : setSongs\n+ índice
+    repos --> hooks : ids
+    hooks --> screen : spotify
+    screen --> actor : "Basado en\ntu Spotify"
+end
+
+@enduml

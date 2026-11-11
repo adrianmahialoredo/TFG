@@ -1,0 +1,76 @@
+@startuml DSD-CU-09-1
+title DSD-CU-09 (1/12) - Recomendaciones:\n"Para ti" al añadir a una lista (app)
+
+' Diagrama de secuencia de diseño: realización de CU-09 (análisis en
+' diagrams/use_cases/description/CU09_*.puml, DS-CU-09 (1/5) a (5/5)).
+' Partes: (1/12) "Para ti" de una lista y (2/12) del Inicio (app); (3/12) y (4/12) backend por
+' lista; (5/12) backend por usuario; (6/12) y (7/12) artistas favoritos (app); (8/12) y (9/12)
+' backend de artistas; (10/12) "Basado en tu Spotify" (app); (11/12) y (12/12) su backend.
+' Parte de la app: el backend se dibuja como una sola línea de vida ("API REST"); el endpoint
+' está en DSD-CU-09 (3/12) y (4/12).
+' Fuentes: frontend/src/screens/AddItemScreen.tsx, hooks/useAddItemScreen.ts,
+' repositories/itemFeed.repository.ts, repositories/item.repository.ts, utils/entityCache.utils.ts,
+' services/item.service.ts, config/apiConfig.ts.
+' Diferencias con el guion:
+' - No existen "AddToListScreen" ni "recommendation.repository.ts": la pantalla es AddItemScreen
+'   (hook useAddItemScreen) y la cadena es itemFeedRepository -> itemRepository.getCustomFeed
+'   (cache.feed -> cacheFirst) -> itemService.getRecommendedByItemList.
+' - cacheFirst nunca rechaza: si la red falla (sin red, 401, 403 lista ajena, 404) devuelve la
+'   caché o [], así que el catch/setError ("Error al cargar recomendaciones") de
+'   useAddItemScreen no llega a ejecutarse.
+' - La app solo muestra 5 a la vez (VISIBLE_RECOMMENDATIONS); el resto espera su turno (DSD-CU-08 1/5).
+' Notas:
+' - getRecommendedByItemList usa getMixedFeed('items_recommended_list_{id}') -> getCustomFeed
+'   -> cacheFirst(cacheKey, ...).
+' - Con índice guardado, la red se lanza en segundo plano y avisa con onFresh(ids) (se ignora si
+'   ya se añadió algo).
+' - La respuesta es una List<ItemDTO> polimórfica de DTOs completos, barajada por el backend.
+'   hydrateMixed(dtos) llama a song/lesson/genre/instrumentGenreRepository.hydrate (por type) y
+'   a itemRepository.hydrateSummaries; después saveQueryIndex(cacheKey, ids).
+' - useAddItemScreen se suscribe a useItemEntitiesStore(state => state.items) y en un useMemo
+'   pasa los ids a resúmenes, quita los que ya están en la lista y se queda con los 5 primeros.
+!include ../_estilo.iuml
+
+actor "Músico" as actor
+box "App" #F3F8FF
+    participant "AddItem\nScreen\n<<Nivel 7>>" as screen
+    participant "useAddItem\nScreen\n<<Nivel 6>>" as hook
+    participant "itemFeed /\nitem\nRepository" as feedRepo
+    participant "Entity\nStores" as stores
+    participant "item\nService" as service
+end box
+participant "API\nREST" as api
+
+actor -> screen : abre "Añadir"\nen una lista
+screen -> hook : useAddItem\nScreen(listId)
+hook -> feedRepo : getRecommended\nByItemList\n(listId, onFresh)
+feedRepo -> feedRepo : cacheFirst\n(cacheKey)
+
+alt Hay índice guardado
+    feedRepo --> hook : ids de la caché\n(+ onFresh)
+else Sin caché
+    feedRepo -> service : getRecommended\nByItemList(id)
+    service -> api : GET .../items/\nby-item-list/{id}
+    alt Éxito
+        api --> service : 200 List\n<ItemDTO>
+        service --> feedRepo : AnyItemDTO[]
+        feedRepo -> stores : hydrateMixed\n(dtos)
+        feedRepo -> feedRepo : saveQueryIndex
+        feedRepo --> hook : ids
+    else Error
+        api --> service : error
+        service --> feedRepo : throw
+        feedRepo --> hook : [] (cacheFirst\ncaptura el error)
+    end
+end
+
+hook -> stores : items
+hook -> hook : resúmenes sin los\nde la lista; los 5\nprimeros
+hook --> screen : items
+alt Hay items
+    screen --> actor : tarjetas\n"Para ti"
+else Sin recomendaciones
+    screen --> actor : "No hay\nrecomendaciones\ndisponibles"
+end
+
+@enduml

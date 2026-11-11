@@ -1,0 +1,45 @@
+@startuml DS-CU-12-2
+title DS-CU-12 (2/2) - Utilizar metrónomo:\nen marcha y parada
+
+' Diagrama de secuencia de análisis (patrón Boundary-Control-Entity)
+' Fuentes: MetronomeScreen.tsx, useMetronome.ts (useMetronome, useTapTempo), MetronomeSlider.tsx,
+' MetronomePulse.tsx, MetronomeBeatIndicator.tsx
+' Partes: (1/2) apertura, tempo y sonido (CU12_1_configurar.puml); (2/2) en marcha y parada
+' (CU12_2_marcha.puml).
+autonumber
+hide footbox
+skinparam sequenceMessageAlign center
+skinparam roundcorner 6
+skinparam maxMessageSize 130
+skinparam wrapWidth 170
+skinparam ParticipantPadding 2
+skinparam BoxPadding 2
+skinparam defaultFontSize 12
+
+actor "Músico" as musico
+boundary "Metronomo\nScreen" as pantalla
+control "MotorRitmo" as motor
+boundary "SalidaAudio" as audio
+
+note over musico, pantalla : Viene de DS-CU-12 (1/2):\ntempo y sonido elegidos
+
+musico -> pantalla : tocarCirculoCentral()
+pantalla -> motor : iniciar()
+loop Cada 60 / BPM segundos, hasta que se detiene
+    motor -> audio : reproducirGolpe(acentuado si es el primer tiempo)
+    motor --> pantalla : pulso(tiempoEnCompas)
+    pantalla --> musico : animarOnda(), resaltarTiempo(tiempoEnCompas)
+    motor -> motor : programarSiguienteGolpe()
+    note right of motor : setTimeout de JS calculado\ndesde el instante teórico del\ngolpe anterior: sin deriva\nacumulada
+end
+
+alt El músico toca de nuevo el círculo central
+    musico -> pantalla : tocarCirculoCentral()
+    pantalla -> motor : detener()
+else El músico sale de la pantalla
+    musico -> pantalla : salir()
+    pantalla -> motor : detener()
+end
+pantalla --> musico : apagarIndicadorDeTiempos()
+
+@enduml

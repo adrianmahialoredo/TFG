@@ -1,0 +1,60 @@
+@startuml DS-CU-09-4
+title DS-CU-09 (4/5) - Consultar recomendaciones adaptativas:\n"Basado en tu Spotify": token y tops
+
+' Diagrama de secuencia de análisis (patrón Boundary-Control-Entity)
+' Fuentes: HomeScreen.tsx (SPOTIFY_TITLE), useHomeItems.ts, itemFeed.repository.ts,
+' SpotifyRecommendationController.java, SpotifyRecommendationServiceImpl.java,
+' SpotifyAuthServiceImpl.getValidAccessToken, RecommendationConstants.java
+' Partes: (1/5) petición y nivel del algoritmo (CU09_1_recomendaciones.puml); (2/5) cupo por
+' tipo y resultado (CU09_2_cupo.puml); (3/5) artistas favoritos (CU09_3_artistas.puml);
+' (4/5) "Basado en tu Spotify": token y tops (CU09_4_spotify.puml); (5/5) "Basado en tu
+' Spotify": ítems del carrusel (CU09_5_spotify_items.puml).
+autonumber
+hide footbox
+skinparam sequenceMessageAlign center
+skinparam roundcorner 6
+skinparam maxMessageSize 130
+skinparam wrapWidth 170
+skinparam ParticipantPadding 2
+skinparam BoxPadding 2
+skinparam defaultFontSize 12
+
+actor "Músico" as musico
+boundary "Recomendaciones\nView" as vista
+control "Motor\nRecomendacion" as motor
+control "Gestor\nSpotifyAuth" as auth
+entity "Song" as cancion
+participant "SpotifyAPI\n<<sistema\nexterno>>" as spotify
+
+note over musico, motor : Solo en Inicio (en Canciones, el carrusel\n"Basado en tu Spotify" solo trae canciones)
+
+alt 13a. El usuario no tiene Spotify vinculado
+    vista --> musico : mostrarBoton\nConectarSpotify()
+    note right of vista : Título "Basado en tu\nSpotify" + botón\n"Conectar con Spotify"\n(DS-CU-10)
+else Spotify vinculado
+    vista -> motor : pedirRecomendaciones\nDeSpotify(userId)
+    note left of motor : GET /api/spotify/\nrecommendations/\nitems/{id}
+    motor -> auth : obtenerTokenValido(userId)
+    note right of auth : Si caduca en menos de\n1 minuto, lo renueva con\nel refresh token (DS-CU-10)
+    auth --> motor : token
+
+    alt Error de Spotify o de red
+        motor --> vista : error
+        vista --> musico : mostrarCarruselVacio()
+    else Spotify responde
+        motor -> spotify : obtenerTopsDeSpotify(token)
+        spotify --> motor : canciones top (medium, long, short_term)
+        motor -> cancion : buscarPorTituloYArtista(canciones top)
+        note left of cancion : Sin las que estén\nen 3 o más listas
+        cancion --> motor : canciones que existen en la app (hasta 6)
+        opt Faltan canciones
+            motor -> spotify : obtenerArtistasTop(token, 5, medium_term)
+            spotify --> motor : artistas top
+            motor -> cancion : buscarPopulares\nClasicasYNuevas(artistas)
+            cancion --> motor : canciones de sus artistas
+        end
+        note over vista, motor : Continúa en DS-CU-09 (5/5)
+    end
+end
+
+@enduml
