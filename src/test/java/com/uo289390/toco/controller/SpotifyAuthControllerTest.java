@@ -184,6 +184,34 @@ class SpotifyAuthControllerTest {
         mockMvc.perform(get("/api/spotify/callback")
                         .param("code", "auth-code")
                         .param("state", "tampered"))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isBadRequest())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.TEXT_HTML))
+                .andExpect(content().string(containsString("no es válido o ha caducado")));
+    }
+
+    @Test
+    void callback_spotifyRejection_showsReasonInHtmlPage() throws Exception {
+        doThrow(new IllegalStateException("Esta cuenta de Spotify no tiene acceso a la app."))
+                .when(spotifyAuthService).handleCallback("auth-code", "signed-state");
+
+        mockMvc.perform(get("/api/spotify/callback")
+                        .param("code", "auth-code")
+                        .param("state", "signed-state"))
+                .andExpect(status().isBadGateway())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.TEXT_HTML))
+                .andExpect(content().string(containsString("no tiene acceso a la app")));
+    }
+
+    @Test
+    void callback_unexpectedError_showsGenericHtmlPage() throws Exception {
+        doThrow(new RuntimeException("database password leaked"))
+                .when(spotifyAuthService).handleCallback("auth-code", "signed-state");
+
+        mockMvc.perform(get("/api/spotify/callback")
+                        .param("code", "auth-code")
+                        .param("state", "signed-state"))
+                .andExpect(status().isInternalServerError())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.TEXT_HTML))
+                .andExpect(content().string(not(containsString("leaked"))));
     }
 }

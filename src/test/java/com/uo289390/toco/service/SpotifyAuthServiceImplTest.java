@@ -388,11 +388,10 @@ class SpotifyAuthServiceImplTest {
             expectTokenExchange("auth-code", "{\"error\":\"invalid\"}");
 
             // Act
-            RuntimeException ex = assertThrows(RuntimeException.class, () -> service.handleCallback("auth-code", state));
+            IllegalStateException ex = assertThrows(IllegalStateException.class, () -> service.handleCallback("auth-code", state));
 
             // Assert
-            assertEquals("Error processing Spotify authorization", ex.getMessage());
-            assertInstanceOf(IllegalStateException.class, ex.getCause());
+            assertEquals("Error al obtener los tokens de Spotify", ex.getMessage());
             verify(spotifyUserRepository, never()).save(any());
             verify(userRepository, never()).save(any());
         }
@@ -433,10 +432,10 @@ class SpotifyAuthServiceImplTest {
             expectMe("access-1", "{\"display_name\":\"no id\"}");
 
             // Act
-            RuntimeException ex = assertThrows(RuntimeException.class, () -> service.handleCallback("auth-code", state));
+            IllegalStateException ex = assertThrows(IllegalStateException.class, () -> service.handleCallback("auth-code", state));
 
             // Assert
-            assertInstanceOf(IllegalStateException.class, ex.getCause());
+            assertEquals("Error al obtener el ID del usuario de Spotify", ex.getMessage());
             verify(spotifyUserRepository, never()).save(any());
             server.verify();
         }
@@ -486,6 +485,24 @@ class SpotifyAuthServiceImplTest {
             RuntimeException ex = assertThrows(RuntimeException.class, () -> service.handleCallback("auth-code", state));
 
             // Assert
+            assertInstanceOf(HttpClientErrorException.class, ex.getCause());
+            verify(spotifyUserRepository, never()).save(any());
+        }
+
+        @Test
+        void testHandleCallback_AccountNotInUserManagement_ThrowsIllegalStateWithExplanation() {
+            // Arrange (Spotify answers 403 to /me while the app is in development mode)
+            String state = stateOf(service.buildAuthorizationUrl(USER_ID));
+            expectTokenExchange("auth-code", TOKEN_JSON);
+            server.expect(requestTo(ME_URL))
+                    .andRespond(org.springframework.test.web.client.response.MockRestResponseCreators
+                            .withStatus(org.springframework.http.HttpStatus.FORBIDDEN));
+
+            // Act
+            IllegalStateException ex = assertThrows(IllegalStateException.class, () -> service.handleCallback("auth-code", state));
+
+            // Assert
+            assertTrue(ex.getMessage().contains("User Management"));
             assertInstanceOf(HttpClientErrorException.class, ex.getCause());
             verify(spotifyUserRepository, never()).save(any());
         }

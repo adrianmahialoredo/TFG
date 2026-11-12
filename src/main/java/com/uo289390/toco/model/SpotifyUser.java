@@ -41,6 +41,13 @@ public class SpotifyUser {
     private Long id;
 
     /**
+     * Size of the token columns. Spotify tokens are longer than the default VARCHAR(255) and
+     * their length is not documented. Existing databases are widened by
+     * {@code scripts/migrate_spotify_token_length.py} (Hibernate does not alter existing columns).
+     */
+    public static final int TOKEN_MAX_LENGTH = 2048;
+
+    /**
      * The unique identifier of the user account in the Spotify service.
      */
     @NotBlank(message = "Spotify user ID cannot be blank")
@@ -51,12 +58,14 @@ public class SpotifyUser {
      * The OAuth access token used to authenticate requests to the Spotify Web API.
      */
     @NotBlank(message = "Access token cannot be blank")
+    @Column(length = TOKEN_MAX_LENGTH)
     private String accessToken;
 
     /**
      * The OAuth refresh token used to obtain a new access token when it expires.
      */
     @NotBlank(message = "Refresh token cannot be blank")
+    @Column(length = TOKEN_MAX_LENGTH)
     private String refreshToken;
 
     /**

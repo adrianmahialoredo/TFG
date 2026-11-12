@@ -198,6 +198,12 @@ python scripts/migrate_preferences_table.py
 python scripts/migrate_itemlist_order.py
 ```
 
+**Tokens de Spotify:** `spotify_users.access_token` y `refresh_token` pasan de `VARCHAR(255)` a `VARCHAR(2048)` (los tokens de Spotify superan los 255 caracteres y vincular la cuenta fallaba con `value too long for type character varying(255)`). Hibernate no amplía columnas existentes, así que hay que ejecutar una vez, antes o después de desplegar:
+
+```bash
+python scripts/migrate_spotify_token_length.py
+```
+
 ### 4. Spotify
 
 En el [dashboard de Spotify](https://developer.spotify.com/dashboard), en *Redirect URIs*, añadir `https://<servicio>.onrender.com/api/spotify/callback` (exactamente igual que `SPOTIFY_REDIRECT_URI`). La vuelta del login pasa por el backend, no por la app, así que no hace falta nada más en la app.

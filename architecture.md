@@ -95,7 +95,7 @@ En el código de servicios se aplica lo mismo: resultados como `Set`/`LinkedHash
 - Hibernate añade columnas y tablas, pero nunca borra ni relaja columnas existentes.
 - Campos primitivos nuevos en tablas con datos: añadir `@ColumnDefault` (PostgreSQL rechaza añadir una columna `NOT NULL` sin valor por defecto si la tabla ya tiene filas).
 - Quitar un campo de una entidad no borra su columna. Si era `NOT NULL`, los `insert` nuevos fallan: hay que borrarla con un script (p. ej. `preferences.difficulty_level`, que se quitó de `Preferences` y borra `migrate_preferences_table.py`).
-- Cambios que requieren mover datos se hacen con un script idempotente en `scripts/migrate_*.py` (ejemplos: `migrate_preferences_table.py`, `migrate_itemlist_order.py`, `migrate_instrument_genre_lessons.py`, `migrate_song_chords_join_column.py`, `migrate_chord_instrument.py`).
+- Cambios que requieren mover datos se hacen con un script idempotente en `scripts/migrate_*.py` (ejemplos: `migrate_preferences_table.py`, `migrate_itemlist_order.py`, `migrate_spotify_token_length.py`, `migrate_instrument_genre_lessons.py`, `migrate_song_chords_join_column.py`, `migrate_chord_instrument.py`).
 - Hibernate tampoco renombra columnas: si cambia el nombre de una columna o de una columna de unión, hace falta un script de migración (si no, intenta añadir la nueva y falla si es `NOT NULL`).
 
 ---

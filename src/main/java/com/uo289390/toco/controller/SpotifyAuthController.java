@@ -31,8 +31,10 @@ import java.util.Optional;
  *
  * Spotify recommendations live in {@link SpotifyRecommendationController}.
  *
- * Responses: 200 OK, 400 Bad Request (authorization denied, invalid or expired state) and
- * 401 Unauthorized when {@code /login} is called without an authenticated user.
+ * Responses: 200 OK, 400 Bad Request (authorization denied, invalid or expired state),
+ * 401 Unauthorized when {@code /login} is called without an authenticated user, and on
+ * {@code /callback} 502 Bad Gateway (Spotify rejected the requests) or 500 (unexpected error),
+ * always as an HTML page because the callback is opened in the browser.
  *
  * @author Adrián Mahía
  * @version 1.0
@@ -73,7 +75,18 @@ public class SpotifyAuthController {
         if (error != null) {
             return ResponseEntity.badRequest().body(page("No se ha conectado Spotify (" + error + "). Puedes volver a la app."));
         }
-        spotifyAuthService.handleCallback(code, state);
+        // The callback is opened in the browser: errors are shown as a page, not as JSON
+        try {
+            spotifyAuthService.handleCallback(code, state);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(page(
+                    "El enlace de Spotify no es válido o ha caducado. Vuelve a pulsar el botón de Spotify en la app."));
+        } catch (IllegalStateException e) {
+            return ResponseEntity.status(HttpStatus.BAD_GATEWAY).body(page("No se ha conectado Spotify. " + e.getMessage()));
+        } catch (RuntimeException e) {
+            return ResponseEntity.internalServerError().body(page(
+                    "No se ha podido conectar Spotify. Inténtalo de nuevo más tarde."));
+        }
         return ResponseEntity.ok(page("¡Spotify conectado! Ya puedes volver a la app."));
     }
 

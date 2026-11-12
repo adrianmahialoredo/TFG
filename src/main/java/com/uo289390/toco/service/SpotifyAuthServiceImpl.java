@@ -178,13 +178,28 @@ public class SpotifyAuthServiceImpl implements SpotifyAuthService {
             userRepository.save(appUser);
             log.info("Spotify user {} linked to application user {} successfully", spotifyUserId, userId);
 
-        } catch (IllegalArgumentException e) {
-            log.error("Invalid argument in Spotify callback: {}", e.getMessage());
+        } catch (IllegalArgumentException | IllegalStateException e) {
+            log.error("Spotify callback failed: {}", e.getMessage());
             throw e;
+        } catch (HttpClientErrorException e) {
+            log.error("Spotify rejected the callback request with {}: {}", e.getStatusCode(), e.getResponseBodyAsString());
+            throw new IllegalStateException(callbackErrorMessage(e), e);
         } catch (Exception e) {
             log.error("Error handling Spotify callback: {}", e.getMessage(), e);
             throw new RuntimeException("Error processing Spotify authorization", e);
         }
+    }
+
+    /**
+     * Message shown to the user when Spotify answers the callback requests with a 4xx.
+     * A 403 is what Spotify returns while the app is in development mode and the account is not
+     * in the dashboard's User Management list.
+     */
+    private static String callbackErrorMessage(HttpClientErrorException e) {
+        return e.getStatusCode().value() == HttpStatus.FORBIDDEN.value()
+                ? "Esta cuenta de Spotify no tiene acceso a la app. Mientras la app de Spotify está en modo desarrollo, "
+                        + "solo pueden entrar las cuentas añadidas en «User Management» del dashboard de Spotify."
+                : "Spotify ha rechazado la autorización. Vuelve a intentarlo desde la app.";
     }
 
     /**
