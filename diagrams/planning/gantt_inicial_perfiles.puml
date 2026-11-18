@@ -1,0 +1,38 @@
+@startgantt gantt_inicial_perfiles
+title Planificación inicial por perfiles (05/05/2025 – 14/08/2025)
+printscale weekly
+saturday are closed
+sunday are closed
+2025-08-15 is closed
+Project starts 2025-05-05
+language es
+scale 2
+Label on first column and left aligned
+
+[1.1 Gestión y coordinación (continua) (Jefe de proyecto)] starts 2025-05-05 and ends 2025-08-14
+[1.1 Gestión y coordinación (continua) (Jefe de proyecto)] is colored in #2B547E
+
+[1.2 Investigación y alternativas (Jefe de proyecto, Analista)] starts 2025-05-05 and ends 2025-05-09
+[1.2 Investigación y alternativas (Jefe de proyecto, Analista)] is colored in #2E8B57
+
+[1.3 Análisis del sistema (Analista, Diseñador)] starts 2025-05-12 and ends 2025-05-21
+[1.3 Análisis del sistema (Analista, Diseñador)] is colored in #2E8B57
+
+[1.4 Diseño arquitectónico y UI (Diseñador, Analista)] starts 2025-05-21 and ends 2025-05-30
+[1.4 Diseño arquitectónico y UI (Diseñador, Analista)] is colored in #6A5ACD
+
+[1.5 Desarrollo del backend (Programador)] starts 2025-06-02 and ends 2025-06-25
+[1.5 Desarrollo del backend (Programador)] is colored in #C1853C
+
+[1.6 Desarrollo de la app móvil (Programador, Diseñador)] starts 2025-06-25 and ends 2025-07-18
+[1.6 Desarrollo de la app móvil (Programador, Diseñador)] is colored in #C1853C
+
+[1.7 Despliegue e infraestructura (Programador, Jefe de proyecto)] starts 2025-07-21 and ends 2025-07-25
+[1.7 Despliegue e infraestructura (Programador, Jefe de proyecto)] is colored in #C1853C
+
+[1.8 Pruebas y calidad (continua) (Tester, Programador)] starts 2025-05-19 and ends 2025-08-08
+[1.8 Pruebas y calidad (continua) (Tester, Programador)] is colored in #3B7A57
+
+[1.9 Documentación y manuales (continua) (Todos los roles)] starts 2025-05-05 and ends 2025-08-14
+[1.9 Documentación y manuales (continua) (Todos los roles)] is colored in #5D6D7E
+@endgantt

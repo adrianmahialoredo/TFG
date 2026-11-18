@@ -5,7 +5,7 @@ Ejecutan, de extremo a extremo y sin mocks, la parte de servidor de las pruebas 
 en tests/system/results/sistema_<fecha>.csv y .md, listo para la tabla 7.2.
 
 La parte de interfaz de cada PA (pantallas, modales, afinador con micrófono...) se prueba a mano
-en el APK con la plantilla plan_pruebas_sistema.csv.
+en el APK con la plantilla plan_pruebas_manuales.csv.
 
 Uso (PowerShell):
     python tests/system/api_system_tests.py --base-url https://toco-backend.onrender.com `

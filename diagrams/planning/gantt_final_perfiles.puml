@@ -1,0 +1,72 @@
+@startgantt gantt_final_perfiles
+title Planificación final por perfiles y tramos activos (05/05/2025 – 18/11/2026)
+printscale monthly
+Project starts 2025-05-01
+language es
+scale 2
+Label on first column and left aligned
+
+' --- TRAMO 1: Mayo - Junio 2025 ---
+[1.1 Gestión y coordinación (tramo 1) (Jefe de proyecto)] starts 2025-05-05 and ends 2025-06-30
+[1.1 Gestión y coordinación (tramo 1) (Jefe de proyecto)] is colored in #2B547E
+[1.2 Investigación y alternativas (Jefe de proyecto, Analista)] starts 2025-05-05 and ends 2025-05-09
+[1.2 Investigación y alternativas (Jefe de proyecto, Analista)] is colored in #2E8B57
+[1.3 Análisis del sistema (Analista, Diseñador)] starts 2025-05-12 and ends 2025-05-23
+[1.3 Análisis del sistema (Analista, Diseñador)] is colored in #2E8B57
+[1.4 Diseño arquitectónico y UI (Diseñador, Analista)] starts 2025-05-26 and ends 2025-06-06
+[1.4 Diseño arquitectónico y UI (Diseñador, Analista)] is colored in #6A5ACD
+[1.5 Desarrollo del backend (tramo 1) (Programador)] starts 2025-06-02 and ends 2025-06-20
+[1.5 Desarrollo del backend (tramo 1) (Programador)] is colored in #C1853C
+[1.6 App móvil (tramo 1) (Programador, Diseñador)] starts 2025-06-14 and ends 2025-06-30
+[1.6 App móvil (tramo 1) (Programador, Diseñador)] is colored in #C1853C
+[1.8 Pruebas y calidad (tramo 1) (Tester, Programador)] starts 2025-05-19 and ends 2025-06-30
+[1.8 Pruebas y calidad (tramo 1) (Tester, Programador)] is colored in #3B7A57
+[1.9 Documentación (tramo 1) (Todos los roles)] starts 2025-05-05 and ends 2025-06-30
+[1.9 Documentación (tramo 1) (Todos los roles)] is colored in #5D6D7E
+
+' --- TRAMO 2: Octubre - Noviembre 2025 ---
+[1.1 Gestión y coordinación (tramo 2) (Jefe de proyecto)] starts 2025-10-20 and ends 2025-11-03
+[1.1 Gestión y coordinación (tramo 2) (Jefe de proyecto)] is colored in #2B547E
+[1.6 App móvil (tramo 2) (Programador, Diseñador)] starts 2025-10-20 and ends 2025-11-03
+[1.6 App móvil (tramo 2) (Programador, Diseñador)] is colored in #C1853C
+[1.8 Pruebas y calidad (tramo 2) (Tester, Programador)] starts 2025-10-20 and ends 2025-11-03
+[1.8 Pruebas y calidad (tramo 2) (Tester, Programador)] is colored in #3B7A57
+[1.9 Documentación (tramo 2) (Programador, Tester)] starts 2025-10-20 and ends 2025-11-03
+[1.9 Documentación (tramo 2) (Programador, Tester)] is colored in #5D6D7E
+
+' --- TRAMO 3: Febrero - Marzo 2026 ---
+[1.1 Gestión y coordinación (tramo 3) (Jefe de proyecto)] starts 2026-02-02 and ends 2026-03-31
+[1.1 Gestión y coordinación (tramo 3) (Jefe de proyecto)] is colored in #2B547E
+[1.6 App móvil (tramo 3) (Programador, Diseñador)] starts 2026-02-02 and ends 2026-03-31
+[1.6 App móvil (tramo 3) (Programador, Diseñador)] is colored in #C1853C
+[1.8 Pruebas y calidad (tramo 3) (Tester, Programador)] starts 2026-02-02 and ends 2026-03-31
+[1.8 Pruebas y calidad (tramo 3) (Tester, Programador)] is colored in #3B7A57
+[1.9 Documentación (tramo 3) (Programador, Diseñador, Tester)] starts 2026-02-02 and ends 2026-03-31
+[1.9 Documentación (tramo 3) (Programador, Diseñador, Tester)] is colored in #5D6D7E
+
+' --- TRAMO 4: Julio 2026 ---
+[1.1 Gestión y coordinación (tramo 4) (Jefe de proyecto)] starts 2026-07-01 and ends 2026-07-22
+[1.1 Gestión y coordinación (tramo 4) (Jefe de proyecto)] is colored in #2B547E
+[1.6 App móvil (tramo 4) (Programador, Diseñador)] starts 2026-07-01 and ends 2026-07-22
+[1.6 App móvil (tramo 4) (Programador, Diseñador)] is colored in #C1853C
+[1.8 Pruebas y calidad (tramo 4) (Tester, Programador)] starts 2026-07-01 and ends 2026-07-22
+[1.8 Pruebas y calidad (tramo 4) (Tester, Programador)] is colored in #3B7A57
+[1.9 Documentación (tramo 4) (Programador, Tester)] starts 2026-07-01 and ends 2026-07-22
+[1.9 Documentación (tramo 4) (Programador, Tester)] is colored in #5D6D7E
+
+' --- TRAMO 5: Septiembre - Noviembre 2026 ---
+[1.1 Gestión y coordinación (tramo 5) (Jefe de proyecto)] starts 2026-09-08 and ends 2026-11-18
+[1.1 Gestión y coordinación (tramo 5) (Jefe de proyecto)] is colored in #2B547E
+[1.6 App móvil (tramo 5) (Programador, Diseñador)] starts 2026-09-08 and ends 2026-11-03
+[1.6 App móvil (tramo 5) (Programador, Diseñador)] is colored in #C1853C
+[1.5 Desarrollo del backend (tramo 2) (Programador)] starts 2026-10-01 and ends 2026-10-14
+[1.5 Desarrollo del backend (tramo 2) (Programador)] is colored in #C1853C
+[1.7 Despliegue e infraestructura (Programador, Jefe de proyecto)] starts 2026-10-27 and ends 2026-11-03
+[1.7 Despliegue e infraestructura (Programador, Jefe de proyecto)] is colored in #C1853C
+[1.5 Desarrollo del backend (tramo 3 - horas extra post-despliegue) (Programador)] starts 2026-11-03 and ends 2026-11-11
+[1.5 Desarrollo del backend (tramo 3 - horas extra post-despliegue) (Programador)] is colored in #C1853C
+[1.8 Pruebas y calidad (tramo 5) (Tester, Programador)] starts 2026-09-08 and ends 2026-11-11
+[1.8 Pruebas y calidad (tramo 5) (Tester, Programador)] is colored in #3B7A57
+[1.9 Documentación y memoria (tramo 5) (Todos los roles)] starts 2026-09-08 and ends 2026-11-18
+[1.9 Documentación y memoria (tramo 5) (Todos los roles)] is colored in #5D6D7E
+@endgantt
