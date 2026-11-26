@@ -1,4 +1,4 @@
-"""Analiza los datos de la prueba de usabilidad y genera las tablas para la memoria (7.4).
+"""Analiza los datos de la prueba de usabilidad y genera las tablas.
 
 Entradas (CSV con ; o , como separador, UTF-8; las plantillas están en plantillas/):
   --sus           respuestas del SUS: columnas p1..p10, o un CSV exportado de Google/Microsoft

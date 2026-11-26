@@ -1,7 +1,7 @@
 @startuml DCU-01-1
 title DCU-01 (1/2) - Casos de uso de TOCO: acceso, perfil y administración
 
-' Actores y casos de uso del apartado 4.3 de la memoria (CU-01 a CU-13), en dos partes para
+' Actores y casos de uso de TOCO (CU-01 a CU-13), en dos partes para
 ' que quepan en una página: (1/2) acceso, perfil y administración; (2/2) catálogo, listas,
 ' recomendaciones y herramientas (CU00_diagrama_casos_uso_2.puml).
 ' CU-13 es "Olvidé mi contraseña", desde el login.

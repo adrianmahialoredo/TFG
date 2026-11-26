@@ -1,4 +1,4 @@
-# Guia unica de JSON de datos (TFG)
+# Guia unica de JSON de datos
 
 Este documento resume la estructura de los JSON en `data/` para generar datos validos y coherentes con el backend y el frontend. Se basa en los DTOs y entidades actuales.
 

@@ -1,8 +1,8 @@
 """Pruebas de sistema automáticas contra la API REST desplegada (Render + Neon) o local.
 
 Ejecutan, de extremo a extremo y sin mocks, la parte de servidor de las pruebas de aceptación
-(PA-xx de la memoria) y guardan el resultado REAL de cada una (código HTTP, tiempo, observación)
-en tests/system/results/sistema_<fecha>.csv y .md, listo para la tabla 7.2.
+(PA-xx) y guardan el resultado REAL de cada una (código HTTP, tiempo, observación)
+en tests/system/results/sistema_<fecha>.csv y .md.
 
 La parte de interfaz de cada PA (pantallas, modales, afinador con micrófono...) se prueba a mano
 en el APK con la plantilla plan_pruebas_manuales.csv.

@@ -1,7 +1,7 @@
 """Resume los JSON de k6 (tests/load/results/k6_*.json) en una tabla Markdown y CSV.
 
 Para cada escenario coge la ejecución más reciente (o todas con --all) y saca las mismas
-métricas que la tabla 7.3.3 de la memoria: peticiones, rendimiento, media, p95, p99,
+métricas de siempre: peticiones, rendimiento, media, p95, p99,
 máximo y tasa de errores. Escribe resumen_carga.md y resumen_carga.csv en la misma carpeta.
 
 Uso:

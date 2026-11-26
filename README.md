@@ -1,8 +1,8 @@
-# Backend - TFG (Trabajo de Fin de Grado)
+# Backend - TOCO
 
 ## 📋 Descripción General
 
-Este es el backend de la aplicación TFG, desarrollado con **Spring Boot 3.4.3** y **Java 23**. Proporciona una API RESTful completa para gestionar géneros musicales, canciones, lecciones, acordes, instrumentos y más.
+Este es el backend de la aplicación TOCO, desarrollado con **Spring Boot 3.4.3** y **Java 23**. Proporciona una API RESTful completa para gestionar géneros musicales, canciones, lecciones, acordes, instrumentos y más.
 
 La aplicación utiliza:
 - **Base de datos**: PostgreSQL con Spring Data JPA (Hibernate 6)
@@ -743,7 +743,7 @@ Spring lo importa al arrancar y los scripts de `scripts/` (`clean_db.py`, `migra
 ## 🧪 Pruebas
 
 - **Unitarias:** `./mvnw test` (backend, JUnit 5 + JaCoCo en `target/site/jacoco/`) y `cd frontend && npm run test:coverage` (Jest + Testing Library).
-- **De sistema, de carga (k6) y de usabilidad (SUS):** herramientas y guía en [`tests/README.md`](tests/README.md). Los resultados reales quedan en las carpetas `results/` de cada una.
+- **De sistema, de carga (k6) y de usabilidad (SUS):** herramientas y guía en [`tests/README.md`](tests/README.md). Los resultados se generan en las carpetas `results/` de cada una (no se versionan).
 
 ---
 
